@@ -1,15 +1,16 @@
 /// Configuração injetada em tempo de compilação:
 ///
-///   flutter run --dart-define=API_URL=https://api.velas.pt \
+///   flutter run --dart-define=API_URL=http://localhost:3000 \
 ///               --dart-define=GOOGLE_SERVER_CLIENT_ID=123-abc.apps.googleusercontent.com
 ///
-/// Sem API_URL a app arranca em "modo local": os dados ficam apenas no
-/// dispositivo, o que é útil para desenvolvimento.
+/// Sem API_URL a app usa a API de produção. Com `--dart-define=API_URL=`
+/// (vazio) arranca em "modo local": os dados ficam apenas no dispositivo, o que
+/// é útil para desenvolvimento.
 class Env {
   const Env._();
 
   /// Endereço da API (pasta `backend`), sem barra final.
-  static const apiUrl = String.fromEnvironment('API_URL');
+  static const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://velas-backend.triplanai.eupasoft.com');
 
   /// Client ID OAuth do tipo "Web application" do projeto Google Cloud.
   /// O Android precisa dele para devolver o ID token que a API valida.

@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 
 import type { Config } from '../../config/env.js';
 import { escapeHtml, htmlPage, jsString } from '../../core/html.js';
+import { doc } from '../../core/openapi.js';
+import { codeParams } from './invitations.model.js';
 
 /** Códigos de convite: letras e números (gift_groups.invite_code). */
 const codePattern = /^[A-Za-z0-9]{4,20}$/;
@@ -12,7 +14,8 @@ const codePattern = /^[A-Za-z0-9]{4,20}$/;
  * Pública e sem consultar a base de dados (não revela nada sobre o grupo).
  */
 export async function invitePageRoutes(app: FastifyInstance, config: Config) {
-  app.get('/g/:code', async (req, reply) => {
+  const schema = doc({ tag: 'Páginas', summary: 'Página do link de convite (abre a app)', params: codeParams });
+  app.get('/g/:code', { schema }, async (req, reply) => {
     const raw = (req.params as { code: string }).code;
     reply.type('text/html; charset=utf-8').header('cache-control', 'no-store');
     if (!codePattern.test(raw)) {

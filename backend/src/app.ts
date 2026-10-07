@@ -4,6 +4,7 @@ import Fastify, { type FastifyServerOptions } from 'fastify';
 import { createServices, type Deps } from './container.js';
 import { requireAuth } from './core/auth-guard.js';
 import { errorHandler } from './core/errors.js';
+import { doc, documentBearerAuth, registerDocs } from './core/openapi.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { categoriesRoutes } from './modules/categories/categories.routes.js';
 import { filesRoutes } from './modules/files/files.routes.js';
@@ -21,8 +22,11 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   const app = Fastify({ trustProxy: true, ...options });
   app.setErrorHandler(errorHandler);
   await app.register(rateLimit, { global: false, enableDraftSpec: true, allowList: () => !deps.config.rateLimit });
+  // Quem valida os pedidos é o Zod; os schemas das rotas são só documentação (ver core/openapi.ts).
+  app.setValidatorCompiler(() => (value) => ({ value }));
+  if (deps.config.docs) await registerDocs(app);
 
-  app.get('/health', async () => {
+  app.get('/health', { schema: doc({ tag: 'Sistema', summary: 'Estado da API e da base de dados' }) }, async () => {
     await deps.db.query('select 1');
     return { ok: true };
   });
@@ -35,6 +39,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   // Rotas que exigem sessão.
   await app.register(async (scope) => {
     requireAuth(scope, deps.tokens);
+    documentBearerAuth(scope);
     await usersRoutes(scope, services.users);
     await syncRoutes(scope, services.sync);
     await peopleRoutes(scope, services.people);

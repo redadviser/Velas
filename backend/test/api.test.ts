@@ -45,6 +45,7 @@ beforeAll(async () => {
     mail: { from: 'test@velas' },
     appScheme: 'com.eupasoft.velas',
     rateLimit: false,
+    docs: true,
     androidPackage: 'com.eupasoft.aniversarios',
     playStoreUrl: 'https://play.google.com/store/apps/details?id=com.eupasoft.aniversarios',
   };
@@ -387,5 +388,22 @@ describe('prendas em grupo', () => {
     expect((await call('GET', '/groups', { token: member.access_token })).body).toEqual([]);
     // Membro sai da conta: o grupo de outro administrador mantém-se.
     expect((await call('GET', '/me', { token: member.access_token })).status).toBe(200);
+  });
+});
+
+describe('documentação', () => {
+  it('serve o Swagger UI e a especificação OpenAPI gerada a partir dos schemas', async () => {
+    expect((await app.inject({ method: 'GET', url: '/docs/' })).statusCode).toBe(200);
+    const spec = (await call('GET', '/docs/json')).body;
+    expect(spec.openapi).toBe('3.0.3');
+
+    const login = spec.paths['/auth/login'].post;
+    expect(login.security).toBeUndefined();
+    expect(login.requestBody.content['application/json'].schema.required).toEqual(['identifier', 'password']);
+
+    const person = spec.paths['/people/{id}'].put;
+    expect(person.security).toEqual([{ bearerAuth: [] }]);
+    expect(person.parameters).toContainEqual(expect.objectContaining({ in: 'path', name: 'id', required: true }));
+    expect(person.requestBody.content['application/json'].schema.properties.id).toBeUndefined();
   });
 });

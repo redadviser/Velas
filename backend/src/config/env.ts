@@ -49,6 +49,8 @@ export interface Config {
   playStoreUrl?: string;
   /** Limites de pedidos por IP nas rotas de autenticação (desligar só em testes). */
   rateLimit: boolean;
+  /** Swagger UI em /docs e especificação OpenAPI em /docs/json. */
+  docs: boolean;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -86,6 +88,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     appStoreUrl: env.APP_STORE_URL?.trim() || undefined,
     playStoreUrl: env.PLAY_STORE_URL?.trim() || undefined,
     rateLimit: env.RATE_LIMIT !== 'false',
+    docs: env.API_DOCS !== 'false',
   };
 }
 

@@ -1,0 +1,6 @@
+// Login com Google no iOS. Valores do client ID OAuth do tipo "iOS"
+// (Google Cloud Console → APIs e serviços → Credenciais).
+//   GOOGLE_IOS_CLIENT_ID      = 1234-abcd.apps.googleusercontent.com
+//   GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.1234-abcd
+GOOGLE_IOS_CLIENT_ID = CONFIGURAR.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.CONFIGURAR

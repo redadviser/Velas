@@ -74,14 +74,22 @@ export interface ConversationJson {
   /** Título do grupo ou nome da outra pessoa. */
   title: string;
   celebrant_name: string | null;
-  other_user: { user_id: string; display_name: string; username: string | null; photo_url: string | null } | null;
+  other_user: (Presence & { user_id: string; display_name: string; username: string | null; photo_url: string | null }) | null;
   last_message: Pick<MessageJson, 'id' | 'sender_id' | 'sender_name' | 'kind' | 'body' | 'created_at' | 'deleted'> | null;
   last_message_at: string | null;
   unread_count: number;
+  /** Quem (além de mim) já viu a última mensagem. */
+  seen_by: { user_id: string; display_name: string }[];
   created_at: string;
 }
 
-export interface Participant {
+/** Online agora, ou quando foi visto por último. */
+export interface Presence {
+  online: boolean;
+  last_seen_at: string | null;
+}
+
+export interface Participant extends Presence {
   user_id: string;
   display_name: string;
   username: string | null;

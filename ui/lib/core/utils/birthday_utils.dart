@@ -72,28 +72,6 @@ class Fmt {
       DateFormat('MMM', _locale).format(DateTime(2000, month)).replaceAll('.', '').toUpperCase();
   static String monthYear(DateTime d) => _cap(DateFormat("MMMM 'de' y", _locale).format(d));
 
-  static String time(DateTime d) => DateFormat('HH:mm', _locale).format(d);
-
-  /// Hora na lista de conversas: hoje "14:05", ontem "Ontem", esta semana "Ter", antes "12/03/25".
-  static String chatTime(DateTime d) {
-    final today = BirthdayUtils.today();
-    final day = DateTime(d.year, d.month, d.day);
-    final diff = today.difference(day).inDays;
-    if (diff <= 0) return time(d);
-    if (diff == 1) return 'Ontem';
-    if (diff < 7) return weekdayShort(d);
-    return DateFormat('dd/MM/yy', _locale).format(d);
-  }
-
-  /// Separador de dias dentro de uma conversa.
-  static String chatDay(DateTime d) {
-    final diff = BirthdayUtils.today().difference(DateTime(d.year, d.month, d.day)).inDays;
-    if (diff <= 0) return 'Hoje';
-    if (diff == 1) return 'Ontem';
-    if (diff < 7) return weekday(d);
-    return d.year == DateTime.now().year ? weekdayDayMonth(d) : fullDate(d);
-  }
-
   static String birthDate(int day, int month, int? year) =>
       year == null ? dayMonth(DateTime(2000, month, day)) : fullDate(DateTime(year, month, day));
 

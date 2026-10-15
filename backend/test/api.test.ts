@@ -642,8 +642,26 @@ describe('amigos e conversas', () => {
     const filipaWs = await app.injectWS('/ws');
     filipaWs.send(JSON.stringify({ type: 'auth', token: filipa.access_token }));
     await new Promise((r) => filipaWs.once('message', r));
+    // O Gil (amigo) vê que a Filipa ficou online, também na lista de conversas.
+    expect(await next('presence')).toMatchObject({ user_id: filipa.user.id, online: true });
+    const withFilipa = (await call('GET', '/conversations', { token: gil.access_token })).body.find((c: { id: string }) => c.id === direct);
+    expect(withFilipa.other_user).toMatchObject({ user_id: filipa.user.id, online: true });
+    expect((await call('GET', '/friends', { token: gil.access_token })).body.friends.find((f: { user_id: string }) => f.user_id === filipa.user.id).online).toBe(true);
+
     filipaWs.send(JSON.stringify({ type: 'typing', conversation_id: direct }));
     expect(await next('typing')).toMatchObject({ conversation_id: direct, user_id: filipa.user.id, name: 'Filipa' });
+
+    // "Vista por": a Filipa vê na lista quem já leu a última mensagem dela.
+    const filipaEvents: { type: string; [k: string]: unknown }[] = [];
+    filipaWs.on('message', (raw) => filipaEvents.push(JSON.parse(raw.toString())));
+    await send(filipa, direct, { kind: 'text', body: 'Já viste?' });
+    const conv = async () =>
+      (await call('GET', '/conversations', { token: filipa.access_token })).body.find((c: { id: string }) => c.id === direct);
+    expect((await conv()).seen_by).toEqual([]);
+    await call('POST', `/conversations/${direct}/read`, { token: gil.access_token });
+    expect((await conv()).seen_by).toEqual([{ user_id: gil.user.id, display_name: 'Gil' }]);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(filipaEvents.find((e) => e.type === 'read')).toMatchObject({ user_id: gil.user.id, name: 'Gil', conversation_id: direct });
 
     await call('POST', '/friends/requests', { token: hugo.access_token, body: { user_id: gil.user.id } });
     await next('friends');

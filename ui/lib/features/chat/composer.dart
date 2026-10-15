@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/chat_providers.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/errors.dart';
 import '../../core/widgets/common.dart';
@@ -79,12 +81,12 @@ class _ComposerState extends ConsumerState<Composer> {
           children: [
             ListTile(
               leading: const Icon(LucideIcons.images),
-              title: const Text('Galeria'),
+              title: Text(ctx.tr(Keys.commonGallery)),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(LucideIcons.camera),
-              title: const Text('Câmara'),
+              title: Text(ctx.tr(Keys.commonCamera)),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             const SizedBox(height: 8),
@@ -97,7 +99,7 @@ class _ComposerState extends ConsumerState<Composer> {
     try {
       picked = await pickChatImage(source);
     } catch (_) {
-      if (mounted) showMessage(context, 'Não foi possível aceder às fotografias. Verifica as permissões.');
+      if (mounted) showMessage(context, context.tr(Keys.commonPhotosPermission));
       return;
     }
     if (picked == null) return;
@@ -146,7 +148,7 @@ class _ComposerState extends ConsumerState<Composer> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'A responder a ${reply.senderName}',
+                            context.tr(Keys.chatComposerReplyingTo, {'name': reply.senderName}),
                             style: context.text.labelMedium?.copyWith(
                               color: context.colors.primary,
                               fontWeight: FontWeight.w700,
@@ -162,7 +164,7 @@ class _ComposerState extends ConsumerState<Composer> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Cancelar resposta',
+                      tooltip: context.tr(Keys.chatComposerCancelReply),
                       onPressed: widget.onCancelReply,
                       icon: Icon(LucideIcons.x, size: 18, color: muted),
                     ),
@@ -175,7 +177,7 @@ class _ComposerState extends ConsumerState<Composer> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   IconButton(
-                    tooltip: 'Enviar fotografia',
+                    tooltip: context.tr(Keys.chatComposerSendPhoto),
                     onPressed: _attach,
                     icon: Icon(LucideIcons.imagePlus, color: muted),
                   ),
@@ -189,7 +191,7 @@ class _ComposerState extends ConsumerState<Composer> {
                       textCapitalization: TextCapitalization.sentences,
                       onChanged: (_) => _chat.typing(),
                       decoration: InputDecoration(
-                        hintText: 'Mensagem',
+                        hintText: context.tr(Keys.chatMessage),
                         counterText: '',
                         isDense: true,
                         contentPadding: const EdgeInsets.fromLTRB(16, 11, 4, 11),
@@ -208,7 +210,7 @@ class _ComposerState extends ConsumerState<Composer> {
                         filled: true,
                         fillColor: context.palette.muted,
                         suffixIcon: IconButton(
-                          tooltip: 'Emojis',
+                          tooltip: context.tr(Keys.chatComposerEmoji),
                           onPressed: () => _togglePanel(MediaTab.emoji),
                           icon: Icon(
                             _panel == MediaTab.emoji ? LucideIcons.keyboard : LucideIcons.smile,
@@ -222,13 +224,13 @@ class _ComposerState extends ConsumerState<Composer> {
                   const SizedBox(width: 4),
                   if (hasText)
                     IconButton.filled(
-                      tooltip: 'Enviar',
+                      tooltip: context.tr(Keys.chatComposerSend),
                       onPressed: _sendText,
                       icon: const Icon(LucideIcons.sendHorizontal, size: 20),
                     )
                   else
                     IconButton(
-                      tooltip: 'GIFs e stickers',
+                      tooltip: context.tr(Keys.chatComposerGifsStickers),
                       // Com o painel nos stickers, volta a tocar fecha-o; senão abre nos GIFs.
                       onPressed: () => _togglePanel(_panel == MediaTab.stickers ? MediaTab.stickers : MediaTab.gifs),
                       icon: Icon(

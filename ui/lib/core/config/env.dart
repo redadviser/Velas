@@ -10,7 +10,7 @@ class Env {
   const Env._();
 
   /// Endereço da API (pasta `backend`), sem barra final.
-  static const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://velas-backend.triplanai.eupasoft.com');
+  static const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://birthday-ly.triplanai.eupasoft.com');
 
   /// Client ID OAuth do tipo "Web application" do projeto Google Cloud.
   /// O Android precisa dele para devolver o ID token que a API valida.

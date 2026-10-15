@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/utils/errors.dart';
 import '../models/chat_models.dart';
 import '../repositories/chat_repository.dart';
@@ -25,7 +27,7 @@ class ApiChatRepository implements ChatRepository {
     try {
       await _api.post('/friends/requests/$requestId/respond', {'accept': accept});
     } on ApiException catch (e) {
-      if (e.code == 'friend_request_not_found') throw const AppException('Este pedido já não está disponível.');
+      if (e.code == 'friend_request_not_found') throw AppException(tr(Keys.errorFriendRequestGone));
       rethrow;
     }
   }
@@ -47,7 +49,7 @@ class ApiChatRepository implements ChatRepository {
     try {
       return Conversation.fromJson(_map(await _api.post('/conversations/direct', {'user_id': userId})));
     } on ApiException catch (e) {
-      if (e.code == 'not_friends') throw const AppException('Só podes conversar em privado com amigos.');
+      if (e.code == 'not_friends') throw AppException(tr(Keys.errorDirectOnlyFriends));
       rethrow;
     }
   }
@@ -72,7 +74,7 @@ class ApiChatRepository implements ChatRepository {
     try {
       return ChatMessage.fromJson(_map(await _api.post('/conversations/$conversationId/messages', message.toJson())));
     } on ApiException catch (e) {
-      if (e.code == 'not_friends') throw const AppException('Já não são amigos: não podes enviar mensagens nesta conversa.');
+      if (e.code == 'not_friends') throw AppException(tr(Keys.errorNotFriendsAnymore));
       rethrow;
     }
   }
@@ -93,7 +95,7 @@ class ApiChatRepository implements ChatRepository {
     try {
       return Sticker.fromJson(_map(await _api.post('/stickers', body)));
     } on ApiException catch (e) {
-      if (e.code == 'too_many_stickers') throw const AppException('Já tens stickers a mais. Apaga alguns primeiro.');
+      if (e.code == 'too_many_stickers') throw AppException(tr(Keys.errorTooManyStickers));
       rethrow;
     }
   }
@@ -111,7 +113,7 @@ class ApiChatRepository implements ChatRepository {
     try {
       return Sticker.fromJson(_map(await _api.postBytes('/stickers/upload$query', bytes, 'application/octet-stream')));
     } on ApiException catch (e) {
-      if (e.code == 'too_many_stickers') throw const AppException('Já tens stickers a mais. Apaga alguns primeiro.');
+      if (e.code == 'too_many_stickers') throw AppException(tr(Keys.errorTooManyStickers));
       rethrow;
     }
   }
@@ -125,7 +127,7 @@ class ApiChatRepository implements ChatRepository {
     try {
       return GifPage.fromJson(_map(await _api.get('/gifs?$q')));
     } on ApiException catch (e) {
-      if (e.code == 'gifs_unavailable') throw const AppException('Os GIFs não estão disponíveis de momento.');
+      if (e.code == 'gifs_unavailable') throw AppException(tr(Keys.errorGifsUnavailable));
       rethrow;
     }
   }

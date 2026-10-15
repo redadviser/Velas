@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/chat_providers.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/errors.dart';
 import '../../core/widgets/common.dart';
@@ -66,10 +68,10 @@ class _MediaPanelState extends State<MediaPanel> with SingleTickerProviderStateM
             controller: _tabs,
             dividerHeight: 0,
             labelStyle: context.text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-            tabs: const [
-              Tab(height: 40, text: 'Emoji'),
-              Tab(height: 40, text: 'GIFs'),
-              Tab(height: 40, text: 'Stickers'),
+            tabs: [
+              Tab(height: 40, text: context.tr(Keys.chatMediaEmoji)),
+              Tab(height: 40, text: context.tr(Keys.chatMediaGifs)),
+              Tab(height: 40, text: context.tr(Keys.chatMediaStickers)),
             ],
           ),
           Expanded(
@@ -95,13 +97,14 @@ Config emojiConfig(BuildContext context, {double? height}) {
   final muted = context.palette.mutedForeground;
   return Config(
     height: height,
-    locale: const Locale('pt'),
+    // Pesquisa de emojis na língua da app.
+    locale: Locale(context.translations.locale.languageCode),
     checkPlatformCompatibility: true,
     emojiViewConfig: EmojiViewConfig(
       backgroundColor: bg,
       columns: 8,
       emojiSizeMax: 28 * (foundation.defaultTargetPlatform == TargetPlatform.iOS ? 1.2 : 1.0),
-      noRecents: Text('Ainda sem recentes', style: TextStyle(color: muted)),
+      noRecents: Text(context.tr(Keys.chatMediaNoRecents), style: TextStyle(color: muted)),
     ),
     categoryViewConfig: CategoryViewConfig(
       backgroundColor: bg,
@@ -111,7 +114,7 @@ Config emojiConfig(BuildContext context, {double? height}) {
       backspaceColor: primary,
     ),
     bottomActionBarConfig: const BottomActionBarConfig(enabled: false),
-    searchViewConfig: SearchViewConfig(backgroundColor: bg, hintText: 'Procurar emoji'),
+    searchViewConfig: SearchViewConfig(backgroundColor: bg, hintText: context.tr(Keys.chatMediaSearchEmoji)),
     skinToneConfig: SkinToneConfig(dialogBackgroundColor: bg, indicatorColor: muted),
   );
 }
@@ -211,7 +214,7 @@ class _GifSearchState extends ConsumerState<GifSearch> with AutomaticKeepAliveCl
             },
             decoration: InputDecoration(
               isDense: true,
-              hintText: stickers ? 'Procurar stickers' : 'Procurar GIFs (ex.: parabéns)',
+              hintText: stickers ? context.tr(Keys.chatMediaSearchStickers) : context.tr(Keys.chatMediaSearchGifs),
               prefixIcon: const Icon(LucideIcons.search, size: 18),
             ),
           ),
@@ -249,7 +252,7 @@ class _GifSearchState extends ConsumerState<GifSearch> with AutomaticKeepAliveCl
                       onLongPress: () => runGuarded(
                         context,
                         () => ref.read(stickersProvider.notifier).saveFromGif(g),
-                        success: 'Guardado nos teus stickers.',
+                        success: context.tr(Keys.chatStickerSaved),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
@@ -294,16 +297,16 @@ class _StickersTabState extends ConsumerState<_StickersTab> {
     await runGuarded(
       context,
       () => ref.read(stickersProvider.notifier).upload(picked.bytes, width: picked.width, height: picked.height),
-      success: 'Sticker criado.',
+      success: context.tr(Keys.chatMediaStickerCreated),
     );
   }
 
   Future<void> _manage(Sticker s) async {
     final ok = await confirmDialog(
       context,
-      title: 'Apagar sticker?',
-      message: 'Deixa de aparecer nos teus stickers.',
-      confirm: 'Apagar',
+      title: context.tr(Keys.chatMediaDeleteStickerTitle),
+      message: context.tr(Keys.chatMediaDeleteStickerMessage),
+      confirm: context.tr(Keys.commonDelete),
     );
     if (ok && mounted) await runGuarded(context, () => ref.read(stickersProvider.notifier).delete(s));
   }
@@ -317,9 +320,9 @@ class _StickersTabState extends ConsumerState<_StickersTab> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: SegmentedButton<bool>(
             showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: true, label: Text('Os meus')),
-              ButtonSegment(value: false, label: Text('Procurar')),
+            segments: [
+              ButtonSegment(value: true, label: Text(context.tr(Keys.chatMediaMine))),
+              ButtonSegment(value: false, label: Text(context.tr(Keys.chatMediaSearch))),
             ],
             selected: {_mine},
             onSelectionChanged: (s) => setState(() => _mine = s.first),
@@ -353,7 +356,7 @@ class _StickersTabState extends ConsumerState<_StickersTab> {
                                 Icon(LucideIcons.imagePlus, color: context.palette.mutedForeground),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Criar',
+                                  context.tr(Keys.chatMediaCreate),
                                   style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
                                 ),
                               ],
@@ -376,7 +379,7 @@ class _StickersTabState extends ConsumerState<_StickersTab> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Text(
-              'Mantém o dedo numa imagem, GIF ou sticker da conversa para o guardares aqui.',
+              context.tr(Keys.chatMediaStickersHint),
               textAlign: TextAlign.center,
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),

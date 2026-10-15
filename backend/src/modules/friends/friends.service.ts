@@ -22,11 +22,12 @@ export class FriendsService {
         display_name: string;
         username: string | null;
         photo_path: string | null;
+        last_seen_at: string | null;
         created_at: string;
         responded_at: string | null;
       }>(
         `select f.id, f.status, f.addressee_id = $1 as incoming, p.id as user_id, p.display_name, p.username,
-                p.photo_path, f.created_at, f.responded_at
+                p.photo_path, p.last_seen_at, f.created_at, f.responded_at
          from friendships f
          join profiles p on p.id = case when f.requester_id = $1 then f.addressee_id else f.requester_id end
          where $1 in (f.requester_id, f.addressee_id)
@@ -40,7 +41,14 @@ export class FriendsService {
         photo_url: this.storage.urlOf(r.photo_path),
       });
       return {
-        friends: rows.filter((r) => r.status === 'accepted').map((r) => ({ ...user(r), since: r.responded_at ?? r.created_at })),
+        friends: rows
+          .filter((r) => r.status === 'accepted')
+          .map((r) => ({
+            ...user(r),
+            since: r.responded_at ?? r.created_at,
+            online: this.hub.isOnline(r.user_id),
+            last_seen_at: r.last_seen_at,
+          })),
         incoming: rows
           .filter((r) => r.status === 'pending' && r.incoming)
           .map((r) => ({ ...user(r), id: r.id, created_at: r.created_at })),

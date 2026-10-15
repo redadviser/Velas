@@ -17,6 +17,8 @@ import '../chat/chat_widgets.dart';
 import 'group_widgets.dart';
 import 'invite_widgets.dart';
 import 'payment_widgets.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 
 /// Dados de pagamento do comprador (pedidos ao servidor só a membros).
 final _payeeProvider = FutureProvider.autoDispose.family<PaymentDetails, String>((ref, groupId) async {
@@ -228,7 +230,7 @@ class GroupDetailScreen extends ConsumerWidget {
         actions: [
           if (g.conversationId != null)
             IconButton(
-              tooltip: 'Conversa do grupo',
+              tooltip: context.tr(Keys.chatGroupCardTitle),
               onPressed: () => context.push('/chats/${g.conversationId}'),
               icon: Badge(
                 isLabelVisible: ref.watch(groupUnreadProvider(g.conversationId!)) > 0,
@@ -273,7 +275,10 @@ class GroupDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
           children: [
             _Header(group: g),
-            if (g.conversationId != null) ...[const SizedBox(height: 12), _GroupChatCard(conversationId: g.conversationId!)],
+            if (g.conversationId != null) ...[
+              const SizedBox(height: 12),
+              _GroupChatCard(conversationId: g.conversationId!),
+            ],
             const SizedBox(height: 16),
             if (me != null && !iAmBuyer) ...[
               _MyShare(
@@ -391,7 +396,6 @@ class _GroupChatCard extends ConsumerWidget {
     final c = ref.watch(conversationsProvider).value?.where((x) => x.id == conversationId).firstOrNull;
     final me = ref.watch(currentUserProvider)?.id;
     final last = c?.lastMessage;
-    final who = last == null ? '' : last.senderId == me ? 'Tu: ' : '${last.senderName.split(' ').first}: ';
     return AppCard(
       onTap: () => context.push('/chats/$conversationId'),
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
@@ -407,9 +411,16 @@ class _GroupChatCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Conversa do grupo', style: context.text.titleSmall),
+                Text(context.tr(Keys.chatGroupCardTitle), style: context.text.titleSmall),
                 Text(
-                  last == null ? 'Combinem aqui a prenda: ideias, links e fotografias.' : '$who${last.preview}',
+                  last == null
+                      ? context.tr(Keys.chatGroupCardEmpty)
+                      : last.senderId == me
+                      ? context.tr(Keys.chatPreviewYou, {'text': last.preview})
+                      : context.tr(Keys.chatPreviewSender, {
+                          'name': last.senderName.split(' ').first,
+                          'text': last.preview,
+                        }),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),

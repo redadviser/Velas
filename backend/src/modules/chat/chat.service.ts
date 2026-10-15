@@ -22,7 +22,7 @@ const conversationsQuery = `
     g.celebrant_name,
     case when c.group_id is null then
       json_build_object('user_id', op.id, 'display_name', op.display_name, 'username', op.username,
-                        'photo_path', op.photo_path)
+                        'photo_path', op.photo_path, 'last_seen_at', op.last_seen_at)
     end as other_user,
     c.last_message_at, c.created_at,
     (select count(*)::int from chat_messages m
@@ -33,7 +33,13 @@ const conversationsQuery = `
         'body', case when m.deleted_at is null then left(m.body, 200) else '' end,
         'created_at', m.created_at, 'deleted', m.deleted_at is not null)
      from chat_messages m left join profiles sp on sp.id = m.sender_id
-     where m.conversation_id = c.id order by m.created_at desc, m.id desc limit 1) as last_message
+     where m.conversation_id = c.id order by m.created_at desc, m.id desc limit 1) as last_message,
+    (select coalesce(json_agg(json_build_object('user_id', rp.id, 'display_name', rp.display_name)
+                              order by r2.last_read_at), '[]')
+     from conversation_reads r2 join profiles rp on rp.id = r2.user_id
+     where r2.conversation_id = c.id and r2.user_id <> $1
+       and c.last_message_at is not null and r2.last_read_at >= c.last_message_at
+       and r2.user_id in (select u.id from conversation_user_ids(c.id) as u(id))) as seen_by
   from mine c
   left join gift_groups g on g.id = c.group_id
   left join profiles op on c.group_id is null and op.id = case when c.user_a = $1 then c.user_b else c.user_a end
@@ -60,7 +66,9 @@ type MessageRow = Omit<MessageJson, 'media_url' | 'sender_photo_url'> & {
 };
 
 type ConversationRow = Omit<ConversationJson, 'other_user'> & {
-  other_user: (Omit<NonNullable<ConversationJson['other_user']>, 'photo_url'> & { photo_path: string | null }) | null;
+  other_user:
+    | (Omit<NonNullable<ConversationJson['other_user']>, 'photo_url' | 'online'> & { photo_path: string | null })
+    | null;
 };
 
 /**
@@ -91,7 +99,10 @@ export class ChatService {
   private conversation(row: ConversationRow): ConversationJson {
     if (!row.other_user) return { ...row, other_user: null };
     const { photo_path, ...other } = row.other_user;
-    return { ...row, other_user: { ...other, photo_url: this.storage.urlOf(photo_path) } };
+    return {
+      ...row,
+      other_user: { ...other, photo_url: this.storage.urlOf(photo_path), online: this.hub.isOnline(other.user_id) },
+    };
   }
 
   private async conversationsIn(c: Tx, userId: string, conversationId: string | null): Promise<ConversationJson[]> {
@@ -132,8 +143,8 @@ export class ChatService {
     return this.as(userId, async (c) => {
       const conv = (await this.conversationsIn(c, userId, conversationId))[0];
       if (!conv) throw notFound();
-      const { rows } = await c.query<Omit<Participant, 'photo_url'> & { photo_path: string | null }>(
-        `select p.id as user_id, p.display_name, p.username, p.photo_path, r.last_read_at
+      const { rows } = await c.query<Omit<Participant, 'photo_url' | 'online'> & { photo_path: string | null }>(
+        `select p.id as user_id, p.display_name, p.username, p.photo_path, p.last_seen_at, r.last_read_at
          from conversation_user_ids($1) as u(id)
          join profiles p on p.id = u.id
          left join conversation_reads r on r.conversation_id = $1 and r.user_id = p.id
@@ -142,7 +153,11 @@ export class ChatService {
       );
       return {
         ...conv,
-        participants: rows.map(({ photo_path, ...p }) => ({ ...p, photo_url: this.storage.urlOf(photo_path) })),
+        participants: rows.map(({ photo_path, ...p }) => ({
+          ...p,
+          photo_url: this.storage.urlOf(photo_path),
+          online: this.hub.isOnline(p.user_id),
+        })),
       };
     });
   }
@@ -168,7 +183,7 @@ export class ChatService {
 
   /** Marca a conversa como lida até agora. */
   async markRead(userId: string, conversationId: string): Promise<void> {
-    const { at, ids } = await this.as(userId, async (c) => {
+    const { at, ids, name } = await this.as(userId, async (c) => {
       await ChatService.requireAccess(c, conversationId);
       const { rows } = await c.query<{ last_read_at: Date }>(
         `insert into conversation_reads (conversation_id, user_id) values ($1, $2)
@@ -176,11 +191,45 @@ export class ChatService {
          returning last_read_at`,
         [conversationId, userId],
       );
-      return { at: rows[0]!.last_read_at, ids: await ChatService.participantIds(c, conversationId) };
+      const me = await c.query<{ display_name: string }>('select display_name from profiles where id = $1', [userId]);
+      return {
+        at: rows[0]!.last_read_at,
+        ids: await ChatService.participantIds(c, conversationId),
+        name: me.rows[0]?.display_name ?? '',
+      };
     });
     this.hub.send(
       ids,
-      { type: 'read', conversation_id: conversationId, user_id: userId, last_read_at: new Date(at).toISOString() },
+      { type: 'read', conversation_id: conversationId, user_id: userId, name, last_read_at: new Date(at).toISOString() },
+      userId,
+    );
+  }
+
+  /**
+   * Ficou online/offline (chamado pelo WebSocket): avisa os amigos e quem
+   * partilha conversas com a pessoa. Ao sair guarda a hora ("visto por último").
+   */
+  async presence(userId: string, online: boolean): Promise<void> {
+    const seen = online
+      ? await this.db.query<{ last_seen_at: Date | null }>('select last_seen_at from profiles where id = $1', [userId])
+      : await this.db.query<{ last_seen_at: Date | null }>(
+          'update profiles set last_seen_at = now() where id = $1 returning last_seen_at',
+          [userId],
+        );
+    const { rows } = await this.db.query<{ id: string }>(
+      `select case when requester_id = $1 then addressee_id else requester_id end as id
+       from friendships where status = 'accepted' and $1 in (requester_id, addressee_id)
+       union
+       select u.id from conversations c, conversation_user_ids(c.id) as u(id)
+       where $1 in (c.user_a, c.user_b)
+          or c.group_id in (select id from gift_groups where created_by = $1
+                            union select group_id from group_members where user_id = $1)`,
+      [userId],
+    );
+    const at = seen.rows[0]?.last_seen_at;
+    this.hub.send(
+      rows.map((r) => r.id),
+      { type: 'presence', user_id: userId, online, last_seen_at: at ? new Date(at).toISOString() : null },
       userId,
     );
   }

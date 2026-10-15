@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/birthday_utils.dart';
 import '../../data/models/chat_models.dart';
+import 'chat_format.dart';
 import 'chat_widgets.dart';
 
 /// Uma mensagem na conversa. As mensagens seguidas da mesma pessoa formam um
@@ -23,6 +26,7 @@ class MessageBubble extends StatelessWidget {
     this.onRetry,
     this.onTapReply,
     this.onTapSender,
+    this.onSwipeReply,
   });
 
   final ChatMessage message;
@@ -31,7 +35,7 @@ class MessageBubble extends StatelessWidget {
   final bool firstInRun;
   final bool lastInRun;
 
-  /// Conversa privada: a outra pessoa já leu (mostra ✓✓).
+  /// Já foi vista por todos os outros (mostra ✓✓).
   final bool seen;
   final VoidCallback? onLongPress;
   final VoidCallback? onOpenMedia;
@@ -41,6 +45,9 @@ class MessageBubble extends StatelessWidget {
 
   /// Tocar no avatar ou no nome de quem enviou (abre o perfil).
   final VoidCallback? onTapSender;
+
+  /// Deslizar a mensagem para a direita responde-lhe.
+  final VoidCallback? onSwipeReply;
 
   bool get _mine => message.senderId == myId;
 
@@ -69,7 +76,7 @@ class MessageBubble extends StatelessWidget {
       },
     );
 
-    return Padding(
+    final bubble = Padding(
       padding: EdgeInsets.only(top: firstInRun ? 10 : 2, left: 12, right: 12),
       child: Row(
         mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -101,7 +108,7 @@ class MessageBubble extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 12, bottom: 2),
                       child: Text(
-                        m.senderId == null ? 'Conta eliminada' : m.senderName,
+                        m.senderId == null ? context.tr(Keys.chatDeletedAccount) : m.senderName,
                         style: context.text.labelMedium?.copyWith(
                           color: m.senderId == null ? context.palette.mutedForeground : userColor(context, m.senderId!),
                           fontWeight: FontWeight.w700,
@@ -120,11 +127,98 @@ class MessageBubble extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     icon: const Icon(LucideIcons.circleAlert, size: 14),
-                    label: const Text('Não enviada · tocar para tentar de novo'),
+                    label: Text(context.tr(Keys.chatNotSent)),
                   ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+
+    if (onSwipeReply == null || m.deleted || m.state != SendState.sent) return bubble;
+    return _SwipeToReply(onReply: onSwipeReply!, child: bubble);
+  }
+}
+
+/// Puxar a mensagem para a direita (como no WhatsApp) para lhe responder.
+class _SwipeToReply extends StatefulWidget {
+  const _SwipeToReply({required this.onReply, required this.child});
+
+  final VoidCallback onReply;
+  final Widget child;
+
+  @override
+  State<_SwipeToReply> createState() => _SwipeToReplyState();
+}
+
+class _SwipeToReplyState extends State<_SwipeToReply> with SingleTickerProviderStateMixin {
+  static const _trigger = 56.0;
+  static const _max = 80.0;
+
+  late final AnimationController _back;
+  double _dx = 0;
+  double _from = 0;
+  bool _armed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _back = AnimationController(vsync: this, duration: const Duration(milliseconds: 180))
+      ..addListener(() => setState(() => _dx = _from * (1 - _back.value)));
+  }
+
+  @override
+  void dispose() {
+    _back.dispose();
+    super.dispose();
+  }
+
+  void _update(DragUpdateDetails d) {
+    _back.stop();
+    setState(() => _dx = (_dx + d.delta.dx).clamp(0.0, _max));
+    if (!_armed && _dx >= _trigger) {
+      _armed = true;
+      HapticFeedback.selectionClick();
+    } else if (_armed && _dx < _trigger) {
+      _armed = false;
+    }
+  }
+
+  void _end([DragEndDetails? _]) {
+    if (_armed) widget.onReply();
+    _armed = false;
+    _from = _dx;
+    _back.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (_dx / _trigger).clamp(0.0, 1.0);
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragUpdate: _update,
+      onHorizontalDragEnd: _end,
+      onHorizontalDragCancel: _end,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          if (_dx > 0)
+            Positioned(
+              left: 16,
+              child: Opacity(
+                opacity: progress,
+                child: Transform.scale(
+                  scale: 0.6 + progress * 0.4,
+                  child: CircleAvatar(
+                    radius: 15,
+                    backgroundColor: context.palette.muted,
+                    child: Icon(LucideIcons.reply, size: 16, color: context.colors.onSurface),
+                  ),
+                ),
+              ),
+            ),
+          Transform.translate(offset: Offset(_dx, 0), child: widget.child),
         ],
       ),
     );
@@ -160,7 +254,7 @@ class _Meta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(Fmt.time(message.createdAt), style: style),
+        Text(ChatFormat.time(message.createdAt), style: style),
         if (mine && !message.deleted) ...[
           const SizedBox(width: 3),
           Icon(
@@ -170,7 +264,12 @@ class _Meta extends StatelessWidget {
               SendState.sent => seen ? LucideIcons.checkCheck : LucideIcons.check,
             },
             size: 13,
-            color: message.state == SendState.failed ? context.colors.error : color,
+            // Vista por todos: ✓✓ sem transparência.
+            color: message.state == SendState.failed
+                ? context.colors.error
+                : seen
+                ? color.withValues(alpha: 1)
+                : color,
           ),
         ],
       ],
@@ -203,7 +302,7 @@ class _ReplyQuote extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              reply.senderName.isEmpty ? 'Mensagem' : reply.senderName,
+              reply.senderName.isEmpty ? context.tr(Keys.chatMessage) : reply.senderName,
               style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 12),
             ),
             Text(
@@ -259,7 +358,7 @@ class _TextBubble extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.end,
             spacing: 8,
             children: [
-              Text(deleted ? 'Mensagem apagada' : message.body, style: textStyle),
+              Text(deleted ? context.tr(Keys.chatDeleted) : message.body, style: textStyle),
               Padding(
                 padding: const EdgeInsets.only(bottom: 1),
                 child: _Meta(message: message, mine: mine, seen: seen, color: fg.withValues(alpha: 0.7)),

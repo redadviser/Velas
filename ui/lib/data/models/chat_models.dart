@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show StringCharacters;
 
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/utils/text.dart';
 
 DateTime? _dt(Object? v) => v == null ? null : DateTime.parse(v as String).toLocal();
@@ -9,12 +11,23 @@ int? _int(Object? v) => (v as num?)?.toInt();
 /// Outra conta, com o mínimo para a reconhecer.
 @immutable
 class ChatUser {
-  const ChatUser({required this.userId, required this.name, this.username = '', this.photoUrl});
+  const ChatUser({
+    required this.userId,
+    required this.name,
+    this.username = '',
+    this.photoUrl,
+    this.online = false,
+    this.lastSeenAt,
+  });
 
   final String userId;
   final String name;
   final String username;
   final String? photoUrl;
+
+  /// Presença no momento em que foi lida (atualizada em tempo real por [presenceProvider]).
+  final bool online;
+  final DateTime? lastSeenAt;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
 
@@ -26,6 +39,8 @@ class ChatUser {
     name: j['display_name'] as String? ?? '',
     username: j['username'] as String? ?? '',
     photoUrl: j['photo_url'] as String?,
+    online: j['online'] as bool? ?? false,
+    lastSeenAt: _dt(j['last_seen_at']),
   );
 }
 
@@ -107,7 +122,13 @@ class Reaction {
 /// Resumo da mensagem a que se responde.
 @immutable
 class MessageReply {
-  const MessageReply({required this.id, required this.senderName, required this.kind, this.body = '', this.deleted = false});
+  const MessageReply({
+    required this.id,
+    required this.senderName,
+    required this.kind,
+    this.body = '',
+    this.deleted = false,
+  });
 
   final String id;
   final String senderName;
@@ -191,12 +212,12 @@ class ChatMessage {
   String get preview => previewOf(kind, body, deleted: deleted);
 
   static String previewOf(MessageKind kind, String body, {bool deleted = false}) {
-    if (deleted) return 'Mensagem apagada';
+    if (deleted) return tr(Keys.chatDeleted);
     return switch (kind) {
       MessageKind.text => body,
-      MessageKind.image => body.isEmpty ? '📷 Fotografia' : '📷 $body',
-      MessageKind.gif => 'GIF',
-      MessageKind.sticker => 'Sticker',
+      MessageKind.image => body.isEmpty ? tr(Keys.chatPreviewPhoto) : tr(Keys.chatPreviewPhotoCaption, {'text': body}),
+      MessageKind.gif => tr(Keys.chatPreviewGif),
+      MessageKind.sticker => tr(Keys.chatPreviewSticker),
     };
   }
 
@@ -361,6 +382,7 @@ class Conversation {
     this.lastMessage,
     this.lastMessageAt,
     this.unreadCount = 0,
+    this.seenBy = const [],
     required this.createdAt,
     this.participants = const [],
   });
@@ -376,6 +398,9 @@ class Conversation {
   final LastMessage? lastMessage;
   final DateTime? lastMessageAt;
   final int unreadCount;
+
+  /// Quem (além de mim) já viu a última mensagem.
+  final List<ChatUser> seenBy;
   final DateTime createdAt;
 
   /// Só em GET /conversations/:id.
@@ -383,7 +408,12 @@ class Conversation {
 
   DateTime get sortKey => lastMessageAt ?? createdAt;
 
-  Conversation copyWith({LastMessage? lastMessage, int? unreadCount, List<Participant>? participants}) => Conversation(
+  Conversation copyWith({
+    LastMessage? lastMessage,
+    int? unreadCount,
+    List<Participant>? participants,
+    List<ChatUser>? seenBy,
+  }) => Conversation(
     id: id,
     isGroup: isGroup,
     groupId: groupId,
@@ -393,6 +423,7 @@ class Conversation {
     lastMessage: lastMessage ?? this.lastMessage,
     lastMessageAt: lastMessage?.createdAt ?? lastMessageAt,
     unreadCount: unreadCount ?? this.unreadCount,
+    seenBy: seenBy ?? this.seenBy,
     createdAt: createdAt,
     participants: participants ?? this.participants,
   );
@@ -407,6 +438,7 @@ class Conversation {
     lastMessage: j['last_message'] == null ? null : LastMessage.fromJson((j['last_message'] as Map).cast()),
     lastMessageAt: _dt(j['last_message_at']),
     unreadCount: _int(j['unread_count']) ?? 0,
+    seenBy: [for (final u in (j['seen_by'] as List?) ?? const []) ChatUser.fromJson((u as Map).cast())],
     createdAt: _dt(j['created_at']) ?? DateTime.now(),
     participants: [for (final p in (j['participants'] as List?) ?? const []) Participant.fromJson((p as Map).cast())],
   );
@@ -439,12 +471,8 @@ class Sticker {
   final int? width;
   final int? height;
 
-  factory Sticker.fromJson(Map<String, dynamic> j) => Sticker(
-    id: j['id'] as String,
-    url: j['url'] as String,
-    width: _int(j['width']),
-    height: _int(j['height']),
-  );
+  factory Sticker.fromJson(Map<String, dynamic> j) =>
+      Sticker(id: j['id'] as String, url: j['url'] as String, width: _int(j['width']), height: _int(j['height']));
 }
 
 enum GifKind { gifs, stickers }

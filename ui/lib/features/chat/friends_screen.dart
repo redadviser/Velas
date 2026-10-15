@@ -3,22 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/chat_providers.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import '../groups/invite_widgets.dart';
+import 'chat_format.dart';
 import 'chat_widgets.dart';
 import 'conversations_list.dart';
 
-String friendRequestMessage(FriendRequestResult r, String name) => switch (r) {
-  FriendRequestResult.sent => 'Pedido enviado a $name.',
-  FriendRequestResult.accepted => 'Tu e $name já são amigos. 🎉',
-  FriendRequestResult.alreadyFriends => 'Tu e $name já são amigos.',
-  FriendRequestResult.alreadySent => 'Já enviaste um pedido a $name.',
-  FriendRequestResult.self => 'Não te podes adicionar a ti próprio.',
-  FriendRequestResult.notFound => 'Esta conta já não existe.',
-};
+String friendRequestMessage(FriendRequestResult r, String name) => tr(
+  switch (r) {
+    FriendRequestResult.sent => Keys.friendsResultSent,
+    FriendRequestResult.accepted => Keys.friendsResultAccepted,
+    FriendRequestResult.alreadyFriends => Keys.friendsResultAlreadyFriends,
+    FriendRequestResult.alreadySent => Keys.friendsResultAlreadySent,
+    FriendRequestResult.self => Keys.friendsResultSelf,
+    FriendRequestResult.notFound => Keys.friendsResultNotFound,
+  },
+  {'name': name},
+);
 
 class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
@@ -32,12 +38,12 @@ class FriendsScreen extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(LucideIcons.messageCircle),
-              title: Text('Conversar com ${f.firstName}'),
+              title: Text(ctx.tr(Keys.friendsChatWith, {'name': f.firstName})),
               onTap: () => Navigator.pop(ctx, 'chat'),
             ),
             ListTile(
               leading: Icon(LucideIcons.userMinus, color: ctx.colors.error),
-              title: Text('Remover dos amigos', style: TextStyle(color: ctx.colors.error)),
+              title: Text(ctx.tr(Keys.friendsRemoveAction), style: TextStyle(color: ctx.colors.error)),
               onTap: () => Navigator.pop(ctx, 'remove'),
             ),
             const SizedBox(height: 8),
@@ -51,9 +57,9 @@ class FriendsScreen extends ConsumerWidget {
     } else if (action == 'remove') {
       final ok = await confirmDialog(
         context,
-        title: 'Remover ${f.firstName}?',
-        message: 'Deixam de ser amigos. A conversa privada fica, mas sem novas mensagens.',
-        confirm: 'Remover',
+        title: context.tr(Keys.friendsRemoveTitle, {'name': f.firstName}),
+        message: context.tr(Keys.friendsRemoveMessage),
+        confirm: context.tr(Keys.commonRemove),
       );
       if (ok && context.mounted) await runGuarded(context, () => ref.read(friendsProvider.notifier).remove(f.userId));
     }
@@ -67,26 +73,23 @@ class FriendsScreen extends ConsumerWidget {
     final muted = context.palette.mutedForeground;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Amigos')),
+      appBar: AppBar(title: Text(context.tr(Keys.friendsTitle))),
       body: RefreshIndicator(
         onRefresh: ctrl.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
           children: [
-            Text('Adicionar amigo', style: AppTheme.display(context, size: 22)),
+            Text(context.tr(Keys.friendsAddTitle), style: AppTheme.display(context, size: 22)),
             const SizedBox(height: 4),
-            Text(
-              'Procura pelo email, telemóvel ou @username. Amigos conversam em privado e são convidados para grupos com um toque.',
-              style: context.text.bodySmall?.copyWith(color: muted),
-            ),
+            Text(context.tr(Keys.friendsAddHint), style: context.text.bodySmall?.copyWith(color: muted)),
             const SizedBox(height: 12),
             ContactLookup(
-              actionLabel: 'Adicionar',
+              actionLabel: context.tr(Keys.friendsAddAction),
               onAction: (user) async => friendRequestMessage(await ctrl.request(user.userId), user.name),
             ),
             if (list.incoming.isNotEmpty) ...[
               SectionTitle(
-                'Pedidos recebidos · ${list.incoming.length}',
+                context.tr(Keys.friendsIncoming, {'count': list.incoming.length}),
                 padding: const EdgeInsets.fromLTRB(4, 28, 0, 8),
               ),
               for (final r in list.incoming)
@@ -100,7 +103,7 @@ class FriendsScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(child: _Name(user: r.user)),
                         IconButton(
-                          tooltip: 'Recusar',
+                          tooltip: context.tr(Keys.commonDecline),
                           onPressed: () => runGuarded(context, () => ctrl.respond(r, accept: false)),
                           icon: Icon(LucideIcons.x, color: muted),
                         ),
@@ -108,10 +111,10 @@ class FriendsScreen extends ConsumerWidget {
                           onPressed: () => runGuarded(
                             context,
                             () => ctrl.respond(r, accept: true),
-                            success: 'Tu e ${r.user.firstName} já são amigos. 🎉',
+                            success: context.tr(Keys.friendsResultAccepted, {'name': r.user.firstName}),
                           ),
                           style: FilledButton.styleFrom(minimumSize: const Size(88, 40)),
-                          child: const Text('Aceitar'),
+                          child: Text(context.tr(Keys.commonAccept)),
                         ),
                       ],
                     ),
@@ -119,7 +122,9 @@ class FriendsScreen extends ConsumerWidget {
                 ),
             ],
             SectionTitle(
-              list.friends.isEmpty ? 'Amigos' : 'Amigos · ${list.friends.length}',
+              list.friends.isEmpty
+                  ? context.tr(Keys.friendsList)
+                  : context.tr(Keys.friendsListCount, {'count': list.friends.length}),
               padding: const EdgeInsets.fromLTRB(4, 28, 0, 8),
             ),
             if (async.isLoading && !async.hasValue)
@@ -128,7 +133,7 @@ class FriendsScreen extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
               )
             else if (list.friends.isEmpty)
-              Text('Ainda não tens amigos na Birthdayly.', style: TextStyle(color: muted))
+              Text(context.tr(Keys.friendsEmpty), style: TextStyle(color: muted))
             else
               AppCard(
                 padding: EdgeInsets.zero,
@@ -137,11 +142,11 @@ class FriendsScreen extends ConsumerWidget {
                     for (final (i, f) in list.friends.indexed) ...[
                       if (i > 0) const Divider(indent: 16, endIndent: 16),
                       ListTile(
-                        leading: UserAvatar(user: f),
+                        leading: PresenceAvatar(user: f),
                         title: Text(f.name),
-                        subtitle: f.username.isEmpty ? null : Text('@${f.username}'),
+                        subtitle: _FriendStatus(user: f),
                         trailing: IconButton(
-                          tooltip: 'Conversar',
+                          tooltip: context.tr(Keys.friendsChat),
                           onPressed: () => openDirectChat(context, ref, f.userId),
                           icon: Icon(LucideIcons.messageCircle, color: context.colors.primary),
                         ),
@@ -152,17 +157,20 @@ class FriendsScreen extends ConsumerWidget {
                 ),
               ),
             if (list.outgoing.isNotEmpty) ...[
-              SectionTitle('Pedidos enviados', padding: const EdgeInsets.fromLTRB(4, 28, 0, 8)),
+              SectionTitle(context.tr(Keys.friendsOutgoing), padding: const EdgeInsets.fromLTRB(4, 28, 0, 8)),
               for (final r in list.outgoing)
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                   leading: UserAvatar(user: r.user),
                   title: Text(r.user.name),
-                  subtitle: const Text('À espera de resposta'),
+                  subtitle: Text(context.tr(Keys.friendsWaiting)),
                   trailing: TextButton(
-                    onPressed: () =>
-                        runGuarded(context, () => ctrl.remove(r.user.userId), success: 'Pedido cancelado.'),
-                    child: const Text('Cancelar'),
+                    onPressed: () => runGuarded(
+                      context,
+                      () => ctrl.remove(r.user.userId),
+                      success: context.tr(Keys.friendsRequestCancelled),
+                    ),
+                    child: Text(context.tr(Keys.commonCancel)),
                   ),
                 ),
             ],
@@ -187,4 +195,26 @@ class _Name extends StatelessWidget {
         Text('@${user.username}', style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground)),
     ],
   );
+}
+
+/// "Online", "Visto por último …" ou o @username.
+class _FriendStatus extends ConsumerWidget {
+  const _FriendStatus({required this.user});
+
+  final ChatUser user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = ref.watch(userPresenceProvider(user.userId));
+    context.translations;
+    final status = ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
+    final text = status ?? (user.username.isEmpty ? null : '@${user.username}');
+    if (text == null) return const SizedBox.shrink();
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(color: p.online ? context.palette.success : context.palette.mutedForeground),
+    );
+  }
 }

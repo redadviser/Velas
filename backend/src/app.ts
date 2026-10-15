@@ -46,7 +46,10 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await filesRoutes(app, deps.storage);
   await invitePageRoutes(app, deps.config);
   // Tempo real: a autenticação é a primeira mensagem da ligação.
-  await realtimeRoutes(app, services.hub, deps.tokens, { typing: (uid, cid) => services.chat.typing(uid, cid) });
+  await realtimeRoutes(app, services.hub, deps.tokens, {
+    typing: (uid, cid) => services.chat.typing(uid, cid),
+    presence: (uid, online) => services.chat.presence(uid, online),
+  });
 
   // Rotas que exigem sessão.
   await app.register(async (scope) => {

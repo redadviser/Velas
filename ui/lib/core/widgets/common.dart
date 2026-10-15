@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/errors.dart';
+import '../constants.dart';
+import '../i18n/translations.dart';
 
 /// Superfície base: cartão branco com contorno subtil, sem sombras pesadas.
 class AppCard extends StatelessWidget {
@@ -187,10 +189,13 @@ class Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (leading != null)
-            ...[leading!, const SizedBox(width: 5)]
-          else if (icon != null)
-            ...[Icon(icon, size: dense ? 12 : 14, color: fg), const SizedBox(width: 4)],
+          if (leading != null) ...[
+            leading!,
+            const SizedBox(width: 5),
+          ] else if (icon != null) ...[
+            Icon(icon, size: dense ? 12 : 14, color: fg),
+            const SizedBox(width: 4),
+          ],
           Text(
             label,
             style: context.text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: dense ? 11 : 12),
@@ -245,7 +250,7 @@ Future<bool> confirmDialog(
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
           style: TextButton.styleFrom(foregroundColor: ctx.colors.onSurface),
-          child: const Text('Cancelar'),
+          child: Text(ctx.tr(Keys.commonCancel)),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, true),

@@ -13,6 +13,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/data_repository.dart';
 import '../data/repositories/group_repository.dart';
 import '../services/notification_service.dart';
+import 'i18n/translations.dart';
 
 /// Substituídos em `main()` depois da inicialização assíncrona.
 final sharedPrefsProvider = Provider<SharedPreferences>((_) => throw UnimplementedError());
@@ -137,3 +138,22 @@ class ThemeModeController extends Notifier<ThemeMode> {
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
+
+/// Língua escolhida no perfil (`null` = a do telemóvel).
+class LocaleController extends Notifier<Locale?> {
+  static const _key = 'velas.locale';
+
+  @override
+  Locale? build() {
+    final code = ref.watch(sharedPrefsProvider).getString(_key);
+    return Translations.supportedLocales.where((l) => l.languageCode == code).firstOrNull;
+  }
+
+  void set(Locale? locale) {
+    state = locale;
+    final prefs = ref.read(sharedPrefsProvider);
+    locale == null ? prefs.remove(_key) : prefs.setString(_key, locale.languageCode);
+  }
+}
+
+final localeProvider = NotifierProvider<LocaleController, Locale?>(LocaleController.new);

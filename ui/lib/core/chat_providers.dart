@@ -42,6 +42,97 @@ final chatEventsProvider = Provider<Stream<ChatEvent>>(
 Stream<ChatEvent> _events(Ref ref) => ref.watch(chatEventsProvider);
 
 // ---------------------------------------------------------------------------
+// Presença e "a escrever…"
+// ---------------------------------------------------------------------------
+
+typedef Presence = ({bool online, DateTime? lastSeenAt});
+
+/// Quem está online (ou quando foi visto por último), por utilizador. Começa
+/// com o que vem nas listas da API e atualiza-se com os eventos em tempo real.
+class PresenceController extends Notifier<Map<String, Presence>> {
+  @override
+  Map<String, Presence> build() {
+    final sub = _events(ref).listen((e) {
+      if (e is PresenceChanged) {
+        state = {...state, e.userId: (online: e.online, lastSeenAt: e.lastSeenAt ?? state[e.userId]?.lastSeenAt)};
+      }
+    });
+    ref.onDispose(sub.cancel);
+    return const {};
+  }
+
+  void seed(Iterable<ChatUser> users) {
+    final next = {...state};
+    var changed = false;
+    for (final u in users) {
+      final p = (online: u.online, lastSeenAt: u.lastSeenAt);
+      if (next[u.userId] != p) {
+        next[u.userId] = p;
+        changed = true;
+      }
+    }
+    if (changed) state = next;
+  }
+}
+
+final presenceProvider = NotifierProvider<PresenceController, Map<String, Presence>>(PresenceController.new);
+
+/// Presença de uma pessoa (offline e sem data se ainda não se souber).
+final userPresenceProvider = Provider.family<Presence, String>(
+  (ref, userId) => ref.watch(presenceProvider.select((m) => m[userId])) ?? (online: false, lastSeenAt: null),
+);
+
+/// Quem está a escrever em cada conversa (conversa → utilizador → nome).
+/// Cada aviso dura 5 s; uma mensagem dessa pessoa termina-o logo.
+class TypingController extends Notifier<Map<String, Map<String, String>>> {
+  static const _duration = Duration(seconds: 5);
+  final _timers = <String, Timer>{};
+
+  @override
+  Map<String, Map<String, String>> build() {
+    final sub = _events(ref).listen((e) {
+      switch (e) {
+        case Typing(:final conversationId, :final userId, :final name):
+          final key = '$conversationId/$userId';
+          _timers[key]?.cancel();
+          _timers[key] = Timer(_duration, () => _stop(conversationId, userId));
+          state = {
+            ...state,
+            conversationId: {...?state[conversationId], userId: name},
+          };
+        case MessageReceived(:final message) when message.senderId != null:
+          _stop(message.conversationId, message.senderId!);
+        default:
+          break;
+      }
+    });
+    ref.onDispose(() {
+      sub.cancel();
+      for (final t in _timers.values) {
+        t.cancel();
+      }
+    });
+    return const {};
+  }
+
+  void _stop(String conversationId, String userId) {
+    _timers.remove('$conversationId/$userId')?.cancel();
+    final current = state[conversationId];
+    if (current == null || !current.containsKey(userId)) return;
+    final rest = {...current}..remove(userId);
+    state = {...state}..[conversationId] = rest;
+    if (rest.isEmpty) state = {...state}..remove(conversationId);
+  }
+}
+
+final typingProvider = NotifierProvider<TypingController, Map<String, Map<String, String>>>(TypingController.new);
+
+/// Quem está a escrever numa conversa (id → nome).
+final conversationTypingProvider = Provider.family<Map<String, String>, String>(
+  (ref, conversationId) => ref.watch(typingProvider.select((m) => m[conversationId])) ?? const {},
+);
+
+// ---------------------------------------------------------------------------
 // Conversas
 // ---------------------------------------------------------------------------
 
@@ -59,7 +150,13 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
       sub.cancel();
       _refreshDebounce?.cancel();
     });
-    return repo.fetchConversations();
+    return _fetch(repo);
+  }
+
+  Future<List<Conversation>> _fetch(ChatRepository repo) async {
+    final list = await repo.fetchConversations();
+    ref.read(presenceProvider.notifier).seed(list.map((c) => c.otherUser).whereType<ChatUser>());
+    return list;
   }
 
   String? get _me => ref.read(currentUserProvider)?.id;
@@ -72,14 +169,31 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
         if (list == null || i == -1) return _scheduleRefresh();
         final c = list[i];
         final unread = message.senderId != _me && _open != c.id ? c.unreadCount + 1 : c.unreadCount;
-        final updated = c.copyWith(lastMessage: LastMessage.of(message), unreadCount: unread);
+        // Mensagem nova: ainda ninguém a viu.
+        final updated = c.copyWith(lastMessage: LastMessage.of(message), unreadCount: unread, seenBy: const []);
         state = AsyncData([updated, ...list.where((x) => x.id != c.id)]);
       case MessageUpdated(:final message):
         final list = state.value;
         if (list == null) return;
         state = AsyncData([
+          for (final c in list) c.lastMessage?.id == message.id ? c.copyWith(lastMessage: LastMessage.of(message)) : c,
+        ]);
+      case ReadReceipt(:final conversationId, :final userId, :final name, :final lastReadAt):
+        final list = state.value;
+        if (list == null) return;
+        state = AsyncData([
           for (final c in list)
-            c.lastMessage?.id == message.id ? c.copyWith(lastMessage: LastMessage.of(message)) : c,
+            c.id == conversationId &&
+                    c.lastMessage != null &&
+                    !lastReadAt.isBefore(c.lastMessage!.createdAt) &&
+                    !c.seenBy.any((u) => u.userId == userId)
+                ? c.copyWith(
+                    seenBy: [
+                      ...c.seenBy,
+                      ChatUser(userId: userId, name: name),
+                    ],
+                  )
+                : c,
         ]);
       case ChatConnected() || ConversationsChanged():
         _scheduleRefresh();
@@ -96,7 +210,7 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
   Future<void> refresh() async {
     final repo = ref.read(chatRepositoryProvider);
     if (repo == null) return;
-    state = AsyncData(await repo.fetchConversations());
+    state = AsyncData(await _fetch(repo));
   }
 
   void setOpen(String? conversationId) => _open = conversationId;
@@ -149,12 +263,18 @@ class FriendsController extends AsyncNotifier<FriendsList> {
       if (e is FriendsChanged || e is ChatConnected) refresh().catchError((_) {});
     });
     ref.onDispose(sub.cancel);
-    return repo.fetchFriends();
+    return _fetch();
   }
 
   ChatRepository get _repo => ref.read(chatRepositoryProvider)!;
 
-  Future<void> refresh() async => state = AsyncData(await _repo.fetchFriends());
+  Future<FriendsList> _fetch() async {
+    final list = await _repo.fetchFriends();
+    ref.read(presenceProvider.notifier).seed(list.friends);
+    return list;
+  }
+
+  Future<void> refresh() async => state = AsyncData(await _fetch());
 
   Future<FriendRequestResult> request(String userId) async {
     final r = await _repo.requestFriend(userId);
@@ -227,7 +347,6 @@ class ChatState {
     this.loadingMore = false,
     this.hasMore = false,
     this.error,
-    this.typing = const {},
   });
 
   /// Com os participantes.
@@ -240,9 +359,6 @@ class ChatState {
   final bool hasMore;
   final Object? error;
 
-  /// Quem está a escrever (id → nome).
-  final Map<String, String> typing;
-
   ChatState copyWith({
     Conversation? conversation,
     List<ChatMessage>? messages,
@@ -250,7 +366,6 @@ class ChatState {
     bool? loadingMore,
     bool? hasMore,
     Object? Function()? error,
-    Map<String, String>? typing,
   }) => ChatState(
     conversation: conversation ?? this.conversation,
     messages: messages ?? this.messages,
@@ -258,7 +373,6 @@ class ChatState {
     loadingMore: loadingMore ?? this.loadingMore,
     hasMore: hasMore ?? this.hasMore,
     error: error != null ? error() : this.error,
-    typing: typing ?? this.typing,
   );
 }
 
@@ -284,11 +398,9 @@ class ChatController extends Notifier<ChatState> {
   final String conversationId;
 
   static const _uuid = Uuid();
-  static const _typingFor = Duration(seconds: 5);
 
   /// O que falta enviar das mensagens que falharam (para "tentar novamente").
   final _pending = <String, ({OutgoingMessage message, Uint8List? bytes})>{};
-  final _typingTimers = <String, Timer>{};
   DateTime _lastTypingSent = DateTime(2000);
   Timer? _readDebounce;
 
@@ -301,9 +413,6 @@ class ChatController extends Notifier<ChatState> {
     ref.onDispose(() {
       sub.cancel();
       _readDebounce?.cancel();
-      for (final t in _typingTimers.values) {
-        t.cancel();
-      }
     });
     Future.microtask(load);
     return const ChatState();
@@ -321,6 +430,7 @@ class ChatController extends Notifier<ChatState> {
     try {
       final (conv, page) = await (_repo.fetchConversation(conversationId), _repo.fetchMessages(conversationId)).wait;
       final local = state.messages.where((m) => m.state != SendState.sent);
+      ref.read(presenceProvider.notifier).seed(conv.participants.map((p) => p.user));
       state = state.copyWith(
         conversation: conv,
         messages: mergeMessages(page.messages, local),
@@ -368,7 +478,6 @@ class ChatController extends Notifier<ChatState> {
   void _onEvent(ChatEvent e) {
     switch (e) {
       case MessageReceived(:final message) when message.conversationId == conversationId:
-        _stopTyping(message.senderId);
         state = state.copyWith(messages: mergeMessages(state.messages, [message]));
         if (message.senderId != _me.id) _scheduleRead();
       case MessageUpdated(:final message) when message.conversationId == conversationId:
@@ -386,21 +495,11 @@ class ChatController extends Notifier<ChatState> {
             ],
           ),
         );
-      case Typing(:final userId, :final name) when e.conversationId == conversationId:
-        _typingTimers[userId]?.cancel();
-        _typingTimers[userId] = Timer(_typingFor, () => _stopTyping(userId));
-        state = state.copyWith(typing: {...state.typing, userId: name});
       case ChatConnected():
         _catchUp();
       default:
         break;
     }
-  }
-
-  void _stopTyping(String? userId) {
-    if (userId == null || !state.typing.containsKey(userId)) return;
-    _typingTimers.remove(userId)?.cancel();
-    state = state.copyWith(typing: {...state.typing}..remove(userId));
   }
 
   void _scheduleRead() {
@@ -437,7 +536,14 @@ class ChatController extends Notifier<ChatState> {
   Future<void> sendImage(Uint8List bytes, {int? width, int? height, String caption = '', ChatMessage? replyTo}) {
     final id = _uuid.v4();
     return _send(
-      OutgoingMessage(id: id, kind: MessageKind.image, body: caption.trim(), width: width, height: height, replyTo: replyTo?.id),
+      OutgoingMessage(
+        id: id,
+        kind: MessageKind.image,
+        body: caption.trim(),
+        width: width,
+        height: height,
+        replyTo: replyTo?.id,
+      ),
       bytes: bytes,
       replyTo: replyTo,
     );
@@ -514,9 +620,7 @@ class ChatController extends Notifier<ChatState> {
     } catch (e) {
       _pending[out.id] = (message: _pending[out.id]?.message ?? out, bytes: bytes);
       state = state.copyWith(
-        messages: [
-          for (final m in state.messages) m.id == out.id ? m.copyWith(state: SendState.failed) : m,
-        ],
+        messages: [for (final m in state.messages) m.id == out.id ? m.copyWith(state: SendState.failed) : m],
       );
       rethrow;
     }
@@ -549,7 +653,10 @@ class ChatController extends Notifier<ChatState> {
     final next = m.reactionOf(me) == emoji ? null : emoji;
     final previous = m;
     final optimistic = m.copyWith(
-      reactions: [...m.reactions.where((r) => r.userId != me), if (next != null) Reaction(emoji: next, userId: me)],
+      reactions: [
+        ...m.reactions.where((r) => r.userId != me),
+        if (next != null) Reaction(emoji: next, userId: me),
+      ],
     );
     state = state.copyWith(messages: mergeMessages(state.messages, [optimistic]));
     try {

@@ -18,6 +18,8 @@ import '../chat/chat_widgets.dart';
 import 'identity_sheets.dart';
 import '../auth/reset_password_screen.dart';
 import '../../core/utils/text.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -245,6 +247,15 @@ class ProfileScreen extends ConsumerWidget {
                 title: 'Categorias',
                 value: '${data.categories.length}',
                 onTap: () => context.push('/profile/categories'),
+              ),
+              _Tile(
+                icon: LucideIcons.languages,
+                title: context.tr(Keys.settingsLanguage),
+                value: switch (ref.watch(localeProvider)) {
+                  null => context.tr(Keys.settingsLanguageSystem),
+                  final l => context.tr('language.${l.languageCode}'),
+                },
+                onTap: () => _pickLanguage(context, ref),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -537,4 +548,37 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
       ),
     );
   }
+}
+
+/// Idioma da app: o do telemóvel ou um escolhido.
+Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
+  final current = ref.read(localeProvider);
+  final picked = await showModalBottomSheet<(Locale?,)>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: RadioGroup<String>(
+        groupValue: current?.languageCode ?? '',
+        onChanged: (code) => Navigator.pop(ctx, (
+          code == null || code.isEmpty
+              ? null
+              : Translations.supportedLocales.firstWhere((l) => l.languageCode == code),
+        )),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(ctx.tr(Keys.settingsLanguage), style: AppTheme.display(ctx, size: 22)),
+            ),
+            RadioListTile<String>(value: '', title: Text(ctx.tr(Keys.settingsLanguageSystem))),
+            for (final code in Translations.languageCodes)
+              RadioListTile<String>(value: code, title: Text(ctx.tr('language.$code'))),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (picked != null) ref.read(localeProvider.notifier).set(picked.$1);
 }

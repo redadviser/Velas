@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/chat_providers.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/errors.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
+import 'chat_format.dart';
 import 'chat_widgets.dart';
 import 'conversations_list.dart';
 import 'friends_screen.dart';
@@ -50,10 +53,13 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
     final outgoing = friends.outgoing.where((r) => r.user.userId == u.userId).firstOrNull;
     final isFriend = friends.isFriend(u.userId);
     final muted = context.palette.mutedForeground;
+    final p = ref.watch(userPresenceProvider(u.userId));
+    final online = p.online;
+    final presence = u.userId == me ? null : ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
 
     Widget action;
     if (u.userId == me) {
-      action = const Pill(label: 'És tu');
+      action = Pill(label: context.tr(Keys.profileSheetYou));
     } else if (isFriend) {
       action = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,7 +67,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
           Center(
             child: Pill(
               icon: LucideIcons.userCheck,
-              label: 'Amigos',
+              label: context.tr(Keys.profileSheetFriends),
               background: context.palette.success.withValues(alpha: 0.14),
               foreground: context.palette.success,
             ),
@@ -76,7 +82,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                       openDirectChat(context, ref, u.userId);
                     },
               icon: const Icon(LucideIcons.messageCircle, size: 18),
-              label: const Text('Enviar mensagem'),
+              label: Text(context.tr(Keys.profileSheetSendMessage)),
             ),
           ],
         ],
@@ -86,7 +92,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '${u.firstName} quer ser teu amigo.',
+            context.tr(Keys.profileSheetWantsFriend, {'name': u.firstName}),
             textAlign: TextAlign.center,
             style: TextStyle(color: muted),
           ),
@@ -96,7 +102,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _busy ? null : () => _run(() => ctrl.respond(incoming, accept: false)),
-                  child: const Text('Recusar'),
+                  child: Text(context.tr(Keys.commonDecline)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -106,9 +112,9 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                       ? null
                       : () => _run(
                           () => ctrl.respond(incoming, accept: true),
-                          success: 'Tu e ${u.firstName} já são amigos. 🎉',
+                          success: context.tr(Keys.friendsResultAccepted, {'name': u.firstName}),
                         ),
-                  child: const Text('Aceitar'),
+                  child: Text(context.tr(Keys.commonAccept)),
                 ),
               ),
             ],
@@ -120,14 +126,16 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Pedido de amizade enviado.',
+            context.tr(Keys.profileSheetRequestSent),
             textAlign: TextAlign.center,
             style: TextStyle(color: muted),
           ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: _busy ? null : () => _run(() => ctrl.remove(u.userId), success: 'Pedido cancelado.'),
-            child: const Text('Cancelar pedido'),
+            onPressed: _busy
+                ? null
+                : () => _run(() => ctrl.remove(u.userId), success: context.tr(Keys.friendsRequestCancelled)),
+            child: Text(context.tr(Keys.profileSheetCancelRequest)),
           ),
         ],
       );
@@ -150,7 +158,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
         icon: _busy
             ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(LucideIcons.userPlus, size: 18),
-        label: const Text('Adicionar amigo'),
+        label: Text(context.tr(Keys.profileSheetAddFriend)),
       );
     }
 
@@ -161,7 +169,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: UserAvatar(user: u, size: 88)),
+            Center(child: PresenceAvatar(user: u, size: 88)),
             const SizedBox(height: 14),
             Text(u.name, textAlign: TextAlign.center, style: AppTheme.display(context, size: 24)),
             if (u.username.isNotEmpty)
@@ -169,6 +177,15 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                 '@${u.username}',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: muted),
+              ),
+            if (presence != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  presence,
+                  textAlign: TextAlign.center,
+                  style: context.text.bodySmall?.copyWith(color: online ? context.palette.success : muted),
+                ),
               ),
             const SizedBox(height: 20),
             action,

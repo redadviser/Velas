@@ -14,6 +14,8 @@ export interface FriendUser {
 
 export interface Friend extends FriendUser {
   since: string;
+  online: boolean;
+  last_seen_at: string | null;
 }
 
 export interface FriendRequest extends FriendUser {

@@ -15,6 +15,8 @@ import '../../data/models/chat_models.dart';
 import '../../data/models/group_models.dart';
 import '../chat/chat_widgets.dart';
 import 'invite_links.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 
 /// Procura uma conta por email, telemóvel ou username e executa [onAction]
 /// com a conta encontrada. [onAction] devolve a mensagem a mostrar.
@@ -396,7 +398,7 @@ class _InviteSheet extends ConsumerWidget {
               const SizedBox(height: 16),
               _FriendsToInvite(group: group),
               ContactLookup(
-                actionLabel: 'Convidar',
+                actionLabel: context.tr(Keys.inviteInvite),
                 onShareLink: () => _shareLink(group),
                 onAction: (user) async {
                   String message = '';
@@ -449,16 +451,15 @@ class _FriendsToInviteState extends ConsumerState<_FriendsToInvite> {
   @override
   Widget build(BuildContext context) {
     final g = widget.group;
-    final taken = {
-      ...g.members.map((m) => m.userId).whereType<String>(),
-      ...g.invitations.map((i) => i.invitedUserId),
-    };
-    final friends = (ref.watch(friendsProvider).value?.friends ?? const []).where((f) => !taken.contains(f.userId)).toList();
+    final taken = {...g.members.map((m) => m.userId).whereType<String>(), ...g.invitations.map((i) => i.invitedUserId)};
+    final friends = (ref.watch(friendsProvider).value?.friends ?? const [])
+        .where((f) => !taken.contains(f.userId))
+        .toList();
     if (friends.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Amigos', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text(context.tr(Keys.inviteFriends), style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
         for (final f in friends)
           ListTile(
@@ -467,17 +468,21 @@ class _FriendsToInviteState extends ConsumerState<_FriendsToInvite> {
             title: Text(f.name),
             subtitle: f.username.isEmpty ? null : Text('@${f.username}'),
             trailing: _invited.contains(f.userId)
-                ? Pill(icon: LucideIcons.check, label: 'Convidado', foreground: context.palette.success)
+                ? Pill(
+                    icon: LucideIcons.check,
+                    label: context.tr(Keys.inviteInvited),
+                    foreground: context.palette.success,
+                  )
                 : FilledButton.tonal(
                     onPressed: _busy == null ? () => _invite(f.userId, f.name) : null,
                     style: FilledButton.styleFrom(minimumSize: const Size(88, 38)),
                     child: _busy == f.userId
                         ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Convidar'),
+                        : Text(context.tr(Keys.inviteInvite)),
                   ),
           ),
         const SizedBox(height: 12),
-        Text('Ou procura outra pessoa', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text(context.tr(Keys.inviteOrSearch), style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
       ],
     );

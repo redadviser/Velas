@@ -9,7 +9,8 @@ import type { AccessTokens } from '../modules/auth/tokens.js';
 export type RealtimeEvent =
   | { type: 'message'; message: unknown }
   | { type: 'message_updated'; message: unknown }
-  | { type: 'read'; conversation_id: string; user_id: string; last_read_at: string }
+  | { type: 'read'; conversation_id: string; user_id: string; name: string; last_read_at: string }
+  | { type: 'presence'; user_id: string; online: boolean; last_seen_at: string | null }
   | { type: 'typing'; conversation_id: string; user_id: string; name: string }
   | { type: 'conversations' }
   | { type: 'friends' };
@@ -22,16 +23,26 @@ export type RealtimeEvent =
 export class RealtimeHub {
   private readonly sockets = new Map<string, Set<WebSocket>>();
 
-  add(userId: string, socket: WebSocket) {
+  /** Devolve true se é a primeira ligação deste utilizador (ficou online). */
+  add(userId: string, socket: WebSocket): boolean {
     let set = this.sockets.get(userId);
+    const first = !set;
     if (!set) this.sockets.set(userId, (set = new Set()));
     set.add(socket);
+    return first;
   }
 
-  remove(userId: string, socket: WebSocket) {
+  /** Devolve true se era a última ligação deste utilizador (ficou offline). */
+  remove(userId: string, socket: WebSocket): boolean {
     const set = this.sockets.get(userId);
-    set?.delete(socket);
-    if (set?.size === 0) this.sockets.delete(userId);
+    if (!set?.delete(socket)) return false;
+    if (set.size > 0) return false;
+    this.sockets.delete(userId);
+    return true;
+  }
+
+  isOnline(userId: string): boolean {
+    return this.sockets.has(userId);
   }
 
   send(userIds: Iterable<string>, event: RealtimeEvent, except?: string) {
@@ -60,7 +71,15 @@ const clientMessage = z.discriminatedUnion('type', [
 export interface RealtimeHandlers {
   /** "Está a escrever…" — o serviço do chat valida o acesso e reencaminha. */
   typing(userId: string, conversationId: string): Promise<void>;
+  /** A pessoa ficou online ou offline (avisa amigos e quem partilha conversas). */
+  presence?(userId: string, online: boolean): Promise<void>;
 }
+
+/**
+ * Espera antes de dar alguém como offline: trocar de rede ou abrir a app
+ * outra vez não deve aparecer como "saiu e voltou".
+ */
+const offlineGraceMs = 15_000;
 
 /** Tempo para a app se autenticar depois de abrir a ligação. */
 const authTimeoutMs = 10_000;
@@ -75,6 +94,33 @@ const heartbeatMs = 25_000;
  */
 export async function realtimeRoutes(app: FastifyInstance, hub: RealtimeHub, tokens: AccessTokens, handlers: RealtimeHandlers) {
   await app.register(websocket, { options: { maxPayload: 16 * 1024 } });
+  const goingOffline = new Map<string, NodeJS.Timeout>();
+  app.addHook('onClose', async () => {
+    for (const t of goingOffline.values()) clearTimeout(t);
+  });
+
+  const connected = (uid: string, socket: WebSocket) => {
+    const first = hub.add(uid, socket);
+    const pending = goingOffline.get(uid);
+    if (pending) {
+      // Voltou antes de contar como offline: para os outros nunca saiu.
+      clearTimeout(pending);
+      goingOffline.delete(uid);
+    } else if (first) {
+      handlers.presence?.(uid, true).catch(() => {});
+    }
+  };
+
+  const disconnected = (uid: string, socket: WebSocket) => {
+    if (!hub.remove(uid, socket)) return;
+    goingOffline.set(
+      uid,
+      setTimeout(() => {
+        goingOffline.delete(uid);
+        if (!hub.isOnline(uid)) handlers.presence?.(uid, false).catch(() => {});
+      }, offlineGraceMs).unref(),
+    );
+  };
 
   app.get('/ws', { websocket: true, schema: { hide: true } }, (socket) => {
     let userId: string | null = null;
@@ -93,7 +139,7 @@ export async function realtimeRoutes(app: FastifyInstance, hub: RealtimeHub, tok
     socket.on('close', () => {
       clearTimeout(authTimer);
       clearInterval(heartbeat);
-      if (userId) hub.remove(userId, socket);
+      if (userId) disconnected(userId, socket);
     });
 
     socket.on('message', async (raw) => {
@@ -107,10 +153,11 @@ export async function realtimeRoutes(app: FastifyInstance, hub: RealtimeHub, tok
       if (msg.type === 'auth') {
         const uid = await tokens.verify(msg.token);
         if (!uid) return socket.close(4401, 'unauthorized');
-        if (userId && userId !== uid) hub.remove(userId, socket);
+        if (userId === uid) return socket.send(JSON.stringify({ type: 'ready' }));
+        if (userId) disconnected(userId, socket);
         userId = uid;
         clearTimeout(authTimer);
-        hub.add(uid, socket);
+        connected(uid, socket);
         socket.send(JSON.stringify({ type: 'ready' }));
       } else if (!userId) {
         socket.close(4401, 'unauthorized');

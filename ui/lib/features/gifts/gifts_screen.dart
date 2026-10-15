@@ -14,6 +14,8 @@ import '../../data/models/models.dart';
 import '../../core/providers.dart';
 import '../chat/conversations_list.dart';
 import 'gift_widgets.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 
 class GiftsScreen extends ConsumerStatefulWidget {
   const GiftsScreen({super.key});
@@ -52,7 +54,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
             Expanded(child: Text('Presentes', style: AppTheme.display(context, size: 30))),
             if (_chatsTab && chat)
               IconButton(
-                tooltip: 'Amigos',
+                tooltip: context.tr(Keys.chatFriendsTooltip),
                 onPressed: () => context.push('/friends'),
                 icon: Badge(
                   isLabelVisible: requests > 0,
@@ -69,7 +71,12 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
           children: [
             _Tab(label: 'Ideias', selected: !_chatsTab, onTap: () => setState(() => _chatsTab = false)),
             const SizedBox(width: 20),
-            _Tab(label: 'Conversas', badge: badge, selected: _chatsTab, onTap: () => setState(() => _chatsTab = true)),
+            _Tab(
+              label: context.tr(Keys.chatTab),
+              badge: badge,
+              selected: _chatsTab,
+              onTap: () => setState(() => _chatsTab = true),
+            ),
           ],
         ),
       ),
@@ -81,7 +88,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
         heroTag: 'fab-gifts',
         onPressed: () => _chatsTab ? showNewConversationSheet(context, ref) : pickPersonThenAddGift(context, ref),
         icon: const Icon(LucideIcons.plus, size: 20),
-        label: Text(_chatsTab ? 'Nova' : 'Nova ideia'),
+        label: Text(_chatsTab ? context.tr(Keys.chatNewTitle) : 'Nova ideia'),
       ),
       body: SafeArea(
         bottom: false,

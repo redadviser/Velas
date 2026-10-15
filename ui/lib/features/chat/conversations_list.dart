@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/chat_providers.dart';
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -13,16 +15,17 @@ import '../../data/models/chat_models.dart';
 import '../../data/models/group_models.dart';
 import '../groups/group_widgets.dart';
 import '../groups/invite_widgets.dart';
+import 'chat_format.dart';
 import 'chat_widgets.dart';
 
 enum ConversationFilter {
-  all('Tudo'),
-  gifts('Prendas'),
-  direct('Privadas'),
-  unread('Não lidas');
+  all(Keys.chatFilterAll),
+  gifts(Keys.chatFilterGifts),
+  direct(Keys.chatFilterDirect),
+  unread(Keys.chatFilterUnread);
 
-  const ConversationFilter(this.label);
-  final String label;
+  const ConversationFilter(this.labelKey);
+  final String labelKey;
 }
 
 /// Uma linha da lista: uma prenda em grupo (com a sua conversa) ou uma conversa privada.
@@ -143,7 +146,7 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      requests == 1 ? '1 pedido de amizade' : '$requests pedidos de amizade',
+                      context.trPlural(Keys.chatFriendRequests, requests),
                       style: context.text.titleSmall?.copyWith(color: context.palette.accentForeground),
                     ),
                   ),
@@ -160,7 +163,7 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
               children: [
                 for (final f in ConversationFilter.values) ...[
                   ChoiceChip(
-                    label: Text(f.label),
+                    label: Text(context.tr(f.labelKey)),
                     selected: _filter == f,
                     showCheckmark: false,
                     onSelected: (_) => setState(() => _filter = f),
@@ -173,23 +176,28 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
         if (nothingAtAll)
           EmptyState(
             icon: LucideIcons.messagesSquare,
-            title: 'Prendas em grupo e conversas',
-            message: chat
-                ? 'Junta amigos ou família para uma prenda: combinam tudo na conversa do grupo e pagam diretamente a quem compra. Também podes falar em privado com os teus amigos.'
-                : 'Junta amigos ou família, combinem o valor de cada um e paguem diretamente a quem compra — por MB WAY, transferência ou em mão.',
+            title: context.tr(Keys.chatEmptyTitle),
+            message: context.tr(chat ? Keys.chatEmptyMessage : Keys.chatEmptyMessageLocal),
             action: Column(
               children: [
                 FilledButton.icon(
                   onPressed: () => context.push('/groups/new'),
                   icon: const Icon(LucideIcons.plus, size: 18),
-                  label: const Text('Criar prenda em grupo'),
+                  label: Text(context.tr(Keys.chatEmptyCreateGroup)),
                   style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
                 ),
                 if (supportsInvites) ...[
                   const SizedBox(height: 8),
-                  TextButton(onPressed: () => showJoinGroupSheet(context, ref), child: const Text('Tenho um código')),
+                  TextButton(
+                    onPressed: () => showJoinGroupSheet(context, ref),
+                    child: Text(context.tr(Keys.chatEmptyHaveCode)),
+                  ),
                 ],
-                if (chat) TextButton(onPressed: () => context.push('/friends'), child: const Text('Adicionar amigos')),
+                if (chat)
+                  TextButton(
+                    onPressed: () => context.push('/friends'),
+                    child: Text(context.tr(Keys.chatEmptyAddFriends)),
+                  ),
               ],
             ),
           )
@@ -197,11 +205,11 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
           Padding(
             padding: const EdgeInsets.all(40),
             child: Text(
-              switch (_filter) {
-                ConversationFilter.unread => 'Está tudo lido. 👌',
-                ConversationFilter.direct => 'Ainda sem conversas privadas. Toca em "Nova" para falar com um amigo.',
-                _ => 'Ainda sem prendas em grupo.',
-              },
+              context.tr(switch (_filter) {
+                ConversationFilter.unread => Keys.chatFilterEmptyUnread,
+                ConversationFilter.direct => Keys.chatFilterEmptyDirect,
+                _ => Keys.chatFilterEmptyGifts,
+              }),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.palette.mutedForeground),
             ),
@@ -223,14 +231,73 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
   }
 }
 
-/// "Tu: …", "Gil: …" antes da última mensagem.
-String _preview(LastMessage last, String? myId, {required bool isGroup}) {
-  final who = last.senderId == myId
-      ? 'Tu: '
-      : isGroup && last.senderName.isNotEmpty
-      ? '${last.senderName.split(' ').first}: '
-      : '';
-  return '$who${last.preview}';
+/// Segunda linha de uma conversa: quem está a escrever, se a minha última
+/// mensagem já foi vista ("Vista por …"), ou a última mensagem.
+class _Preview extends ConsumerWidget {
+  const _Preview({
+    required this.conversation,
+    required this.myId,
+    required this.isGroup,
+    required this.fallback,
+    this.others,
+  });
+
+  final Conversation? conversation;
+  final String? myId;
+  final bool isGroup;
+
+  /// Sem mensagens.
+  final String fallback;
+
+  /// Quantas pessoas (além de mim) podem ver ("Vista por todos").
+  final int? others;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = conversation;
+    final muted = context.palette.mutedForeground;
+    final unread = (c?.unreadCount ?? 0) > 0;
+    final style = context.text.bodyMedium?.copyWith(color: unread ? context.colors.onSurface : muted);
+    final typing = c == null ? const <String, String>{} : ref.watch(conversationTypingProvider(c.id));
+
+    Widget line(String text, {IconData? icon, Color? color, bool italic = false}) => Row(
+      children: [
+        if (icon != null) ...[Icon(icon, size: 15, color: color ?? muted), const SizedBox(width: 4)],
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style?.copyWith(color: color, fontStyle: italic ? FontStyle.italic : null),
+          ),
+        ),
+      ],
+    );
+
+    if (typing.isNotEmpty) {
+      return line(
+        isGroup ? ChatFormat.typing(typing.values) : context.tr(Keys.chatTypingSelf),
+        color: context.colors.primary,
+        italic: true,
+      );
+    }
+    final last = c?.lastMessage;
+    if (last == null) return line(fallback);
+    if (last.senderId == myId && !last.deleted) {
+      if (c!.seenBy.isNotEmpty) {
+        return line(
+          ChatFormat.seenBy(c.seenBy, others: others),
+          icon: LucideIcons.checkCheck,
+          color: context.colors.primary,
+        );
+      }
+      return line(context.tr(Keys.chatPreviewYou, {'text': last.preview}), icon: LucideIcons.check);
+    }
+    final text = isGroup && last.senderName.isNotEmpty && last.senderId != myId
+        ? context.tr(Keys.chatPreviewSender, {'name': last.senderName.split(' ').first, 'text': last.preview})
+        : last.preview;
+    return line(text, italic: last.deleted);
+  }
 }
 
 class _TileLayout extends StatelessWidget {
@@ -241,17 +308,15 @@ class _TileLayout extends StatelessWidget {
     required this.onTap,
     this.time,
     this.unread = 0,
-    this.italic = false,
     this.footer,
   });
 
   final Widget avatar;
   final String title;
-  final String preview;
+  final Widget preview;
   final VoidCallback onTap;
   final DateTime? time;
   final int unread;
-  final bool italic;
   final Widget? footer;
 
   @override
@@ -283,7 +348,7 @@ class _TileLayout extends StatelessWidget {
                       ),
                       if (time != null)
                         Text(
-                          Fmt.chatTime(time!),
+                          ChatFormat.listTime(time!),
                           style: context.text.labelSmall?.copyWith(
                             color: hasUnread ? context.colors.primary : muted,
                             fontWeight: hasUnread ? FontWeight.w700 : null,
@@ -294,17 +359,7 @@ class _TileLayout extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          preview,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.text.bodyMedium?.copyWith(
-                            color: hasUnread ? context.colors.onSurface : muted,
-                            fontStyle: italic ? FontStyle.italic : null,
-                          ),
-                        ),
-                      ),
+                      Expanded(child: preview),
                       if (hasUnread) ...[const SizedBox(width: 8), CountBadge(count: unread)],
                     ],
                   ),
@@ -319,7 +374,7 @@ class _TileLayout extends StatelessWidget {
   }
 }
 
-/// Conversa privada com um amigo.
+/// Conversa privada com um amigo (com a bolinha verde se estiver online).
 class ConversationTile extends StatelessWidget {
   const ConversationTile({super.key, required this.conversation, required this.myId});
 
@@ -329,13 +384,11 @@ class ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = conversation;
-    final last = c.lastMessage;
     return _TileLayout(
       avatar: ConversationAvatar(conversation: c),
       title: c.title,
-      preview: last == null ? 'Diz olá 👋' : _preview(last, myId, isGroup: c.isGroup),
-      italic: last?.deleted ?? false,
-      time: last?.createdAt,
+      preview: _Preview(conversation: c, myId: myId, isGroup: false, fallback: context.tr(Keys.chatSayHello)),
+      time: c.lastMessage?.createdAt,
       unread: c.unreadCount,
       onTap: () => context.push('/chats/${c.id}'),
     );
@@ -355,30 +408,49 @@ class GroupConversationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final g = group;
     final c = conversation;
-    final last = c?.lastMessage;
     final next = g.nextBirthday;
     final me = g.memberFor(myId);
     final muted = context.palette.mutedForeground;
     void openGroup() => context.push('/groups/${g.id}');
 
     final (String label, Color bg, Color fg) status = g.purchasedAt != null
-        ? ('Comprada', context.palette.success.withValues(alpha: 0.14), context.palette.success)
+        ? (context.tr(Keys.chatGiftPurchased), context.palette.success.withValues(alpha: 0.14), context.palette.success)
         : me != null && g.isBuyer(me)
         ? (
-            g.awaitingConfirmationCount > 0 ? '${g.awaitingConfirmationCount} por confirmar' : 'Tu compras',
+            g.awaitingConfirmationCount > 0
+                ? context.trPlural(Keys.chatGiftAwaiting, g.awaitingConfirmationCount)
+                : context.tr(Keys.chatGiftYouBuy),
             context.palette.accent,
             context.palette.accentForeground,
           )
         : me == null
-        ? ('${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}', context.palette.muted, muted)
+        ? (
+            context.tr(Keys.chatGiftCollected, {
+              'confirmed': Fmt.money(g.confirmedAmount),
+              'target': Fmt.money(g.targetAmount),
+            }),
+            context.palette.muted,
+            muted,
+          )
         : switch (g.statusOf(me)) {
             ContributionStatus.pending => (
-              'Pagar ${Fmt.money(g.shareOf(me))}',
+              context.tr(Keys.chatGiftPay, {'amount': Fmt.money(g.shareOf(me))}),
               context.colors.primary,
               context.colors.onPrimary,
             ),
-            final s => (statusStyle(context, s).label, statusStyle(context, s).bg, statusStyle(context, s).fg),
+            ContributionStatus.paid => (
+              context.tr(Keys.chatGiftToConfirm),
+              statusStyle(context, ContributionStatus.paid).bg,
+              statusStyle(context, ContributionStatus.paid).fg,
+            ),
+            ContributionStatus.confirmed => (
+              context.tr(Keys.chatGiftPaid),
+              statusStyle(context, ContributionStatus.confirmed).bg,
+              statusStyle(context, ContributionStatus.confirmed).fg,
+            ),
           };
+    // Quem mais pode ver as mensagens do grupo (para "Vista por todos").
+    final others = g.members.where((m) => m.userId != null && m.userId != myId).length;
 
     return _TileLayout(
       avatar: Container(
@@ -392,11 +464,16 @@ class GroupConversationTile extends StatelessWidget {
         child: Icon(LucideIcons.gift, color: g.purchasedAt == null ? Colors.white : muted, size: 22),
       ),
       title: g.title,
-      preview: last == null
-          ? (c == null ? '${g.members.length} pessoas' : 'Combinem aqui a prenda 💬')
-          : _preview(last, myId, isGroup: true),
-      italic: last?.deleted ?? false,
-      time: last?.createdAt,
+      preview: _Preview(
+        conversation: c,
+        myId: myId,
+        isGroup: true,
+        others: others,
+        fallback: c == null
+            ? context.trPlural(Keys.commonPeople, g.members.length)
+            : context.tr(Keys.chatGroupTalkHere),
+      ),
+      time: c?.lastMessage?.createdAt,
       unread: c?.unreadCount ?? 0,
       // Sem conversa (modo local) abre logo a prenda.
       onTap: c == null ? openGroup : () => context.push('/chats/${c.id}'),
@@ -409,7 +486,9 @@ class GroupConversationTile extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              next == null ? 'Para ${g.celebrantName}' : 'Para ${g.celebrantName} · ${Fmt.dayMonth(next)}',
+              next == null
+                  ? context.tr(Keys.chatGiftForName, {'name': g.celebrantName})
+                  : context.tr(Keys.chatGiftForNameDate, {'name': g.celebrantName, 'date': Fmt.dayMonth(next)}),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.text.labelSmall?.copyWith(color: muted),
@@ -434,24 +513,24 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text('Nova', style: AppTheme.display(ctx, size: 22)),
+            child: Text(ctx.tr(Keys.chatNewTitle), style: AppTheme.display(ctx, size: 22)),
           ),
           ListTile(
             leading: const Icon(LucideIcons.gift),
-            title: const Text('Prenda em grupo'),
-            subtitle: const Text('Juntar pessoas para uma prenda, com conversa'),
+            title: Text(ctx.tr(Keys.chatNewGroup)),
+            subtitle: Text(ctx.tr(Keys.chatNewGroupHint)),
             onTap: () => Navigator.pop(ctx, 'group'),
           ),
           if (chat)
             ListTile(
               leading: const Icon(LucideIcons.messageCircle),
-              title: const Text('Conversa com um amigo'),
+              title: Text(ctx.tr(Keys.chatNewDirect)),
               onTap: () => Navigator.pop(ctx, 'direct'),
             ),
           if (supportsInvites)
             ListTile(
               leading: const Icon(LucideIcons.ticket),
-              title: const Text('Entrar com código'),
+              title: Text(ctx.tr(Keys.chatNewCode)),
               onTap: () => Navigator.pop(ctx, 'code'),
             ),
           const SizedBox(height: 8),
@@ -474,7 +553,7 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
 Future<void> startDirectChat(BuildContext context, WidgetRef ref) async {
   final friends = ref.read(friendsProvider).value?.friends ?? const [];
   if (friends.isEmpty) {
-    showMessage(context, 'Adiciona primeiro um amigo para conversarem em privado.');
+    showMessage(context, context.tr(Keys.chatNewNeedFriend));
     context.push('/friends');
     return;
   }
@@ -490,11 +569,11 @@ Future<void> startDirectChat(BuildContext context, WidgetRef ref) async {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text('Conversar com…', style: AppTheme.display(ctx, size: 22)),
+            child: Text(ctx.tr(Keys.chatNewPickFriend), style: AppTheme.display(ctx, size: 22)),
           ),
           for (final f in friends)
             ListTile(
-              leading: UserAvatar(user: f),
+              leading: PresenceAvatar(user: f),
               title: Text(f.name),
               subtitle: f.username.isEmpty ? null : Text('@${f.username}'),
               onTap: () => Navigator.pop(ctx, f),

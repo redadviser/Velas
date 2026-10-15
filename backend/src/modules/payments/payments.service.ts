@@ -26,7 +26,13 @@ interface PaymentRow {
 }
 
 /** paid_method de group_members para cada método da Stripe. */
-const paidMethod: Record<InAppMethod, string> = { card: 'card', paypal: 'paypal', mb_way: 'mbway' };
+const paidMethod: Record<InAppMethod, string> = {
+  card: 'card',
+  paypal: 'paypal',
+  mb_way: 'mbway',
+  sepa_debit: 'transfer',
+  revolut_pay: 'revolut',
+};
 
 /**
  * Pagamentos dentro da app com Stripe Connect. O dinheiro vai para a conta
@@ -236,34 +242,56 @@ export class PaymentsService {
     const { rows } = await this.db.query<PaymentRow>('select * from payments where id = $1 and payer_id = $2', [paymentId, userId]);
     const p = rows[0];
     if (!p) throw notFound();
-    if (p.status === 'pending' && this.gateway) {
+    if ((p.status === 'pending' || p.status === 'processing') && this.gateway) {
       const r = p.stripe_payment_intent
         ? await this.gateway.paymentIntentStatus(p.stripe_payment_intent)
         : p.stripe_checkout_session
           ? await this.gateway.checkoutStatus(p.stripe_checkout_session)
           : null;
-      if (r && r.status !== 'pending') await this.finalize(p.id, r.status, 'error' in r ? r.error : undefined);
+      if (r && r.status !== 'pending' && r.status !== p.status) {
+        await this.finalize(p.id, r.status, 'error' in r ? r.error : undefined);
+      }
     }
     return this.paymentJson(paymentId);
   }
 
   /**
-   * Fecha o pagamento (uma só vez). Concluído: a parte fica paga e confirmada.
+   * Muda o estado do pagamento. `processing` (transferência a caminho) marca a
+   * parte como paga; `succeeded` também a confirma; uma transferência que
+   * falha depois de `processing` volta a pôr a parte por pagar.
    * Corre sem utilizador (os triggers de permissões não se aplicam: é a Stripe a confirmar).
    */
   private async finalize(paymentId: string, status: Exclude<GatewayStatus, 'pending'>, error?: string): Promise<void> {
-    const { rows } = await this.db.query<{ member_id: string | null; method: InAppMethod; group_id: string }>(
-      `update payments set status = $2, error = $3 where id = $1 and status = 'pending'
-       returning member_id, method, group_id`,
+    const { rows } = await this.db.query<{ member_id: string | null; method: InAppMethod; group_id: string; was: string }>(
+      `update payments p set status = $2, error = $3
+       from (select id, status as was from payments where id = $1 for update) old
+       where p.id = old.id
+         and (old.was = 'pending' or (old.was = 'processing' and $2 <> 'processing'))
+       returning p.member_id, p.method, p.group_id, old.was`,
       [paymentId, status, error ?? null],
     );
     const p = rows[0];
-    if (!p || status !== 'succeeded' || !p.member_id) return;
-    await this.db.query(
-      `update group_members set paid_at = coalesce(paid_at, now()), paid_method = $2, confirmed_at = coalesce(confirmed_at, now())
-       where id = $1`,
-      [p.member_id, paidMethod[p.method]],
-    );
+    if (!p || !p.member_id) return;
+    if (status === 'succeeded') {
+      await this.db.query(
+        `update group_members set paid_at = coalesce(paid_at, now()), paid_method = $2, confirmed_at = coalesce(confirmed_at, now())
+         where id = $1`,
+        [p.member_id, paidMethod[p.method]],
+      );
+    } else if (status === 'processing') {
+      await this.db.query(
+        `update group_members set paid_at = coalesce(paid_at, now()), paid_method = $2 where id = $1 and confirmed_at is null`,
+        [p.member_id, paidMethod[p.method]],
+      );
+    } else if (p.was === 'processing') {
+      // A transferência não passou: volta a "por pagar".
+      await this.db.query(
+        `update group_members set paid_at = null, paid_method = null where id = $1 and confirmed_at is null`,
+        [p.member_id],
+      );
+    } else {
+      return;
+    }
     // Os membros veem logo a parte paga (as apps recarregam os grupos).
     if (this.hub) {
       const { rows: users } = await this.db.query<{ id: string }>(
@@ -303,7 +331,11 @@ export class PaymentsService {
         if (paymentId) await this.finalize(paymentId, 'canceled');
         break;
       case 'checkout.session.completed':
-        if (paymentId && o.payment_status === 'paid') await this.finalize(paymentId, 'succeeded');
+        // Transferência (débito SEPA): autorizada, o dinheiro chega daqui a uns dias.
+        if (paymentId) await this.finalize(paymentId, o.payment_status === 'paid' ? 'succeeded' : 'processing');
+        break;
+      case 'payment_intent.processing':
+        if (paymentId) await this.finalize(paymentId, 'processing');
         break;
       case 'checkout.session.async_payment_succeeded':
         if (paymentId) await this.finalize(paymentId, 'succeeded');

@@ -25,6 +25,7 @@ abstract final class Keys {
   static const commonDateAt = 'common.dateAt';
   /// Plural (`.one` / `.other`).
   static const commonPeople = 'common.people';
+  static const commonSave = 'common.save';
 
   // Definições ------------------------------------------------------------
   static const settingsLanguage = 'settings.language';
@@ -309,6 +310,11 @@ abstract final class Keys {
   static const payInAppErrorCanceled = 'pay.inApp.error.canceled';
   static const payInAppErrorGeneric = 'pay.inApp.error.generic';
   static const payInAppErrorPayeeNotReady = 'pay.inApp.error.payeeNotReady';
+  static const payInAppTransferSteps = 'pay.inApp.transferSteps';
+  static const payInAppRevolutSteps = 'pay.inApp.revolutSteps';
+  static const payInAppPayTransfer = 'pay.inApp.payTransfer';
+  static const payInAppPayRevolut = 'pay.inApp.payRevolut';
+  static const payInAppProcessing = 'pay.inApp.processing';
 
   // groupPhoto ------------------------------------------------------------
   static const groupPhotoChange = 'groupPhoto.change';
@@ -316,13 +322,13 @@ abstract final class Keys {
   static const groupPhotoUpdated = 'groupPhoto.updated';
   static const groupPhotoRemoved = 'groupPhoto.removed';
 
-  // payouts ---------------------------------------------------------------
-  static const payoutsTitle = 'payouts.title';
-  static const payoutsHint = 'payouts.hint';
-  static const payoutsConnect = 'payouts.connect';
-  static const payoutsContinue = 'payouts.continue';
-  static const payoutsReady = 'payouts.ready';
-  static const payoutsPending = 'payouts.pending';
-  static const payoutsRefresh = 'payouts.refresh';
-  static const payoutsBuyerHint = 'payouts.buyerHint';
+  // paymentsScreen --------------------------------------------------------
+  static const paymentsScreenTitle = 'paymentsScreen.title';
+
+  // receive ---------------------------------------------------------------
+  static const receiveTitle = 'receive.title';
+  static const receiveHint = 'receive.hint';
+  static const receiveAction = 'receive.action';
+  static const receiveScreenHint = 'receive.screenHint';
+  static const receiveSaved = 'receive.saved';
 }

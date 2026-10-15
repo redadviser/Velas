@@ -153,9 +153,9 @@ class ProfileScreen extends ConsumerWidget {
               ),
               _Tile(
                 icon: LucideIcons.wallet,
-                title: 'Dados de pagamento',
+                title: context.tr(Keys.paymentsScreenTitle),
                 value: [
-                  if (user.payment.mbwayPhone.isNotEmpty) 'MB WAY',
+                  if (user.mbwayPayPhone.isNotEmpty || user.payment.mbwayPhone.isNotEmpty) 'MB WAY',
                   if (user.payment.iban.isNotEmpty) 'IBAN',
                   if (user.payment.revolutTag.isNotEmpty) 'Revolut',
                   if (user.payment.paypalUser.isNotEmpty) 'PayPal',

@@ -39,9 +39,21 @@ void main() {
     expect(payee.withFee(PaymentMethod.card, 13.33), (fee: 0.46, total: 13.79));
     expect(payee.withFee(PaymentMethod.cash, 13.33), (fee: 0.0, total: 13.33));
     // Com a conta Stripe de quem recebe, cartão, PayPal e MB WAY pagam-se na app sem mais dados.
-    expect(payee.methods, [PaymentMethod.card, PaymentMethod.mbway, PaymentMethod.paypal, PaymentMethod.cash]);
+    expect(payee.methods, [
+      PaymentMethod.card,
+      PaymentMethod.mbway,
+      PaymentMethod.paypal,
+      PaymentMethod.revolut,
+      PaymentMethod.transfer,
+      PaymentMethod.cash,
+    ]);
     expect(payee.payInApp(PaymentMethod.mbway), isTrue);
+    expect(payee.payInApp(PaymentMethod.transfer), isTrue); // IBAN na página da Stripe (débito SEPA)
     expect(payee.payInApp(PaymentMethod.skrill), isFalse);
+    expect(PaymentMethod.transfer.inAppName, 'sepa_debit');
+    expect(PaymentMethod.revolut.inAppName, 'revolut_pay');
+    expect(PaymentFormat.toE164('912 345 678'), '+351912345678');
+    expect(PaymentFormat.displayE164('+351912345678'), '912 345 678');
   });
 
   Future<PayResult? Function()> open(WidgetTester tester, InAppPay inApp) async {
@@ -120,6 +132,33 @@ void main() {
     expect(result()?.paidInApp, isTrue);
     expect(result()?.method, PaymentMethod.mbway);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('transferência: autorizada fica a caminho e a janela fecha', (tester) async {
+    final methods = <PaymentMethod>[];
+    final result = await open(
+      tester,
+      InAppPay(
+        start: (m, {phone, savePhone = false}) async {
+          methods.add(m);
+          return payment('pending', method: 'sepa_debit', url: 'https://checkout.stripe.test/sepa_debit');
+        },
+        poll: (_) async => payment('processing', method: 'sepa_debit'),
+      ),
+    );
+    await tester.tap(find.text('Transferência'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('IBAN na página segura da Stripe'), findsOneWidget);
+    await tester.ensureVisible(find.textContaining('Transferir'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Transferir'));
+    await tester.pump();
+    await tester.pump();
+    expect(methods, [PaymentMethod.transfer]);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(result()?.paidInApp, isTrue);
+    expect(result()?.processing, isTrue);
   });
 
   testWidgets('MB WAY com número associado usa-o; recusado explica porquê', (tester) async {

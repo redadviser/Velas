@@ -22,7 +22,7 @@ class InAppPayment {
   final double fee;
   final double total;
 
-  /// `pending`, `succeeded`, `failed` ou `canceled`.
+  /// `pending`, `processing` (transferência a caminho), `succeeded`, `failed` ou `canceled`.
   final String status;
 
   /// Código de erro da Stripe (ex.: `payment_method_customer_decline`).
@@ -33,6 +33,9 @@ class InAppPayment {
 
   bool get isPending => status == 'pending';
   bool get succeeded => status == 'succeeded';
+
+  /// Transferência autorizada: a parte já conta como paga, falta o dinheiro chegar.
+  bool get isProcessing => status == 'processing';
 
   factory InAppPayment.fromJson(Map<String, dynamic> j) => InAppPayment(
     id: j['id'] as String,

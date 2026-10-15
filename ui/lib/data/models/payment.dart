@@ -20,11 +20,14 @@ enum PaymentMethod {
   String get label => tr('pay.method.$name');
 
   /// O nome na API de pagamentos dentro da app (Stripe), se o método o permitir.
+  /// A transferência é um débito SEPA: quem paga escreve o IBAN na página da Stripe.
   String? get inAppName => switch (this) {
     PaymentMethod.card => 'card',
     PaymentMethod.paypal => 'paypal',
     PaymentMethod.mbway => 'mb_way',
-    _ => null,
+    PaymentMethod.transfer => 'sepa_debit',
+    PaymentMethod.revolut => 'revolut_pay',
+    PaymentMethod.skrill || PaymentMethod.cash => null,
   };
 
   static PaymentMethod? tryParse(String? v) => PaymentMethod.values.where((m) => m.name == v).firstOrNull;
@@ -90,8 +93,8 @@ class PaymentDetails {
     PaymentMethod.mbway => inApp || mbwayPhone.isNotEmpty,
     PaymentMethod.paypal => inApp || paypalUser.isNotEmpty,
     PaymentMethod.skrill => skrillEmail.isNotEmpty,
-    PaymentMethod.revolut => revolutTag.isNotEmpty,
-    PaymentMethod.transfer => iban.isNotEmpty,
+    PaymentMethod.revolut => inApp || revolutTag.isNotEmpty,
+    PaymentMethod.transfer => inApp || iban.isNotEmpty,
     PaymentMethod.cash => acceptsCash,
   };
 
@@ -183,6 +186,17 @@ class PaymentFormat {
       [for (var i = 0; i < s.length; i += 4) s.substring(i, i + 4 > s.length ? s.length : i + 4)].join(' ');
 
   static String cleanHandle(String input) => input.trim().replaceFirst(RegExp(r'^@'), '').replaceAll(' ', '');
+
+  /// Número para o MB WAY em E.164 (9 dígitos portugueses ganham o +351); `null` se inválido.
+  static String? toE164(String input) {
+    final pt = normalizePhone(input);
+    if (pt != null) return '+351$pt';
+    final d = input.replaceAll(RegExp(r'[\s\-()]'), '');
+    return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(d) ? d : null;
+  }
+
+  /// "+351912345678" → "912 345 678" (os números portugueses).
+  static String displayE164(String e164) => e164.startsWith('+351') ? displayPhone(e164.substring(4)) : e164;
 
   /// Email (Skrill), em minúsculas; `null` se não parecer um email.
   static String? normalizeEmail(String input) {

@@ -1,9 +1,15 @@
 import Stripe from 'stripe';
 
-export type InAppMethod = 'card' | 'paypal' | 'mb_way';
+export type InAppMethod = 'card' | 'paypal' | 'mb_way' | 'sepa_debit' | 'revolut_pay';
 
-/** Estado de um pagamento do lado da Stripe, já traduzido. */
-export type GatewayStatus = 'pending' | 'succeeded' | 'failed' | 'canceled';
+/** Métodos pagos na página da Stripe (Checkout); o MB WAY é à parte. */
+export type CheckoutMethod = Exclude<InAppMethod, 'mb_way'>;
+
+/**
+ * Estado de um pagamento do lado da Stripe, já traduzido. `processing`: a
+ * transferência (débito SEPA) foi autorizada mas o dinheiro ainda não chegou.
+ */
+export type GatewayStatus = 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled';
 
 export interface GatewayEvent {
   type: string;
@@ -32,9 +38,9 @@ export interface PaymentsGateway {
     metadata: Record<string, string>;
   }): Promise<{ paymentIntentId: string; status: GatewayStatus; error?: string }>;
 
-  /** Cartão ou PayPal: página de pagamento segura da Stripe (Checkout). */
+  /** Cartão, PayPal, transferência (IBAN) ou Revolut Pay: página de pagamento segura da Stripe (Checkout). */
   createCheckout(p: {
-    method: 'card' | 'paypal';
+    method: CheckoutMethod;
     amountCents: number;
     transferCents: number;
     destination: string;
@@ -58,6 +64,8 @@ function fromIntent(pi: Stripe.PaymentIntent): { status: GatewayStatus; error?: 
   switch (pi.status) {
     case 'succeeded':
       return { status: 'succeeded' };
+    case 'processing':
+      return { status: 'processing' };
     case 'canceled':
       return { status: 'canceled', error };
     case 'requires_payment_method':
@@ -157,6 +165,8 @@ export class StripeGateway implements PaymentsGateway {
     const s = await this.stripe.checkout.sessions.retrieve(id);
     const paymentIntentId = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id;
     if (s.status === 'complete' && s.payment_status === 'paid') return { status: 'succeeded' as const, paymentIntentId };
+    // Transferência: autorizada, mas o dinheiro só chega daqui a uns dias (o webhook confirma).
+    if (s.status === 'complete') return { status: 'processing' as const, paymentIntentId };
     if (s.status === 'expired') return { status: 'canceled' as const, paymentIntentId };
     return { status: 'pending' as const, paymentIntentId };
   }

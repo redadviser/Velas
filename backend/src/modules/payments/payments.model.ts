@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { InAppMethod } from './gateway.js';
 
-export const inAppMethods = ['card', 'paypal', 'mb_way'] as const;
+export const inAppMethods = ['card', 'paypal', 'mb_way', 'sepa_debit', 'revolut_pay'] as const;
 
 /** Comissão da Stripe por método: percentagem + valor fixo (em euros). */
 export type FeeTable = Record<InAppMethod, { percent: number; fixed: number }>;
@@ -16,6 +16,8 @@ export const defaultFees: FeeTable = {
   card: { percent: 1.5, fixed: 0.25 },
   mb_way: { percent: 1.5, fixed: 0.25 },
   paypal: { percent: 3.4, fixed: 0.35 },
+  sepa_debit: { percent: 0, fixed: 0.35 },
+  revolut_pay: { percent: 1.5, fixed: 0.25 },
 };
 
 /**
@@ -53,7 +55,8 @@ export interface PaymentJson {
   amount: number;
   fee: number;
   total: number;
-  status: 'pending' | 'succeeded' | 'failed' | 'canceled';
+  /** processing: transferência autorizada, à espera de chegar (a parte já conta como paga). */
+  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled';
   error: string | null;
   /** Cartão / PayPal: página de pagamento a abrir. */
   checkout_url: string | null;

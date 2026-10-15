@@ -927,6 +927,56 @@ describe('pagamentos na app (Stripe)', () => {
     expect(done.raw.body).toContain('Pagamento concluído');
     expect(done.raw.body).toContain('com.eupasoft.velas://app/payments');
   });
+
+  it('transferência (IBAN na Stripe): paga ao autorizar, confirmada quando chega, por pagar se falhar', async () => {
+    const eli = await signup('Eli', 'eli', 'eli@ex.pt');
+    const fil = await signup('Fil', 'fil', 'fil@ex.pt');
+    const gui = await signup('Gui', 'gui', 'gui@ex.pt');
+    const groupId = uuid();
+    await call('PUT', `/groups/${groupId}`, {
+      token: eli.access_token,
+      body: { group: { title: 'Prenda do Zé', celebrant_name: 'Zé', target_amount: 30 }, new_members: [{ id: uuid(), user_id: eli.user.id, display_name: 'Eli' }] },
+    });
+    const code = (await call('GET', '/groups', { token: eli.access_token })).body.find((g: { id: string }) => g.id === groupId).invite_code;
+    for (const s of [fil, gui]) await call('POST', `/invite-codes/${code}/join`, { token: s.access_token, body: {} });
+    await call('POST', '/me/payouts/onboarding', { token: eli.access_token });
+    await call('POST', '/me/payouts/refresh', { token: eli.access_token });
+    const memberOf = async (s: Session) =>
+      (await call('GET', '/groups', { token: s.access_token })).body
+        .find((g: { id: string }) => g.id === groupId)
+        .group_members.find((m: { user_id: string }) => m.user_id === s.user.id);
+    const webhook = (type: string, object: object) =>
+      app.inject({
+        method: 'POST',
+        url: '/stripe/webhook',
+        headers: { 'content-type': 'application/json', 'stripe-signature': 'assinatura-valida' },
+        payload: JSON.stringify({ type, data: { object: { id: 'cs_y', ...object } } }),
+      });
+
+    for (const [payer, outcome] of [[fil, 'checkout.session.async_payment_succeeded'], [gui, 'checkout.session.async_payment_failed']] as const) {
+      const member = await memberOf(payer);
+      const pay = await call('POST', `/group-members/${member.id}/checkout`, { token: payer.access_token, body: { method: 'sepa_debit' } });
+      // 30 € a três = 10 €; a transferência só tem a parte fixa (0,35 €).
+      expect(pay.body).toMatchObject({ method: 'sepa_debit', amount: 10, fee: 0.35, total: 10.35 });
+      expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'sepa_debit', amountCents: 1035, transferCents: 1000 });
+
+      await webhook('checkout.session.completed', { payment_status: 'unpaid', metadata: { payment_id: pay.body.id } });
+      expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('processing');
+      expect(await memberOf(payer)).toMatchObject({ paid_method: 'transfer', paid_at: expect.any(String), confirmed_at: null });
+
+      await webhook(outcome, { metadata: { payment_id: pay.body.id } });
+      if (outcome.endsWith('succeeded')) {
+        expect(await memberOf(payer)).toMatchObject({ paid_method: 'transfer', confirmed_at: expect.any(String) });
+      } else {
+        expect(await memberOf(payer)).toMatchObject({ paid_at: null, paid_method: null, confirmed_at: null });
+        expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('failed');
+      }
+    }
+
+    // Revolut Pay também vai pelo Checkout.
+    const fil2 = await call('POST', `/group-members/${(await memberOf(gui)).id}/checkout`, { token: gui.access_token, body: { method: 'revolut_pay' } });
+    expect(fil2.body).toMatchObject({ method: 'revolut_pay', checkout_url: 'https://checkout.stripe.test/revolut_pay' });
+  });
 });
 
 describe('sistema', () => {

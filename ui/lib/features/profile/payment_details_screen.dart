@@ -3,14 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/payment.dart';
 import '../groups/payment_widgets.dart';
-import 'payouts_card.dart';
 
-/// Os dados que os amigos usam para te pagar quando és tu a comprar a prenda.
+/// Como preferes receber quando és tu a comprar a prenda (MB WAY, IBAN,
+/// Revolut, PayPal, Skrill, em mão). O dinheiro não passa pela app: quem paga
+/// vê estes dados prontos a copiar e envia-te diretamente.
 class PaymentDetailsScreen extends ConsumerStatefulWidget {
   const PaymentDetailsScreen({super.key});
 
@@ -20,8 +23,19 @@ class PaymentDetailsScreen extends ConsumerStatefulWidget {
 
 class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
   final _form = GlobalKey<FormState>();
-  late PaymentDetails _details = ref.read(currentUserProvider)?.payment ?? PaymentDetails.empty;
+  late PaymentDetails _details = _initial();
   bool _saving = false;
+
+  /// Sem MB WAY indicado, sugere o telemóvel da conta (português).
+  PaymentDetails _initial() {
+    final user = ref.read(currentUserProvider);
+    final d = user?.payment ?? PaymentDetails.empty;
+    if (d.mbwayPhone.isEmpty && (user?.phone.startsWith('+351') ?? false)) {
+      final suggested = PaymentFormat.normalizePhone(user!.phone);
+      if (suggested != null) return d.copyWith(mbwayPhone: suggested);
+    }
+    return d;
+  }
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
@@ -31,7 +45,7 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
     final ok = await runGuarded(
       context,
       () => ref.read(authRepositoryProvider).updateProfile(user.copyWith(payment: _details)),
-      success: 'Dados de pagamento guardados.',
+      success: context.tr(Keys.receiveSaved),
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -42,14 +56,14 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dados de pagamento'),
+        title: Text(context.tr(Keys.paymentsScreenTitle)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(minimumSize: const Size(88, 40)),
-              child: const Text('Guardar'),
+              child: Text(context.tr(Keys.commonSave)),
             ),
           ),
         ],
@@ -59,7 +73,6 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
-            const PayoutsCard(),
             AppCard(
               color: context.palette.accent,
               child: Row(
@@ -69,8 +82,7 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Estes dados só são mostrados às pessoas de um grupo em que és tu a comprar a prenda, '
-                      'para te poderem enviar a parte delas por fora da app.',
+                      context.tr(Keys.receiveScreenHint),
                       style: TextStyle(color: context.palette.accentForeground),
                     ),
                   ),

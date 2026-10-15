@@ -22,7 +22,6 @@ import 'invite_widgets.dart';
 import 'payment_widgets.dart';
 import '../../core/constants.dart';
 import '../../core/i18n/translations.dart';
-import '../profile/payouts_card.dart';
 
 /// Dados de pagamento do comprador (pedidos ao servidor só a membros).
 final _payeeProvider = FutureProvider.autoDispose.family<PaymentDetails, String>((ref, groupId) async {
@@ -77,8 +76,8 @@ class GroupDetailScreen extends ConsumerWidget {
     );
     if (result == null || !context.mounted) return;
     if (result.paidInApp) {
-      // O servidor já marcou a parte como paga e confirmada.
-      showMessage(context, context.tr(Keys.payInAppSucceeded));
+      // O servidor já marcou a parte como paga (e confirmada, se o dinheiro já chegou).
+      showMessage(context, context.tr(result.processing ? Keys.payInAppProcessing : Keys.payInAppSucceeded));
       await _ctrl(ref).refresh().catchError((_) {});
       return;
     }
@@ -334,18 +333,19 @@ class GroupDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
             ],
-            if (iAmBuyer && g.purchasedAt == null) const _PayoutsHint(),
+            // Quem compra e ainda não disse para onde quer receber: pergunta-se aqui.
+            if (iAmBuyer && g.purchasedAt == null && payee.hasValue && !payee.value!.hasAnyDigital)
+              _ReceivePrompt(
+                onTap: () => context.push('/profile/payments').then((_) => ref.invalidate(_payeeProvider(groupId))),
+              ),
             if (buyer != null)
               _BuyerCard(
                 buyer: buyer,
                 isMe: iAmBuyer,
                 payee: payee.value,
-                missingPayee: payee.hasValue && !payee.value!.hasAnyDigital,
-                onAddPayment: iAmBuyer
-                    ? () => context.push('/profile/payments').then((_) => ref.invalidate(_payeeProvider(groupId)))
-                    : isAdmin && buyer.userId == null
-                    ? () => context.push('/groups/${g.id}/edit')
-                    : null,
+                missingPayee: payee.hasValue && !payee.value!.inApp && !payee.value!.hasAnyDigital,
+                // Quem compra (eu) já tem o _ReceivePrompt; o administrador indica os dados de quem não tem conta.
+                onAddPayment: isAdmin && buyer.userId == null ? () => context.push('/groups/${g.id}/edit') : null,
               ),
             if (supportsInvites && g.inviteCode.isNotEmpty && g.purchasedAt == null) ...[
               const SizedBox(height: 12),
@@ -739,7 +739,7 @@ class _BuyerCard extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onAddPayment,
               icon: const Icon(LucideIcons.wallet, size: 18),
-              label: Text(isMe ? 'Adicionar MB WAY / IBAN' : 'Indicar dados de pagamento'),
+              label: Text(isMe ? context.tr(Keys.receiveAction) : 'Indicar dados de pagamento'),
             ),
           ],
         ],
@@ -919,30 +919,40 @@ class _GroupPhotoState extends ConsumerState<_GroupPhoto> {
   }
 }
 
-/// Quem compra ainda não recebe na app: um atalho para ligar a conta Stripe.
-class _PayoutsHint extends ConsumerWidget {
-  const _PayoutsHint();
+/// "Para onde queres receber?": quem compra a prenda ainda não indicou MB WAY ou IBAN.
+class _ReceivePrompt extends StatelessWidget {
+  const _ReceivePrompt({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(payoutStatusProvider).value;
-    if (status == null || !status.enabled || status.ready) return const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    final fg = context.palette.accentForeground;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
         color: context.palette.accent,
-        onTap: () => context.push('/profile/payments').then((_) => ref.invalidate(payoutStatusProvider)),
-        child: Row(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(LucideIcons.landmark, color: context.palette.accentForeground),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                context.tr(Keys.payoutsBuyerHint),
-                style: context.text.bodySmall?.copyWith(color: context.palette.accentForeground),
-              ),
+            Row(
+              children: [
+                const PaymentLogo(PaymentMethod.mbway, size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(context.tr(Keys.receiveTitle), style: context.text.titleSmall?.copyWith(color: fg)),
+                ),
+              ],
             ),
-            Icon(LucideIcons.chevronRight, size: 18, color: context.palette.accentForeground),
+            const SizedBox(height: 6),
+            Text(context.tr(Keys.receiveHint), style: context.text.bodySmall?.copyWith(color: fg)),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onTap,
+              icon: const Icon(LucideIcons.wallet, size: 18),
+              label: Text(context.tr(Keys.receiveAction)),
+            ),
           ],
         ),
       ),

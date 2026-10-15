@@ -219,12 +219,15 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
 
 /// Resultado da janela "Pagar a …".
 class PayResult {
-  const PayResult(this.method, {this.paidInApp = false});
+  const PayResult(this.method, {this.paidInApp = false, this.processing = false});
 
   final PaymentMethod method;
 
-  /// Pago dentro da app (Stripe): a parte já ficou paga e confirmada no servidor.
+  /// Pago dentro da app (Stripe): a parte já ficou paga (e confirmada) no servidor.
   final bool paidInApp;
+
+  /// Transferência autorizada mas ainda a caminho: fica confirmada quando chegar.
+  final bool processing;
 }
 
 /// Pagar dentro da app (Stripe). Dado por quem abre a janela, que sabe o
@@ -280,23 +283,12 @@ class _PaySheet extends StatefulWidget {
   State<_PaySheet> createState() => _PaySheetState();
 }
 
-/// "+351912345678" → "912 345 678" (os números portugueses).
-String _displayE164(String e164) => e164.startsWith('+351') ? PaymentFormat.displayPhone(e164.substring(4)) : e164;
-
-/// O que a pessoa escreveu → E.164 (9 dígitos portugueses ganham o +351).
-String? _toE164(String input) {
-  final pt = PaymentFormat.normalizePhone(input);
-  if (pt != null) return '+351$pt';
-  final d = input.replaceAll(RegExp(r'[\s\-()]'), '');
-  return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(d) ? d : null;
-}
-
 class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
   late PaymentMethod? _selected = widget.payee.methods.firstOrNull;
 
   // Pagamento dentro da app.
   late final _phone = TextEditingController(
-    text: widget.inApp?.savedPhone.isNotEmpty ?? false ? _displayE164(widget.inApp!.savedPhone) : '',
+    text: widget.inApp?.savedPhone.isNotEmpty ?? false ? PaymentFormat.displayE164(widget.inApp!.savedPhone) : '',
   );
   late bool _editingPhone = widget.inApp?.savedPhone.isEmpty ?? true;
   bool _savePhone = true;
@@ -355,9 +347,9 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
 
   void _apply(InAppPayment p) {
     if (!mounted) return;
-    if (p.succeeded) {
+    if (p.succeeded || p.isProcessing) {
       _poll?.cancel();
-      Navigator.pop(context, PayResult(_selected!, paidInApp: true));
+      Navigator.pop(context, PayResult(_selected!, paidInApp: true, processing: p.isProcessing));
       return;
     }
     setState(() {
@@ -382,7 +374,7 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
   Future<void> _startInApp(PaymentMethod m) async {
     String? phone;
     if (m == PaymentMethod.mbway && _editingPhone) {
-      phone = _toE164(_phone.text);
+      phone = PaymentFormat.toE164(_phone.text);
       if (phone == null) {
         setState(() => _error = context.tr(Keys.payInAppPhoneInvalid));
         return;
@@ -547,11 +539,16 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          context.tr(switch (m) {
-            PaymentMethod.mbway => Keys.payInAppMbwaySteps,
-            PaymentMethod.paypal => Keys.payInAppPaypalSteps,
-            _ => Keys.payInAppCardSteps,
-          }),
+          context.tr(
+            switch (m) {
+              PaymentMethod.mbway => Keys.payInAppMbwaySteps,
+              PaymentMethod.paypal => Keys.payInAppPaypalSteps,
+              PaymentMethod.transfer => Keys.payInAppTransferSteps,
+              PaymentMethod.revolut => Keys.payInAppRevolutSteps,
+              _ => Keys.payInAppCardSteps,
+            },
+            {'name': widget.payeeName},
+          ),
           style: context.text.bodySmall?.copyWith(color: muted, fontSize: 13),
         ),
         const SizedBox(height: 10),
@@ -568,7 +565,7 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
           if (!_editingPhone)
             _CopyRow(
               label: context.tr(Keys.payInAppPhoneLabel),
-              value: _displayE164(widget.inApp!.savedPhone),
+              value: PaymentFormat.displayE164(widget.inApp!.savedPhone),
               onCopy: () => _copy(widget.inApp!.savedPhone, context.tr(Keys.payFieldNumber)),
             )
           else ...[
@@ -609,10 +606,16 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
           onPressed: _starting ? null : () => _startInApp(m),
           icon: _starting
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : Icon(m == PaymentMethod.mbway ? LucideIcons.smartphone : LucideIcons.lock, size: 18),
+              : Icon(switch (m) {
+                  PaymentMethod.mbway => LucideIcons.smartphone,
+                  PaymentMethod.transfer => LucideIcons.landmark,
+                  _ => LucideIcons.lock,
+                }, size: 18),
           label: Text(switch (m) {
             PaymentMethod.mbway => context.tr(Keys.payInAppSendRequest, {'total': totalText}),
             PaymentMethod.paypal => context.tr(Keys.payInAppPayPaypal, {'total': totalText}),
+            PaymentMethod.transfer => context.tr(Keys.payInAppPayTransfer, {'total': totalText}),
+            PaymentMethod.revolut => context.tr(Keys.payInAppPayRevolut, {'total': totalText}),
             _ => context.tr(Keys.payInAppPayCard, {'total': totalText}),
           }),
         ),

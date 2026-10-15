@@ -284,10 +284,45 @@ abstract final class Keys {
   static const payFormSkrill = 'pay.form.skrill';
   static const payFormSkrillInvalid = 'pay.form.skrillInvalid';
   static const payFormCardHint = 'pay.form.cardHint';
+  static const payInAppBadge = 'pay.inApp.badge';
+  static const payInAppFeeLine = 'pay.inApp.feeLine';
+  static const payInAppPayCard = 'pay.inApp.payCard';
+  static const payInAppPayPaypal = 'pay.inApp.payPaypal';
+  static const payInAppCardSteps = 'pay.inApp.cardSteps';
+  static const payInAppPaypalSteps = 'pay.inApp.paypalSteps';
+  static const payInAppMbwaySteps = 'pay.inApp.mbwaySteps';
+  static const payInAppPhoneLabel = 'pay.inApp.phoneLabel';
+  static const payInAppPhoneInvalid = 'pay.inApp.phoneInvalid';
+  static const payInAppSavePhone = 'pay.inApp.savePhone';
+  static const payInAppChangePhone = 'pay.inApp.changePhone';
+  static const payInAppSendRequest = 'pay.inApp.sendRequest';
+  static const payInAppWaitingMbway = 'pay.inApp.waitingMbway';
+  static const payInAppWaitingCheckout = 'pay.inApp.waitingCheckout';
+  static const payInAppWaitingHint = 'pay.inApp.waitingHint';
+  static const payInAppReopen = 'pay.inApp.reopen';
+  static const payInAppStopWaiting = 'pay.inApp.stopWaiting';
+  static const payInAppSucceeded = 'pay.inApp.succeeded';
+  static const payInAppTryAgain = 'pay.inApp.tryAgain';
+  static const payInAppErrorDeclined = 'pay.inApp.error.declined';
+  static const payInAppErrorExpired = 'pay.inApp.error.expired';
+  static const payInAppErrorNotAvailable = 'pay.inApp.error.notAvailable';
+  static const payInAppErrorCanceled = 'pay.inApp.error.canceled';
+  static const payInAppErrorGeneric = 'pay.inApp.error.generic';
+  static const payInAppErrorPayeeNotReady = 'pay.inApp.error.payeeNotReady';
 
   // groupPhoto ------------------------------------------------------------
   static const groupPhotoChange = 'groupPhoto.change';
   static const groupPhotoRemove = 'groupPhoto.remove';
   static const groupPhotoUpdated = 'groupPhoto.updated';
   static const groupPhotoRemoved = 'groupPhoto.removed';
+
+  // payouts ---------------------------------------------------------------
+  static const payoutsTitle = 'payouts.title';
+  static const payoutsHint = 'payouts.hint';
+  static const payoutsConnect = 'payouts.connect';
+  static const payoutsContinue = 'payouts.continue';
+  static const payoutsReady = 'payouts.ready';
+  static const payoutsPending = 'payouts.pending';
+  static const payoutsRefresh = 'payouts.refresh';
+  static const payoutsBuyerHint = 'payouts.buyerHint';
 }

@@ -41,6 +41,11 @@ export async function registerDocs(app: FastifyInstance) {
         { name: 'Convites' },
         { name: 'Amigos', description: 'Pedidos de amizade e lista de amigos' },
         {
+          name: 'Pagamentos',
+          description:
+            'Pagar a parte dentro da app (Stripe Connect): cartão e PayPal pelo Stripe Checkout, MB WAY com pedido para o telemóvel.',
+        },
+        {
           name: 'Conversas',
           description:
             'Chat dos grupos e privado entre amigos. As novidades chegam em tempo real por WebSocket em /ws ' +

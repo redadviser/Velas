@@ -21,7 +21,7 @@ export class UsersService {
               p.reminder_hour, p.reminder_minute, p.default_reminder_days, p.payment_methods,
               u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
-              p.message_notifications, p.message_previews
+              p.message_notifications, p.message_previews, p.mbway_pay_phone
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],

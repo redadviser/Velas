@@ -179,9 +179,21 @@ export class GroupsService {
   }
 
   /** Dados de pagamento de quem compra (só para membros). */
-  async payee(userId: string, groupId: string): Promise<PaymentMethods> {
-    const { rows } = await this.as(userId, (c) => c.query('select group_payee($1) as payee', [groupId]));
-    return rows[0]?.payee ?? {};
+  /** Pagamentos na app ligados (Stripe) e a comissão por método. */
+  inApp?: { enabled: boolean; fees: Record<string, { percent: number; fixed: number }> };
+
+  async payee(userId: string, groupId: string): Promise<Record<string, unknown>> {
+    const { rows } = await this.as(userId, (c) =>
+      c.query<{ payee: PaymentMethods | null; ready: boolean | null }>(
+        `select group_payee($1) as payee,
+                (select payouts_enabled from profiles where id = group_buyer_user($1)) as ready`,
+        [groupId],
+      ),
+    );
+    const payee = rows[0]?.payee ?? {};
+    // in_app: quem compra ligou a conta Stripe, por isso dá para pagar dentro da app.
+    const inApp = Boolean(this.inApp?.enabled && rows[0]?.ready);
+    return inApp ? { ...payee, in_app: true, in_app_fees: this.inApp!.fees } : payee;
   }
 
   // Membros -----------------------------------------------------------------

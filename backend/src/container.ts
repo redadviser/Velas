@@ -11,6 +11,8 @@ import { ChatService } from './modules/chat/chat.service.js';
 import { StickersService } from './modules/chat/stickers.service.js';
 import { FriendsService } from './modules/friends/friends.service.js';
 import { GifsService } from './modules/gifs/gifs.service.js';
+import type { PaymentsGateway } from './modules/payments/gateway.js';
+import { PaymentsService } from './modules/payments/payments.service.js';
 import { GiftsService } from './modules/gifts/gifts.service.js';
 import { GroupsService } from './modules/groups/groups.service.js';
 import { InvitationsService } from './modules/invitations/invitations.service.js';
@@ -29,6 +31,8 @@ export interface Deps {
   verifyGoogle: GoogleVerifier;
   /** Pedidos HTTP a serviços externos (GIPHY); substituído nos testes. */
   fetch?: typeof fetch;
+  /** Stripe (pagamentos na app); sem ele ficam desligados. Substituído nos testes. */
+  payments?: PaymentsGateway;
 }
 
 export type Services = ReturnType<typeof createServices>;
@@ -43,6 +47,9 @@ export function createServices(deps: Deps) {
   const messages = new MessagesService(db);
   const hub = new RealtimeHub();
   const chat = new ChatService(db, storage, hub);
+  const payments = new PaymentsService(db, deps.config, deps.payments, hub);
+  const groups = new GroupsService(db, storage, hub);
+  groups.inApp = { enabled: payments.enabled, fees: payments.fees };
   // Mudar a privacidade da presença avisa logo quem a estava a ver.
   users.onUpdated = async (userId, patch) => {
     if (patch.show_presence !== undefined) await chat.announcePresence(userId);
@@ -56,11 +63,12 @@ export function createServices(deps: Deps) {
     gifts,
     messages,
     sync: new SyncService(db, categories, people, gifts, messages),
-    groups: new GroupsService(db, storage, hub),
+    groups,
     invitations: new InvitationsService(db, storage),
     friends: new FriendsService(db, hub, storage),
     chat,
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
+    payments,
   };
 }

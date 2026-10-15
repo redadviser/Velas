@@ -17,6 +17,7 @@ import { migrate } from '../src/core/migrations.js';
 import { PhotoStorage } from '../src/core/storage.js';
 import type { Db } from '../src/core/database.js';
 import { GifsService } from '../src/modules/gifs/gifs.service.js';
+import type { GatewayStatus, PaymentsGateway } from '../src/modules/payments/gateway.js';
 import { createTestDb } from './pglite-pool.js';
 
 const secret = 'test-secret-with-at-least-32-characters!!';
@@ -44,6 +45,44 @@ const fakeGiphy: typeof fetch = async (input) => {
     }),
     { headers: { 'content-type': 'application/json' } },
   );
+};
+
+// Stripe falsa: guarda o que lhe pedem e responde como a verdadeira.
+const stripeCalls: { op: string; args: Record<string, unknown> }[] = [];
+const intentStatus = new Map<string, GatewayStatus>();
+const fakeStripe: PaymentsGateway = {
+  async createAccount(p) {
+    stripeCalls.push({ op: 'createAccount', args: p });
+    return { id: `acct_${p.userId.slice(0, 8)}` };
+  },
+  async onboardingLink(accountId, urls) {
+    stripeCalls.push({ op: 'onboardingLink', args: { accountId, ...urls } });
+    return `https://connect.stripe.test/setup/${accountId}`;
+  },
+  async accountReady() {
+    return true;
+  },
+  async startMbWay(p) {
+    stripeCalls.push({ op: 'startMbWay', args: p });
+    const id = `pi_${stripeCalls.length}`;
+    intentStatus.set(id, 'pending');
+    return { paymentIntentId: id, status: 'pending' };
+  },
+  async createCheckout(p) {
+    stripeCalls.push({ op: 'createCheckout', args: p });
+    return { sessionId: `cs_${stripeCalls.length}`, url: `https://checkout.stripe.test/${p.method}` };
+  },
+  async paymentIntentStatus(id) {
+    return { status: intentStatus.get(id) ?? 'pending' };
+  },
+  async checkoutStatus() {
+    return { status: 'pending' };
+  },
+  parseWebhook(raw, signature) {
+    if (signature !== 'assinatura-valida') throw new Error('invalid signature');
+    const e = JSON.parse(raw.toString()) as { type: string; data: { object: { id: string } } };
+    return { type: e.type, object: e.data.object };
+  },
 };
 
 // JPEG mínimo (só os bytes iniciais interessam à validação).
@@ -83,6 +122,7 @@ beforeAll(async () => {
       return identity;
     },
     fetch: fakeGiphy,
+    payments: fakeStripe,
   });
 }, 60_000);
 
@@ -813,6 +853,79 @@ describe('fotografia do grupo e métodos de pagamento', () => {
 
     expect((await call('DELETE', `/groups/${groupId}/photo`, { token: ivo.access_token })).body.photo_url).toBeNull();
     expect((await call('GET', url.pathname + url.search)).status).toBe(404);
+  });
+});
+
+describe('pagamentos na app (Stripe)', () => {
+  it('quem compra liga a conta; MB WAY com número guardado; cartão pelo Checkout; webhook confirma', async () => {
+    const bia = await signup('Bia', 'bia', 'bia@ex.pt');
+    const caio = await signup('Caio', 'caio', 'caio@ex.pt');
+    const dani = await signup('Dani', 'dani', 'dani@ex.pt');
+    const groupId = uuid();
+    await call('PUT', `/groups/${groupId}`, {
+      token: bia.access_token,
+      body: { group: { title: 'Prenda da Rosa', celebrant_name: 'Rosa', target_amount: 40 }, new_members: [{ id: uuid(), user_id: bia.user.id, display_name: 'Bia' }] },
+    });
+    const code = (await call('GET', '/groups', { token: bia.access_token })).body.find((g: { id: string }) => g.id === groupId).invite_code;
+    await call('POST', `/invite-codes/${code}/join`, { token: caio.access_token, body: {} });
+    await call('POST', `/invite-codes/${code}/join`, { token: dani.access_token, body: {} });
+    const group = async (s: Session) => (await call('GET', '/groups', { token: s.access_token })).body.find((g: { id: string }) => g.id === groupId);
+    const memberOf = async (s: Session) => (await group(s)).group_members.find((m: { user_id: string }) => m.user_id === s.user.id);
+    const caioMember = await memberOf(caio);
+    const daniMember = await memberOf(dani);
+    const checkout = (s: Session, memberId: string, body: object) =>
+      call('POST', `/group-members/${memberId}/checkout`, { token: s.access_token, body });
+
+    // A Bia (quem compra) ainda não ligou a conta Stripe.
+    expect((await call('GET', `/groups/${groupId}/payee`, { token: caio.access_token })).body.in_app).toBeUndefined();
+    expect((await checkout(caio, caioMember.id, { method: 'card' })).body.error).toBe('payee_not_ready');
+    expect(await (await call('GET', '/me/payouts', { token: bia.access_token })).body).toMatchObject({ enabled: true, connected: false, ready: false });
+
+    const onboarding = await call('POST', '/me/payouts/onboarding', { token: bia.access_token });
+    expect(onboarding.body.url).toMatch(/^https:\/\/connect\.stripe\.test\/setup\/acct_/);
+    expect(stripeCalls.find((c) => c.op === 'onboardingLink')!.args).toMatchObject({ returnUrl: 'http://api.test/stripe/return' });
+    expect((await call('POST', '/me/payouts/refresh', { token: bia.access_token })).body).toMatchObject({ connected: true, ready: true });
+    const payee = (await call('GET', `/groups/${groupId}/payee`, { token: caio.access_token })).body;
+    expect(payee).toMatchObject({ in_app: true, in_app_fees: { card: { percent: 1.5, fixed: 0.25 } } });
+
+    // Quem compra não paga a si próprio; um membro só paga a sua parte.
+    const biaMember = await memberOf(bia);
+    expect((await checkout(bia, biaMember.id, { method: 'card' })).body.error).toBe('is_buyer');
+    expect((await checkout(dani, caioMember.id, { method: 'card' })).status).toBe(404);
+
+    // MB WAY: sem número guardado tem de o indicar; pode guardá-lo para a próxima.
+    expect((await checkout(caio, caioMember.id, { method: 'mb_way' })).body.error).toBe('invalid_phone');
+    const mbway = await checkout(caio, caioMember.id, { method: 'mb_way', phone: '912 345 678', save_phone: true });
+    expect(mbway.status).toBe(200);
+    // 40 € a três: a Bia 13,34 €, o Caio e a Dani 13,33 €. A comissão vai por cima.
+    expect(mbway.body).toMatchObject({ method: 'mb_way', status: 'pending', amount: 13.33, fee: 0.46, total: 13.79, checkout_url: null });
+    expect(stripeCalls.at(-1)!.args).toMatchObject({ amountCents: 1379, transferCents: 1333, phone: '+351912345678', destination: expect.stringMatching(/^acct_/) });
+    expect((await call('GET', '/me', { token: caio.access_token })).body.mbway_pay_phone).toBe('+351912345678');
+    expect((await call('GET', `/payments/${mbway.body.id}`, { token: dani.access_token })).status).toBe(404);
+
+    // O Caio aprova na app MB WAY: a parte fica paga e confirmada.
+    intentStatus.set([...intentStatus.keys()].at(-1)!, 'succeeded');
+    expect((await call('GET', `/payments/${mbway.body.id}`, { token: caio.access_token })).body.status).toBe('succeeded');
+    expect(await memberOf(caio)).toMatchObject({ paid_method: 'mbway', confirmed_at: expect.any(String) });
+    expect((await checkout(caio, caioMember.id, { method: 'card' })).body.error).toBe('already_paid');
+
+    // Cartão: página da Stripe; o webhook confirma.
+    const card = await checkout(dani, daniMember.id, { method: 'card', locale: 'pt' });
+    expect(card.body).toMatchObject({ status: 'pending', checkout_url: 'https://checkout.stripe.test/card' });
+    expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'card', locale: 'pt', successUrl: 'http://api.test/pay/done', email: 'dani@ex.pt' });
+    const event = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: 'cs_x', payment_status: 'paid', metadata: { payment_id: card.body.id } } } });
+    const webhook = (signature: string) =>
+      app.inject({ method: 'POST', url: '/stripe/webhook', headers: { 'content-type': 'application/json', 'stripe-signature': signature }, payload: event });
+    expect((await webhook('falsa')).statusCode).toBe(400);
+    expect(await memberOf(dani)).toMatchObject({ confirmed_at: null });
+    expect((await webhook('assinatura-valida')).statusCode).toBe(200);
+    expect(await memberOf(dani)).toMatchObject({ paid_method: 'card', confirmed_at: expect.any(String) });
+    expect((await call('GET', `/payments/${card.body.id}`, { token: dani.access_token })).body.status).toBe('succeeded');
+
+    // Páginas para voltar à app.
+    const done = await call('GET', '/pay/done');
+    expect(done.raw.body).toContain('Pagamento concluído');
+    expect(done.raw.body).toContain('com.eupasoft.velas://app/payments');
   });
 });
 

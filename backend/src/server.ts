@@ -10,6 +10,7 @@ import { migrate } from './core/migrations.js';
 import { PhotoStorage } from './core/storage.js';
 import { googleVerifier } from './modules/auth/google.js';
 import { AccessTokens } from './modules/auth/tokens.js';
+import { StripeGateway } from './modules/payments/gateway.js';
 
 async function main() {
   loadDotEnv();
@@ -27,6 +28,9 @@ async function main() {
     tokens: new AccessTokens(config.jwtSecret),
     mail: (m) => mailer(m),
     verifyGoogle: googleVerifier(config.googleClientIds),
+    payments: config.payments
+      ? new StripeGateway(config.payments.stripeSecretKey, config.payments.stripeWebhookSecret)
+      : undefined,
   };
 
   const app = await buildApp(deps, { logger: { level: process.env.LOG_LEVEL ?? 'info' } });

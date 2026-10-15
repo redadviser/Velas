@@ -36,8 +36,8 @@ void main() {
     expect(PaymentMethod.card.label, 'Cartão');
   });
 
-  Future<PaymentMethod? Function()> open(WidgetTester tester, PaymentDetails payee) async {
-    PaymentMethod? result;
+  Future<PayResult? Function()> open(WidgetTester tester, PaymentDetails payee) async {
+    PayResult? result;
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(extensions: const [AppPalette.light]),
@@ -93,7 +93,8 @@ void main() {
 
     await tester.tap(find.text('Já paguei por MB WAY'));
     await tester.pumpAndSettle();
-    expect(result(), PaymentMethod.mbway);
+    expect(result()?.method, PaymentMethod.mbway);
+    expect(result()?.paidInApp, isFalse);
     expect(tester.takeException(), isNull);
   });
 

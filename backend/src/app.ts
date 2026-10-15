@@ -13,6 +13,7 @@ import { chatRoutes } from './modules/chat/chat.routes.js';
 import { filesRoutes } from './modules/files/files.routes.js';
 import { friendsRoutes } from './modules/friends/friends.routes.js';
 import { gifsRoutes } from './modules/gifs/gifs.routes.js';
+import { paymentsPublicRoutes, paymentsRoutes } from './modules/payments/payments.routes.js';
 import { giftsRoutes } from './modules/gifts/gifts.routes.js';
 import { groupsRoutes } from './modules/groups/groups.routes.js';
 import { invitePageRoutes } from './modules/invitations/invite-page.routes.js';
@@ -45,6 +46,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await authRoutes(app, services.auth);
   await filesRoutes(app, deps.storage);
   await invitePageRoutes(app, deps.config);
+  await paymentsPublicRoutes(app, services.payments, deps.config);
   // Tempo real: a autenticação é a primeira mensagem da ligação.
   await realtimeRoutes(app, services.hub, deps.tokens, {
     typing: (uid, cid) => services.chat.typing(uid, cid),
@@ -73,6 +75,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await friendsRoutes(scope, services.friends);
     await chatRoutes(scope, services.chat, services.stickers);
     await gifsRoutes(scope, services.gifs);
+    await paymentsRoutes(scope, services.payments);
   });
 
   return app;

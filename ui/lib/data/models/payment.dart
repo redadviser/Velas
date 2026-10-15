@@ -19,6 +19,14 @@ enum PaymentMethod {
   /// Nome na língua da app (chaves `pay.method.<nome>`).
   String get label => tr('pay.method.$name');
 
+  /// O nome na API de pagamentos dentro da app (Stripe), se o método o permitir.
+  String? get inAppName => switch (this) {
+    PaymentMethod.card => 'card',
+    PaymentMethod.paypal => 'paypal',
+    PaymentMethod.mbway => 'mb_way',
+    _ => null,
+  };
+
   static PaymentMethod? tryParse(String? v) => PaymentMethod.values.where((m) => m.name == v).firstOrNull;
 }
 
@@ -33,6 +41,8 @@ class PaymentDetails {
     this.paypalUser = '',
     this.skrillEmail = '',
     this.acceptsCash = true,
+    this.inApp = false,
+    this.inAppFees = const {},
   });
 
   final String mbwayPhone;
@@ -43,7 +53,26 @@ class PaymentDetails {
   final String skrillEmail;
   final bool acceptsCash;
 
+  /// Quem recebe ligou a conta Stripe: cartão, PayPal e MB WAY pagam-se dentro da
+  /// app (só nos dados de quem compra a prenda; não se guarda).
+  final bool inApp;
+
+  /// Comissão de cada método dentro da app (`card`, `paypal`, `mb_way`).
+  final Map<String, ({double percent, double fixed})> inAppFees;
+
   static const empty = PaymentDetails();
+
+  /// Este método paga-se dentro da app?
+  bool payInApp(PaymentMethod m) => inApp && m.inAppName != null;
+
+  /// A comissão somada a [amount] para quem recebe ficar com [amount] (igual ao servidor).
+  ({double fee, double total}) withFee(PaymentMethod m, double amount) {
+    final f = inAppFees[m.inAppName];
+    if (f == null) return (fee: 0, total: amount);
+    final shareCents = (amount * 100).round();
+    final totalCents = ((shareCents + (f.fixed * 100).round()) / (1 - f.percent / 100)).ceil();
+    return (fee: (totalCents - shareCents) / 100, total: totalCents / 100);
+  }
 
   bool get hasAnyDigital =>
       mbwayPhone.isNotEmpty ||
@@ -56,9 +85,10 @@ class PaymentDetails {
   bool get acceptsCard => revolutTag.isNotEmpty || paypalUser.isNotEmpty;
 
   bool accepts(PaymentMethod m) => switch (m) {
-    PaymentMethod.card => acceptsCard,
-    PaymentMethod.mbway => mbwayPhone.isNotEmpty,
-    PaymentMethod.paypal => paypalUser.isNotEmpty,
+    // Dentro da app não é preciso nenhum dado de quem recebe.
+    PaymentMethod.card => inApp || acceptsCard,
+    PaymentMethod.mbway => inApp || mbwayPhone.isNotEmpty,
+    PaymentMethod.paypal => inApp || paypalUser.isNotEmpty,
     PaymentMethod.skrill => skrillEmail.isNotEmpty,
     PaymentMethod.revolut => revolutTag.isNotEmpty,
     PaymentMethod.transfer => iban.isNotEmpty,
@@ -106,6 +136,14 @@ class PaymentDetails {
       paypalUser: j['paypal_user'] as String? ?? '',
       skrillEmail: j['skrill_email'] as String? ?? '',
       acceptsCash: j['accepts_cash'] as bool? ?? true,
+      inApp: j['in_app'] as bool? ?? false,
+      inAppFees: {
+        for (final MapEntry(:key, :value) in ((j['in_app_fees'] as Map?) ?? const {}).entries)
+          key as String: (
+            percent: ((value as Map)['percent'] as num).toDouble(),
+            fixed: (value['fixed'] as num).toDouble(),
+          ),
+      },
     );
   }
 }

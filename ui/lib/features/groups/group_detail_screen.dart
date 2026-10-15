@@ -22,6 +22,7 @@ import 'invite_widgets.dart';
 import 'payment_widgets.dart';
 import '../../core/constants.dart';
 import '../../core/i18n/translations.dart';
+import '../profile/payouts_card.dart';
 
 /// Dados de pagamento do comprador (pedidos ao servidor só a membros).
 final _payeeProvider = FutureProvider.autoDispose.family<PaymentDetails, String>((ref, groupId) async {
@@ -41,14 +42,47 @@ class GroupDetailScreen extends ConsumerWidget {
   Future<void> _pay(BuildContext context, WidgetRef ref, GiftGroup g, GroupMember me) async {
     final payee = await ref.read(_payeeProvider(groupId).future);
     if (!context.mounted) return;
-    final method = await showPaySheet(
+    final payments = ref.read(paymentsRepositoryProvider);
+    final user = ref.read(currentUserProvider);
+    final result = await showPaySheet(
       context,
       payeeName: g.buyer?.name ?? 'quem compra',
       amount: g.shareOf(me),
       payee: payee,
       reference: '${g.title} — ${me.name}',
+      // Pagar dentro da app (Stripe), quando quem compra ligou a conta.
+      inApp: payments == null || !payee.inApp
+          ? null
+          : InAppPay(
+              savedPhone: user?.mbwayPayPhone ?? '',
+              start: (m, {phone, savePhone = false}) async {
+                final p = await payments.checkout(
+                  me.id,
+                  method: m.inAppName!,
+                  phone: phone,
+                  savePhone: savePhone,
+                  locale: Translations.current.locale.languageCode,
+                );
+                // O número ficou associado à conta: o perfil local passa a sabê-lo.
+                if (savePhone && phone != null && user != null) {
+                  await ref
+                      .read(authRepositoryProvider)
+                      .updateProfile(user.copyWith(mbwayPayPhone: phone))
+                      .catchError((_) {});
+                }
+                return p;
+              },
+              poll: payments.status,
+            ),
     );
-    if (method == null || !context.mounted) return;
+    if (result == null || !context.mounted) return;
+    if (result.paidInApp) {
+      // O servidor já marcou a parte como paga e confirmada.
+      showMessage(context, context.tr(Keys.payInAppSucceeded));
+      await _ctrl(ref).refresh().catchError((_) {});
+      return;
+    }
+    final method = result.method;
     await runGuarded(
       context,
       () => _ctrl(ref).mutate(
@@ -300,6 +334,7 @@ class GroupDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
             ],
+            if (iAmBuyer && g.purchasedAt == null) const _PayoutsHint(),
             if (buyer != null)
               _BuyerCard(
                 buyer: buyer,
@@ -877,6 +912,37 @@ class _GroupPhotoState extends ConsumerState<_GroupPhoto> {
                 child: Icon(LucideIcons.camera, size: 13, color: context.colors.onPrimary),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Quem compra ainda não recebe na app: um atalho para ligar a conta Stripe.
+class _PayoutsHint extends ConsumerWidget {
+  const _PayoutsHint();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(payoutStatusProvider).value;
+    if (status == null || !status.enabled || status.ready) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        color: context.palette.accent,
+        onTap: () => context.push('/profile/payments').then((_) => ref.invalidate(payoutStatusProvider)),
+        child: Row(
+          children: [
+            Icon(LucideIcons.landmark, color: context.palette.accentForeground),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                context.tr(Keys.payoutsBuyerHint),
+                style: context.text.bodySmall?.copyWith(color: context.palette.accentForeground),
+              ),
+            ),
+            Icon(LucideIcons.chevronRight, size: 18, color: context.palette.accentForeground),
           ],
         ),
       ),

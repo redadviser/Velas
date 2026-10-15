@@ -49,6 +49,7 @@ class UserProfile {
     this.typingIndicator = true,
     this.messageNotifications = true,
     this.messagePreviews = true,
+    this.mbwayPayPhone = '',
   });
 
   final String id;
@@ -71,6 +72,9 @@ class UserProfile {
 
   /// Mostrar o texto da mensagem na notificação.
   final bool messagePreviews;
+
+  /// Número MB WAY guardado para pagar dentro da app (E.164; privado). Vazio se não houver.
+  final String mbwayPayPhone;
 
   /// Único, em minúsculas. Vazio em contas antigas que ainda não o definiram.
   final String username;
@@ -102,6 +106,7 @@ class UserProfile {
     bool? typingIndicator,
     bool? messageNotifications,
     bool? messagePreviews,
+    String? mbwayPayPhone,
   }) => UserProfile(
     id: id,
     email: email,
@@ -119,6 +124,7 @@ class UserProfile {
     typingIndicator: typingIndicator ?? this.typingIndicator,
     messageNotifications: messageNotifications ?? this.messageNotifications,
     messagePreviews: messagePreviews ?? this.messagePreviews,
+    mbwayPayPhone: mbwayPayPhone ?? this.mbwayPayPhone,
   );
 
   /// Campos que o próprio altera com PATCH /me (a fotografia vai à parte).
@@ -136,6 +142,7 @@ class UserProfile {
     'typing_indicator': typingIndicator,
     'message_notifications': messageNotifications,
     'message_previews': messagePreviews,
+    'mbway_pay_phone': mbwayPayPhone.isEmpty ? null : mbwayPayPhone,
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> j, {required String id, required String email}) => UserProfile(
@@ -159,6 +166,7 @@ class UserProfile {
     typingIndicator: j['typing_indicator'] as bool? ?? true,
     messageNotifications: j['message_notifications'] as bool? ?? true,
     messagePreviews: j['message_previews'] as bool? ?? true,
+    mbwayPayPhone: j['mbway_pay_phone'] as String? ?? '',
   );
 }
 

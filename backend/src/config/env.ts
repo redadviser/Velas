@@ -1,5 +1,15 @@
 import { existsSync } from 'node:fs';
 
+import { defaultFees, type FeeTable } from '../modules/payments/payments.model.js';
+
+/** Pagamentos dentro da app (Stripe Connect). Sem STRIPE_SECRET_KEY ficam desligados. */
+export interface PaymentsConfig {
+  stripeSecretKey: string;
+  /** Segredo do webhook (Stripe → Developers → Webhooks), para confirmar os pagamentos. */
+  stripeWebhookSecret?: string;
+  fees: FeeTable;
+}
+
 /** Ligação ao servidor PostgreSQL. */
 export interface DatabaseConfig {
   host: string;
@@ -53,6 +63,7 @@ export interface Config {
   docs: boolean;
   /** Chave da API do GIPHY (pesquisa de GIFs e stickers no chat). Sem ela, a pesquisa fica desligada. */
   giphyApiKey?: string;
+  payments?: PaymentsConfig;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -92,7 +103,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     rateLimit: env.RATE_LIMIT !== 'false',
     docs: env.API_DOCS !== 'false',
     giphyApiKey: env.GIPHY_API_KEY?.trim() || undefined,
+    payments: loadPaymentsConfig(env),
   };
+}
+
+export function loadPaymentsConfig(env: NodeJS.ProcessEnv = process.env): PaymentsConfig | undefined {
+  const key = env.STRIPE_SECRET_KEY?.trim();
+  if (!key) return undefined;
+  let fees = defaultFees;
+  if (env.STRIPE_FEES?.trim()) {
+    try {
+      fees = { ...defaultFees, ...(JSON.parse(env.STRIPE_FEES) as Partial<FeeTable>) };
+    } catch {
+      throw new Error('STRIPE_FEES tem de ser JSON, ex.: {"card":{"percent":1.5,"fixed":0.25}}');
+    }
+  }
+  return { stripeSecretKey: key, stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET?.trim() || undefined, fees };
 }
 
 export function loadMailConfig(env: NodeJS.ProcessEnv = process.env): MailConfig {

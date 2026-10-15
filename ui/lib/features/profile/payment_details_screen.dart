@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/payment.dart';
 import '../groups/payment_widgets.dart';
+import 'payouts_card.dart';
 
 /// Os dados que os amigos usam para te pagar quando és tu a comprar a prenda.
 class PaymentDetailsScreen extends ConsumerStatefulWidget {
@@ -58,6 +59,7 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
+            const PayoutsCard(),
             AppCard(
               color: context.palette.accent,
               child: Row(
@@ -68,7 +70,7 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
                   Expanded(
                     child: Text(
                       'Estes dados só são mostrados às pessoas de um grupo em que és tu a comprar a prenda, '
-                      'para te poderem enviar a parte delas. A Birthdayly não movimenta dinheiro.',
+                      'para te poderem enviar a parte delas por fora da app.',
                       style: TextStyle(color: context.palette.accentForeground),
                     ),
                   ),

@@ -5,9 +5,14 @@ import { createServices, type Deps } from './container.js';
 import { requireAuth } from './core/auth-guard.js';
 import { errorHandler } from './core/errors.js';
 import { doc, documentBearerAuth, registerDocs } from './core/openapi.js';
+import { realtimeRoutes } from './core/realtime.js';
+import { PhotoStorage } from './core/storage.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { categoriesRoutes } from './modules/categories/categories.routes.js';
+import { chatRoutes } from './modules/chat/chat.routes.js';
 import { filesRoutes } from './modules/files/files.routes.js';
+import { friendsRoutes } from './modules/friends/friends.routes.js';
+import { gifsRoutes } from './modules/gifs/gifs.routes.js';
 import { giftsRoutes } from './modules/gifts/gifts.routes.js';
 import { groupsRoutes } from './modules/groups/groups.routes.js';
 import { invitePageRoutes } from './modules/invitations/invite-page.routes.js';
@@ -35,11 +40,20 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await authRoutes(app, services.auth);
   await filesRoutes(app, deps.storage);
   await invitePageRoutes(app, deps.config);
+  // Tempo real: a autenticação é a primeira mensagem da ligação.
+  await realtimeRoutes(app, services.hub, deps.tokens, { typing: (uid, cid) => services.chat.typing(uid, cid) });
 
   // Rotas que exigem sessão.
   await app.register(async (scope) => {
     requireAuth(scope, deps.tokens);
     documentBearerAuth(scope);
+    // Imagens enviadas em bruto (o tipo real é verificado pelos bytes). Cada
+    // rota pode subir o limite com `bodyLimit` (ex.: imagens do chat).
+    scope.addContentTypeParser(
+      ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/octet-stream'],
+      { parseAs: 'buffer', bodyLimit: PhotoStorage.maxBytes },
+      (_req, body, done) => done(null, body),
+    );
     await usersRoutes(scope, services.users);
     await syncRoutes(scope, services.sync);
     await peopleRoutes(scope, services.people);
@@ -48,6 +62,9 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await messagesRoutes(scope, services.messages);
     await groupsRoutes(scope, services.groups);
     await invitationsRoutes(scope, services.invitations);
+    await friendsRoutes(scope, services.friends);
+    await chatRoutes(scope, services.chat, services.stickers);
+    await gifsRoutes(scope, services.gifs);
   });
 
   return app;

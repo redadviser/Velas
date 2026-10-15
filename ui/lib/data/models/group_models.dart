@@ -248,6 +248,7 @@ class GiftGroup {
     required this.createdAt,
     this.members = const [],
     this.invitations = const [],
+    this.conversationId,
   });
 
   final String id;
@@ -276,6 +277,9 @@ class GiftGroup {
 
   /// Convites ainda sem resposta.
   final List<GroupInvitation> invitations;
+
+  /// Conversa do grupo (só com servidor).
+  final String? conversationId;
 
   List<GroupMember> get sortedMembers => [...members]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
@@ -368,6 +372,7 @@ class GiftGroup {
     createdAt: createdAt,
     members: members ?? this.members,
     invitations: invitations ?? this.invitations,
+    conversationId: conversationId,
   );
 
   /// Colunas da tabela `gift_groups` (sem membros).
@@ -418,6 +423,7 @@ class GiftGroup {
         for (final i in (j['group_invitations'] as List?) ?? const [])
           GroupInvitation.fromJson((i as Map).cast<String, dynamic>()),
       ].where((i) => i.isPending).toList(),
+      conversationId: j['conversation_id'] as String?,
     );
   }
 }

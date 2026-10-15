@@ -51,6 +51,8 @@ export interface Config {
   rateLimit: boolean;
   /** Swagger UI em /docs e especificação OpenAPI em /docs/json. */
   docs: boolean;
+  /** Chave da API do GIPHY (pesquisa de GIFs e stickers no chat). Sem ela, a pesquisa fica desligada. */
+  giphyApiKey?: string;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -89,6 +91,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     playStoreUrl: env.PLAY_STORE_URL?.trim() || undefined,
     rateLimit: env.RATE_LIMIT !== 'false',
     docs: env.API_DOCS !== 'false',
+    giphyApiKey: env.GIPHY_API_KEY?.trim() || undefined,
   };
 }
 

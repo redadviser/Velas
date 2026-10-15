@@ -16,6 +16,7 @@ import type { Mail } from '../src/core/mailer.js';
 import { migrate } from '../src/core/migrations.js';
 import { PhotoStorage } from '../src/core/storage.js';
 import type { Db } from '../src/core/database.js';
+import { GifsService } from '../src/modules/gifs/gifs.service.js';
 import { createTestDb } from './pglite-pool.js';
 
 const secret = 'test-secret-with-at-least-32-characters!!';
@@ -26,6 +27,24 @@ let db: Db;
 let closeDb: () => Promise<void>;
 let app: FastifyInstance;
 let uploadDir: string;
+
+// Respostas do GIPHY (só a parte que a API usa).
+const giphyCalls: string[] = [];
+const fakeGiphy: typeof fetch = async (input) => {
+  giphyCalls.push(String(input));
+  const image = (id: string, w: string) => ({ url: `https://media1.giphy.com/media/${id}/${w}.gif`, width: '200', height: '150' });
+  return new Response(
+    JSON.stringify({
+      data: [
+        { id: 'abc', images: { fixed_width: image('abc', '200w'), fixed_width_small: image('abc', '100w') } },
+        // URL fora do GIPHY: ignorado.
+        { id: 'bad', images: { fixed_width: { url: 'https://evil.example/x.gif', width: '1', height: '1' } } },
+      ],
+      pagination: { total_count: 100, count: 2, offset: 0 },
+    }),
+    { headers: { 'content-type': 'application/json' } },
+  );
+};
 
 // JPEG mínimo (só os bytes iniciais interessam à validação).
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
@@ -48,6 +67,7 @@ beforeAll(async () => {
     docs: true,
     androidPackage: 'com.velas.app',
     playStoreUrl: 'https://play.google.com/store/apps/details?id=com.velas.app',
+    giphyApiKey: 'giphy-test-key',
   };
   app = await buildApp({
     config,
@@ -62,6 +82,7 @@ beforeAll(async () => {
       if (!identity) throw new HttpError(401, 'invalid_google_token');
       return identity;
     },
+    fetch: fakeGiphy,
   });
 }, 60_000);
 
@@ -399,6 +420,241 @@ describe('prendas em grupo', () => {
     expect((await call('GET', '/groups', { token: member.access_token })).body).toEqual([]);
     // Membro sai da conta: o grupo de outro administrador mantém-se.
     expect((await call('GET', '/me', { token: member.access_token })).status).toBe(200);
+  });
+});
+
+describe('amigos e conversas', () => {
+  let filipa: Session;
+  let gil: Session;
+  let hugo: Session;
+  let direct: string;
+
+  beforeAll(async () => {
+    filipa = await signup('Filipa', 'filipa', 'filipa@ex.pt');
+    gil = await signup('Gil', 'gil', 'gil@ex.pt');
+    hugo = await signup('Hugo', 'hugo', 'hugo@ex.pt');
+  });
+
+  const send = (s: Session, conversation: string, body: object) =>
+    call('POST', `/conversations/${conversation}/messages`, { token: s.access_token, body: { id: uuid(), ...body } });
+
+  it('pede, aceita, recusa e remove amizades', async () => {
+    const req = (from: Session, to: Session) =>
+      call('POST', '/friends/requests', { token: from.access_token, body: { user_id: to.user.id } });
+
+    expect((await req(filipa, gil)).body.result).toBe('sent');
+    expect((await req(filipa, gil)).body.result).toBe('already_sent');
+    expect((await req(filipa, filipa)).body.result).toBe('self');
+
+    const gilList = (await call('GET', '/friends', { token: gil.access_token })).body;
+    expect(gilList.incoming).toEqual([expect.objectContaining({ user_id: filipa.user.id, username: 'filipa' })]);
+    expect((await call('GET', '/friends', { token: filipa.access_token })).body.outgoing).toHaveLength(1);
+    // Só quem recebeu responde.
+    expect((await call('POST', `/friends/requests/${gilList.incoming[0].id}/respond`, { token: filipa.access_token, body: { accept: true } })).status).toBe(404);
+    expect((await call('POST', `/friends/requests/${gilList.incoming[0].id}/respond`, { token: gil.access_token, body: { accept: true } })).status).toBe(204);
+    expect((await call('GET', '/friends', { token: filipa.access_token })).body.friends).toEqual([
+      expect.objectContaining({ user_id: gil.user.id, display_name: 'Gil' }),
+    ]);
+    expect((await req(gil, filipa)).body.result).toBe('already_friends');
+
+    // Recusar apaga o pedido; pedir de volta aceita logo.
+    await req(hugo, filipa);
+    const incoming = (await call('GET', '/friends', { token: filipa.access_token })).body.incoming;
+    await call('POST', `/friends/requests/${incoming[0].id}/respond`, { token: filipa.access_token, body: { accept: false } });
+    expect((await call('GET', '/friends', { token: hugo.access_token })).body.outgoing).toEqual([]);
+    await req(hugo, gil);
+    expect((await req(gil, hugo)).body.result).toBe('accepted');
+    expect((await call('DELETE', `/friends/${hugo.user.id}`, { token: gil.access_token })).status).toBe(204);
+    expect((await call('GET', '/friends', { token: hugo.access_token })).body.friends).toEqual([]);
+  });
+
+  it('conversa privada só entre amigos, com não lidas, respostas, reações e apagar', async () => {
+    expect((await call('POST', '/conversations/direct', { token: hugo.access_token, body: { user_id: filipa.user.id } })).body.error).toBe('not_friends');
+
+    const opened = await call('POST', '/conversations/direct', { token: filipa.access_token, body: { user_id: gil.user.id } });
+    expect(opened.body).toMatchObject({ kind: 'direct', title: 'Gil', other_user: { user_id: gil.user.id }, unread_count: 0 });
+    direct = opened.body.id;
+    expect((await call('POST', '/conversations/direct', { token: gil.access_token, body: { user_id: filipa.user.id } })).body.id).toBe(direct);
+
+    const id = uuid();
+    const first = await call('POST', `/conversations/${direct}/messages`, { token: filipa.access_token, body: { id, kind: 'text', body: '  Olá! O que oferecemos à Rita?  ' } });
+    expect(first.body).toMatchObject({ id, kind: 'text', body: 'Olá! O que oferecemos à Rita?', sender_name: 'Filipa', reactions: [] });
+    // Reenviar a mesma mensagem não duplica.
+    await call('POST', `/conversations/${direct}/messages`, { token: filipa.access_token, body: { id, kind: 'text', body: 'Olá!' } });
+    expect((await send(filipa, direct, { kind: 'text', body: '   ' })).status).toBe(422);
+
+    let gilConv = (await call('GET', '/conversations', { token: gil.access_token })).body.find((c: { id: string }) => c.id === direct);
+    expect(gilConv).toMatchObject({ title: 'Filipa', unread_count: 1, last_message: { body: 'Olá! O que oferecemos à Rita?' } });
+
+    const reply = await send(gil, direct, { kind: 'text', body: 'Um livro 📚', reply_to: id });
+    expect(reply.body.reply).toMatchObject({ id, sender_name: 'Filipa' });
+    expect((await call('PUT', `/chat-messages/${id}/reaction`, { token: gil.access_token, body: { emoji: '❤️' } })).body.reactions).toEqual([
+      { emoji: '❤️', user_id: gil.user.id },
+    ]);
+    // Uma reação por pessoa: escolher outra substitui.
+    expect((await call('PUT', `/chat-messages/${id}/reaction`, { token: gil.access_token, body: { emoji: '😂' } })).body.reactions).toHaveLength(1);
+
+    await call('POST', `/conversations/${direct}/read`, { token: gil.access_token });
+    gilConv = (await call('GET', '/conversations', { token: gil.access_token })).body.find((c: { id: string }) => c.id === direct);
+    expect(gilConv.unread_count).toBe(0);
+    const detail = await call('GET', `/conversations/${direct}`, { token: filipa.access_token });
+    expect(detail.body.participants.map((p: { username: string }) => p.username)).toEqual(['filipa', 'gil']);
+    expect(detail.body.participants[1].last_read_at).not.toBeNull();
+
+    const page = await call('GET', `/conversations/${direct}/messages?limit=1`, { token: gil.access_token });
+    expect(page.body).toMatchObject({ has_more: true, messages: [{ body: 'Um livro 📚' }] });
+    const older = await call('GET', `/conversations/${direct}/messages?before=${page.body.messages[0].id}`, { token: gil.access_token });
+    expect(older.body).toMatchObject({ has_more: false, messages: [{ id }] });
+
+    // Quem não participa não vê nem escreve.
+    expect((await call('GET', `/conversations/${direct}/messages`, { token: hugo.access_token })).status).toBe(404);
+    expect((await send(hugo, direct, { kind: 'text', body: 'olá' })).status).toBe(404);
+
+    // Só quem enviou apaga; fica "apagada" para os dois.
+    expect((await call('DELETE', `/chat-messages/${id}`, { token: gil.access_token })).status).toBe(404);
+    expect((await call('DELETE', `/chat-messages/${id}`, { token: filipa.access_token })).status).toBe(204);
+    const after = await call('GET', `/conversations/${direct}/messages`, { token: gil.access_token });
+    expect(after.body.messages.find((m: { id: string }) => m.id === id)).toMatchObject({ deleted: true, body: '', reactions: [] });
+    expect(after.body.messages[0].reply).toMatchObject({ deleted: true, body: '' });
+  });
+
+  it('envia imagens, GIFs e stickers e guarda stickers', async () => {
+    const up = await call('POST', `/conversations/${direct}/uploads`, { token: filipa.access_token, raw: jpeg });
+    expect(up.status).toBe(200);
+    expect(up.body.media_key).toMatch(new RegExp(`^${direct}/[0-9a-f-]+\\.jpg$`));
+    expect((await call('POST', `/conversations/${direct}/uploads`, { token: hugo.access_token, raw: jpeg })).status).toBe(404);
+
+    const image = await send(filipa, direct, { kind: 'image', media_key: up.body.media_key, body: 'Este?', width: 800, height: 600 });
+    expect(image.body).toMatchObject({ kind: 'image', body: 'Este?', width: 800, height: 600 });
+    const imageUrl = new URL(image.body.media_url);
+    expect((await call('GET', imageUrl.pathname + imageUrl.search)).status).toBe(200);
+    // A chave tem de ser desta conversa.
+    expect((await send(filipa, direct, { kind: 'image', media_key: `${gil.user.id}/x.jpg` })).status).toBe(422);
+
+    // GIFs só do GIPHY.
+    expect((await send(gil, direct, { kind: 'gif', media_url: 'https://evil.example/a.gif' })).status).toBe(400);
+    const gif = await send(gil, direct, { kind: 'gif', media_url: 'https://media1.giphy.com/media/abc/200w.gif', width: 200, height: 150 });
+    expect(gif.body.media_url).toBe('https://media1.giphy.com/media/abc/200w.gif');
+
+    // Guardar como sticker: a imagem é copiada (continua lá depois de a mensagem ser apagada).
+    const saved = await call('POST', '/stickers', { token: gil.access_token, body: { message_id: image.body.id } });
+    expect(saved.status).toBe(200);
+    await call('POST', '/stickers', { token: gil.access_token, body: { message_id: gif.body.id } });
+    // O mesmo GIF não fica duas vezes.
+    await call('POST', '/stickers', { token: gil.access_token, body: { media_url: 'https://media1.giphy.com/media/abc/200w.gif' } });
+    const fromGallery = await app.inject({
+      method: 'POST',
+      url: '/stickers/upload?width=512&height=512',
+      headers: { authorization: `Bearer ${gil.access_token}`, 'content-type': 'image/gif' },
+      payload: Buffer.from('GIF89a\x01\x00\x01\x00', 'binary'),
+    });
+    expect(fromGallery.statusCode).toBe(200);
+    const stickers = (await call('GET', '/stickers', { token: gil.access_token })).body;
+    expect(stickers).toHaveLength(3);
+    expect((await call('GET', '/stickers', { token: filipa.access_token })).body).toEqual([]);
+
+    expect((await call('DELETE', `/chat-messages/${image.body.id}`, { token: filipa.access_token })).status).toBe(204);
+    expect((await call('GET', imageUrl.pathname + imageUrl.search)).status).toBe(404);
+    const savedUrl = new URL(saved.body.url);
+    expect((await call('GET', savedUrl.pathname + savedUrl.search)).status).toBe(200);
+
+    const sticker = await send(gil, direct, { kind: 'sticker', sticker_id: saved.body.id });
+    expect(sticker.body.kind).toBe('sticker');
+    expect(new URL(sticker.body.media_url).pathname).toMatch(new RegExp(`^/files/${direct}/`));
+    expect((await send(filipa, direct, { kind: 'sticker', sticker_id: saved.body.id })).status).toBe(404);
+
+    expect((await call('DELETE', `/stickers/${saved.body.id}`, { token: gil.access_token })).status).toBe(204);
+    expect((await call('GET', savedUrl.pathname + savedUrl.search)).status).toBe(404);
+  });
+
+  it('pesquisa GIFs no GIPHY através da API', async () => {
+    const res = await call('GET', '/gifs?q=parab%C3%A9ns&type=stickers', { token: filipa.access_token });
+    expect(res.body).toEqual({
+      results: [{ id: 'abc', url: 'https://media1.giphy.com/media/abc/200w.gif', preview_url: 'https://media1.giphy.com/media/abc/100w.gif', width: 200, height: 150 }],
+      next_offset: 2,
+    });
+    const url = new URL(giphyCalls.at(-1)!);
+    expect(url.pathname).toBe('/v1/stickers/search');
+    expect(url.searchParams.get('q')).toBe('parabéns');
+    expect(url.searchParams.get('api_key')).toBe('giphy-test-key');
+    await call('GET', '/gifs', { token: filipa.access_token });
+    expect(new URL(giphyCalls.at(-1)!).pathname).toBe('/v1/gifs/trending');
+    expect((await call('GET', '/gifs')).status).toBe(401);
+    await expect(new GifsService(undefined).search('gifs', '', 0)).rejects.toMatchObject({ status: 503, code: 'gifs_unavailable' });
+  });
+
+  it('cada grupo tem a sua conversa, só para os membros', async () => {
+    const groupId = uuid();
+    await call('PUT', `/groups/${groupId}`, {
+      token: filipa.access_token,
+      body: {
+        group: { title: 'Prenda da Rita', celebrant_name: 'Rita', target_amount: 60 },
+        new_members: [{ id: uuid(), user_id: filipa.user.id, display_name: 'Filipa' }],
+      },
+    });
+    const group = (await call('GET', '/groups', { token: filipa.access_token })).body.find((g: { id: string }) => g.id === groupId);
+    const conversation: string = group.conversation_id;
+    expect(conversation).toBeTruthy();
+
+    expect((await send(hugo, conversation, { kind: 'text', body: 'olá' })).status).toBe(404);
+    await call('POST', `/invite-codes/${group.invite_code}/join`, { token: hugo.access_token, body: {} });
+    expect((await send(hugo, conversation, { kind: 'text', body: 'Entrei! 🎉' })).status).toBe(200);
+
+    const conv = (await call('GET', '/conversations', { token: filipa.access_token })).body.find((c: { id: string }) => c.id === conversation);
+    expect(conv).toMatchObject({ kind: 'group', group_id: groupId, title: 'Prenda da Rita', celebrant_name: 'Rita', unread_count: 1 });
+    // Hugo não é amigo da Filipa, mas fala com ela no grupo.
+    expect((await call('GET', `/conversations/${conversation}`, { token: hugo.access_token })).body.participants).toHaveLength(2);
+
+    expect((await call('DELETE', `/groups/${groupId}`, { token: filipa.access_token })).status).toBe(204);
+    expect((await call('GET', `/conversations/${conversation}/messages`, { token: hugo.access_token })).status).toBe(404);
+  });
+
+  it('avisa em tempo real por WebSocket', async () => {
+    const ws = await app.injectWS('/ws');
+    const events: { type: string; [k: string]: unknown }[] = [];
+    const waiters: (() => void)[] = [];
+    ws.on('message', (raw) => {
+      events.push(JSON.parse(raw.toString()));
+      waiters.splice(0).forEach((w) => w());
+    });
+    const next = async (type: string) => {
+      for (let i = 0; i < 50; i++) {
+        const found = events.find((e) => e.type === type);
+        if (found) {
+          events.splice(events.indexOf(found), 1);
+          return found;
+        }
+        await new Promise<void>((r) => {
+          waiters.push(r);
+          setTimeout(r, 100);
+        });
+      }
+      throw new Error(`sem evento ${type}`);
+    };
+
+    ws.send(JSON.stringify({ type: 'auth', token: gil.access_token }));
+    await next('ready');
+
+    await send(filipa, direct, { kind: 'text', body: 'Estás aí?' });
+    expect((await next('message')).message).toMatchObject({ body: 'Estás aí?', conversation_id: direct });
+
+    // "A escrever" da Filipa chega ao Gil (e só às conversas onde ela participa).
+    const filipaWs = await app.injectWS('/ws');
+    filipaWs.send(JSON.stringify({ type: 'auth', token: filipa.access_token }));
+    await new Promise((r) => filipaWs.once('message', r));
+    filipaWs.send(JSON.stringify({ type: 'typing', conversation_id: direct }));
+    expect(await next('typing')).toMatchObject({ conversation_id: direct, user_id: filipa.user.id, name: 'Filipa' });
+
+    await call('POST', '/friends/requests', { token: hugo.access_token, body: { user_id: gil.user.id } });
+    await next('friends');
+
+    // Deixar de ser amigos: a conversa fica para ler, mas já não se escreve.
+    await call('DELETE', `/friends/${filipa.user.id}`, { token: gil.access_token });
+    expect((await send(gil, direct, { kind: 'text', body: 'adeus' })).body.error).toBe('not_friends');
+    expect((await call('GET', `/conversations/${direct}/messages`, { token: gil.access_token })).status).toBe(200);
+
+    ws.terminate();
+    filipaWs.terminate();
   });
 });
 

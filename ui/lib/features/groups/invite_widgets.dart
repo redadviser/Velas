@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/chat_providers.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import '../../core/utils/errors.dart';
 import '../../core/utils/identity.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/group_models.dart';
+import '../chat/chat_widgets.dart';
 import 'invite_links.dart';
 
 /// Procura uma conta por email, telemóvel ou username e executa [onAction]
@@ -396,6 +398,7 @@ class _InviteSheet extends ConsumerWidget {
                 style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
               ),
               const SizedBox(height: 16),
+              _FriendsToInvite(group: group),
               ContactLookup(
                 actionLabel: 'Convidar',
                 onShareLink: () => _shareLink(group),
@@ -412,6 +415,75 @@ class _InviteSheet extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Amigos que ainda não estão no grupo nem foram convidados: um toque convida.
+class _FriendsToInvite extends ConsumerStatefulWidget {
+  const _FriendsToInvite({required this.group});
+
+  final GiftGroup group;
+
+  @override
+  ConsumerState<_FriendsToInvite> createState() => _FriendsToInviteState();
+}
+
+class _FriendsToInviteState extends ConsumerState<_FriendsToInvite> {
+  final _invited = <String>{};
+  String? _busy;
+
+  Future<void> _invite(String userId, String name) async {
+    setState(() => _busy = userId);
+    String message = '';
+    final ok = await runGuarded(
+      context,
+      () => ref.read(groupsProvider.notifier).mutate((repo) async {
+        message = inviteResultMessage(await repo.inviteUser(widget.group.id, userId), name);
+      }),
+    );
+    if (!mounted) return;
+    setState(() {
+      _busy = null;
+      if (ok) _invited.add(userId);
+    });
+    if (ok) showMessage(context, message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final g = widget.group;
+    final taken = {
+      ...g.members.map((m) => m.userId).whereType<String>(),
+      ...g.invitations.map((i) => i.invitedUserId),
+    };
+    final friends = (ref.watch(friendsProvider).value?.friends ?? const []).where((f) => !taken.contains(f.userId)).toList();
+    if (friends.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Amigos', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        for (final f in friends)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: UserAvatar(user: f, size: 36),
+            title: Text(f.name),
+            subtitle: f.username.isEmpty ? null : Text('@${f.username}'),
+            trailing: _invited.contains(f.userId)
+                ? Pill(icon: LucideIcons.check, label: 'Convidado', foreground: context.palette.success)
+                : FilledButton.tonal(
+                    onPressed: _busy == null ? () => _invite(f.userId, f.name) : null,
+                    style: FilledButton.styleFrom(minimumSize: const Size(88, 38)),
+                    child: _busy == f.userId
+                        ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Convidar'),
+                  ),
+          ),
+        const SizedBox(height: 12),
+        Text('Ou procura outra pessoa', style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }

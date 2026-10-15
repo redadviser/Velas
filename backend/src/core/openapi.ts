@@ -39,6 +39,13 @@ export async function registerDocs(app: FastifyInstance) {
         { name: 'Mensagens' },
         { name: 'Prendas em grupo' },
         { name: 'Convites' },
+        { name: 'Amigos', description: 'Pedidos de amizade e lista de amigos' },
+        {
+          name: 'Conversas',
+          description:
+            'Chat dos grupos e privado entre amigos. As novidades chegam em tempo real por WebSocket em /ws ' +
+            '(a primeira mensagem é `{ "type": "auth", "token": "<access token>" }`).',
+        },
         { name: 'Páginas', description: 'Páginas HTML e ficheiros abertos a partir de links' },
       ],
     },

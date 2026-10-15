@@ -94,12 +94,20 @@ export class UsersService {
 
   /** Direito ao apagamento (RGPD): conta, dados e fotografias. */
   async deleteAccount(userId: string): Promise<void> {
-    await tx(this.db, userId, async (c) => {
+    const conversations = await tx(this.db, userId, async (c) => {
+      // Conversas que desaparecem com a conta: as privadas e as dos grupos que administra.
+      const { rows } = await c.query<{ id: string }>(
+        `select c.id from conversations c left join gift_groups g on g.id = c.group_id
+         where $1 in (c.user_a, c.user_b) or g.created_by = $1`,
+        [userId],
+      );
       // Primeiro os grupos de que é administrador (levam os membros consigo);
       // assim o trigger "o administrador não pode sair" não bloqueia.
       await c.query('delete from gift_groups where created_by = $1', [userId]);
       await c.query('delete from users where id = $1', [userId]);
+      return rows;
     });
-    await this.storage.removeUser(userId);
+    await this.storage.removeFolder(userId);
+    for (const { id } of conversations) await this.storage.removeFolder(id);
   }
 }

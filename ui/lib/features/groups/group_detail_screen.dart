@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/chat_providers.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/group_models.dart';
 import '../../data/models/payment.dart';
+import '../chat/chat_widgets.dart';
 import 'group_widgets.dart';
 import 'invite_widgets.dart';
 import 'payment_widgets.dart';
@@ -224,6 +226,16 @@ class GroupDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         actions: [
+          if (g.conversationId != null)
+            IconButton(
+              tooltip: 'Conversa do grupo',
+              onPressed: () => context.push('/chats/${g.conversationId}'),
+              icon: Badge(
+                isLabelVisible: ref.watch(groupUnreadProvider(g.conversationId!)) > 0,
+                label: Text('${ref.watch(groupUnreadProvider(g.conversationId!))}'),
+                child: const Icon(LucideIcons.messageCircle, size: 20),
+              ),
+            ),
           if (isAdmin)
             IconButton(
               tooltip: 'Editar',
@@ -261,6 +273,7 @@ class GroupDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
           children: [
             _Header(group: g),
+            if (g.conversationId != null) ...[const SizedBox(height: 12), _GroupChatCard(conversationId: g.conversationId!)],
             const SizedBox(height: 16),
             if (me != null && !iAmBuyer) ...[
               _MyShare(
@@ -362,6 +375,54 @@ class GroupDetailScreen extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Atalho para a conversa do grupo, com a última mensagem.
+class _GroupChatCard extends ConsumerWidget {
+  const _GroupChatCard({required this.conversationId});
+
+  final String conversationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = ref.watch(conversationsProvider).value?.where((x) => x.id == conversationId).firstOrNull;
+    final me = ref.watch(currentUserProvider)?.id;
+    final last = c?.lastMessage;
+    final who = last == null ? '' : last.senderId == me ? 'Tu: ' : '${last.senderName.split(' ').first}: ';
+    return AppCard(
+      onTap: () => context.push('/chats/$conversationId'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: context.palette.accent,
+            child: Icon(LucideIcons.messagesSquare, size: 18, color: context.palette.accentForeground),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Conversa do grupo', style: context.text.titleSmall),
+                Text(
+                  last == null ? 'Combinem aqui a prenda: ideias, links e fotografias.' : '$who${last.preview}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if ((c?.unreadCount ?? 0) > 0)
+            CountBadge(count: c!.unreadCount)
+          else
+            Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
+        ],
       ),
     );
   }

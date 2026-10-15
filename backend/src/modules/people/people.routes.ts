@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify';
 
 import { HttpError } from '../../core/errors.js';
 import { doc } from '../../core/openapi.js';
-import { PhotoStorage } from '../../core/storage.js';
 import { idParams } from '../../core/validation.js';
 import { importSchema, personSchema } from './people.model.js';
 import type { PeopleService } from './people.service.js';
@@ -11,13 +10,6 @@ const photoTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
 export async function peopleRoutes(app: FastifyInstance, people: PeopleService) {
   const tag = 'Pessoas';
-
-  // Fotografias enviadas em bruto (o tipo real é verificado pelos bytes).
-  app.addContentTypeParser(
-    [...photoTypes, 'application/octet-stream'],
-    { parseAs: 'buffer', bodyLimit: PhotoStorage.maxBytes },
-    (_req, body, done) => done(null, body),
-  );
 
   app.put(
     '/people/:id',

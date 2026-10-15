@@ -1,11 +1,16 @@
 import type { Config } from './config/env.js';
 import type { Db } from './core/database.js';
 import type { Mailer } from './core/mailer.js';
+import { RealtimeHub } from './core/realtime.js';
 import type { PhotoStorage } from './core/storage.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { GoogleVerifier } from './modules/auth/google.js';
 import type { AccessTokens } from './modules/auth/tokens.js';
 import { CategoriesService } from './modules/categories/categories.service.js';
+import { ChatService } from './modules/chat/chat.service.js';
+import { StickersService } from './modules/chat/stickers.service.js';
+import { FriendsService } from './modules/friends/friends.service.js';
+import { GifsService } from './modules/gifs/gifs.service.js';
 import { GiftsService } from './modules/gifts/gifts.service.js';
 import { GroupsService } from './modules/groups/groups.service.js';
 import { InvitationsService } from './modules/invitations/invitations.service.js';
@@ -22,6 +27,8 @@ export interface Deps {
   tokens: AccessTokens;
   mail: Mailer;
   verifyGoogle: GoogleVerifier;
+  /** Pedidos HTTP a serviços externos (GIPHY); substituído nos testes. */
+  fetch?: typeof fetch;
 }
 
 export type Services = ReturnType<typeof createServices>;
@@ -34,7 +41,9 @@ export function createServices(deps: Deps) {
   const people = new PeopleService(db, storage);
   const gifts = new GiftsService(db);
   const messages = new MessagesService(db);
+  const hub = new RealtimeHub();
   return {
+    hub,
     auth: new AuthService(db, users, deps.tokens, deps.mail, deps.verifyGoogle, deps.config),
     users,
     categories,
@@ -42,7 +51,11 @@ export function createServices(deps: Deps) {
     gifts,
     messages,
     sync: new SyncService(db, categories, people, gifts, messages),
-    groups: new GroupsService(db),
+    groups: new GroupsService(db, storage),
     invitations: new InvitationsService(db),
+    friends: new FriendsService(db, hub),
+    chat: new ChatService(db, storage, hub),
+    stickers: new StickersService(db, storage),
+    gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
   };
 }

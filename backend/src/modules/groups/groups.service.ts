@@ -1,11 +1,13 @@
 import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
+import type { PhotoStorage } from '../../core/storage.js';
 import type { PaymentMethods } from '../../core/validation.js';
 import type { GroupInput, GroupJson, MemberInfo, NewMemberInput, PaymentMethod } from './groups.model.js';
 
-/** Grupos com membros e convites embutidos. */
+/** Grupos com membros, convites e a conversa do grupo. */
 const groupsQuery = `
   select g.*,
+    (select c.id from conversations c where c.group_id = g.id) as conversation_id,
     coalesce((select json_agg(m order by m.created_at) from group_members m where m.group_id = g.id), '[]') as group_members,
     coalesce((select json_agg(i order by i.created_at) from group_invitations i where i.group_id = g.id), '[]') as group_invitations
   from gift_groups g`;
@@ -16,7 +18,10 @@ const groupsQuery = `
  * o quê) estão nos triggers guard_* (migrations/002_gift_groups.sql).
  */
 export class GroupsService {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    private readonly storage: PhotoStorage,
+  ) {}
 
   /** Executa como [userId], para os triggers e funções SQL saberem quem é. */
   private as<T>(userId: string, fn: (c: Tx) => Promise<T>) {
@@ -87,7 +92,16 @@ export class GroupsService {
   }
 
   async remove(userId: string, groupId: string): Promise<void> {
-    await this.as(userId, (c) => c.query('delete from gift_groups where id = $1 and created_by = $2', [groupId, userId]));
+    const { rows } = await this.as(userId, (c) =>
+      c.query<{ id: string }>(
+        `with conv as (select id from conversations where group_id = $1),
+              gone as (delete from gift_groups where id = $1 and created_by = $2 returning id)
+         select conv.id from conv where exists (select 1 from gone)`,
+        [groupId, userId],
+      ),
+    );
+    // As imagens da conversa do grupo vão com ele.
+    if (rows[0]) await this.storage.removeFolder(rows[0].id);
   }
 
   /** Marca a prenda como comprada (comprador ou administrador). */

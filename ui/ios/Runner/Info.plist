@@ -23,9 +23,9 @@
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Para escolher uma fotografia da pessoa.</string>
+	<string>Para escolheres fotografias das pessoas e para enviares imagens nas conversas.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Para tirar uma fotografia da pessoa.</string>
+	<string>Para tirares fotografias das pessoas e para as enviares nas conversas.</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>pt-PT</string>

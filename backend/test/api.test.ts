@@ -46,8 +46,8 @@ beforeAll(async () => {
     appScheme: 'com.eupasoft.velas',
     rateLimit: false,
     docs: true,
-    androidPackage: 'com.eupasoft.aniversarios',
-    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.eupasoft.aniversarios',
+    androidPackage: 'com.velas.app',
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.velas.app',
   };
   app = await buildApp({
     config,
@@ -358,19 +358,30 @@ describe('prendas em grupo', () => {
   });
 
   it('entra por link e fecha quando a prenda é comprada', async () => {
-    const code = (await call('GET', '/groups', { token: admin.access_token })).body[0].invite_code;
+    const code: string = (await call('GET', '/groups', { token: admin.access_token })).body[0].invite_code;
+    // 8 caracteres sem ambiguidades (sem 0/O nem 1/I).
+    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    const spaced = `${code.slice(0, 4)} ${code.slice(4)}`;
 
-    // Página pública do link partilhado.
+    // Página pública do link partilhado, com pré-visualização para as apps de mensagens.
     const page = await call('GET', `/g/${code.toLowerCase()}`);
     expect(page.status).toBe(200);
+    expect(page.raw.body).toContain(`<div class="code" id="code">${spaced}</div>`);
+    expect(page.raw.body).toContain(`<meta property="og:description" content="Código ${spaced} ·`);
+    expect(page.raw.body).toContain('<meta property="og:image" content="http://localhost:80/og/invite.jpg">');
+    const image = await call('GET', '/og/invite.jpg');
+    expect(image.status).toBe(200);
+    expect(image.raw.headers['content-type']).toBe('image/jpeg');
     expect(page.raw.body).toContain(`com.eupasoft.velas://app/join/${code}`);
-    expect(page.raw.body).toContain(`intent://app/join/${code}#Intent;scheme=com.eupasoft.velas;package=com.eupasoft.aniversarios;S.browser_fallback_url=https%3A%2F%2Fplay.google.com`);
+    expect(page.raw.body).toContain(`intent://app/join/${code}#Intent;scheme=com.eupasoft.velas;package=com.velas.app;S.browser_fallback_url=https%3A%2F%2Fplay.google.com`);
     expect(page.raw.body).toContain('Descarregar para Android');
     expect(page.raw.body).not.toContain('Descarregar para iPhone');
     expect(page.raw.body).not.toContain('Prenda da Mãe'); // não revela o grupo
     expect((await call('GET', '/g/%3Cscript%3E')).status).toBe(404);
 
-    const preview = await call('GET', `/invite-codes/${code.toLowerCase()}`, { token: other.access_token });
+    // O código pode vir como a pessoa o escreve: minúsculas, espaços, hífens.
+    const typed = encodeURIComponent(`${code.slice(0, 4).toLowerCase()}-${code.slice(4)}`);
+    const preview = await call('GET', `/invite-codes/${typed}`, { token: other.access_token });
     expect(preview.body).toMatchObject({ id: groupId, admin_name: 'Carla', member_count: 3, already_member: false, closed: false });
     expect((await call('GET', '/invite-codes/NAOEXISTE1', { token: other.access_token })).body.error).toBe('invalid_code');
 

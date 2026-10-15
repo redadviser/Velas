@@ -84,7 +84,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     uploadDir: env.UPLOAD_DIR ?? './uploads',
     mail: loadMailConfig(env),
     appScheme: env.APP_SCHEME ?? 'com.eupasoft.velas',
-    androidPackage: env.ANDROID_PACKAGE ?? 'com.eupasoft.aniversarios',
+    androidPackage: env.ANDROID_PACKAGE ?? 'com.velas.app',
     appStoreUrl: env.APP_STORE_URL?.trim() || undefined,
     playStoreUrl: env.PLAY_STORE_URL?.trim() || undefined,
     rateLimit: env.RATE_LIMIT !== 'false',
@@ -93,7 +93,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 }
 
 export function loadMailConfig(env: NodeJS.ProcessEnv = process.env): MailConfig {
-  const from = env.MAIL_FROM?.trim() || 'Velas <no-reply@velas.app>';
+  const from = env.MAIL_FROM?.trim() || 'Birthdayly <no-reply@velas.app>';
   const host = env.SMTP_HOST?.trim();
   if (!host) return { from };
   const port = Number(env.SMTP_PORT || 465);

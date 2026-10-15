@@ -86,7 +86,7 @@ class BrandMark extends StatelessWidget {
         if (showName) ...[
           const SizedBox(width: 10),
           Text(
-            'Velas',
+            'Birthdayly',
             style: AppTheme.display(
               context,
               size: size * 0.6,

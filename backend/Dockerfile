@@ -19,6 +19,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 COPY migrations ./migrations
+# Imagens servidas pela API (pré-visualização dos links de convite).
+COPY public ./public
 # Pasta das fotografias (montar como "Persistent Directory" no CapRover).
 RUN mkdir -p /data/uploads && chown -R node:node /data
 USER node

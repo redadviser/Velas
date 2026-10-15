@@ -250,7 +250,124 @@ String inviteResultMessage(InviteResult r, String name) => switch (r) {
   InviteResult.notFound => 'Esta conta já não existe.',
 };
 
-/// Folha "Convidar" do grupo: link de convite + procurar por contacto.
+void _shareLink(GiftGroup g) => SharePlus.instance.share(
+  ShareParams(text: InviteLinks.linkMessage(g), subject: 'Convite para a prenda "${g.title}"'),
+);
+
+void _shareCode(GiftGroup g) => SharePlus.instance.share(
+  ShareParams(text: InviteLinks.codeMessage(g), subject: 'Convite para a prenda "${g.title}"'),
+);
+
+/// Código e link de convite do grupo, com as ações de partilha. Quem o
+/// administra também pode convidar contas por email, telemóvel ou username.
+class InviteCodeCard extends StatelessWidget {
+  const InviteCodeCard({super.key, required this.group, this.onInviteContact});
+
+  final GiftGroup group;
+  final VoidCallback? onInviteContact;
+
+  Future<void> _copy(BuildContext context, String text, String message) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) showMessage(context, message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.palette.mutedForeground;
+    final code = group.inviteCode;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: context.palette.accent,
+                child: Icon(LucideIcons.userPlus, size: 18, color: context.palette.accentForeground),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Convidar pessoas', style: context.text.titleSmall),
+                    Text(
+                      'Partilha o link ou o código do grupo.',
+                      style: context.text.bodySmall?.copyWith(color: muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Material(
+            color: context.palette.muted,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _copy(context, code, 'Código copiado.'),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+                child: Column(
+                  children: [
+                    Text('CÓDIGO DO GRUPO', style: context.text.labelSmall?.copyWith(color: muted, letterSpacing: 1.2)),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(width: 26),
+                        Text(
+                          InviteLinks.formatCode(code),
+                          style: AppTheme.display(context, size: 30).copyWith(letterSpacing: 4),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(LucideIcons.copy, size: 18, color: muted),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () => _copy(context, InviteLinks.shareLink(code), 'Link copiado.'),
+                      child: Text(
+                        InviteLinks.displayLink(code),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.bodySmall?.copyWith(color: muted),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => _shareLink(group),
+            icon: const Icon(LucideIcons.link, size: 18),
+            label: const Text('Partilhar link'),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => _shareCode(group),
+            icon: const Icon(LucideIcons.hash, size: 18),
+            label: const Text('Partilhar código'),
+          ),
+          if (onInviteContact != null) ...[
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: onInviteContact,
+              icon: const Icon(LucideIcons.atSign, size: 16),
+              label: const Text('Convidar por contacto'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Folha para convidar uma conta por email, telemóvel ou username.
 Future<void> showInviteSheet(BuildContext context, GiftGroup group) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
@@ -264,9 +381,6 @@ class _InviteSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    void share() => SharePlus.instance.share(ShareParams(text: InviteLinks.shareText(group)));
-    final link = InviteLinks.shareLink(group.inviteCode);
-
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
@@ -275,51 +389,16 @@ class _InviteSheet extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Convidar para o grupo', style: AppTheme.display(context, size: 22)),
-              const SizedBox(height: 20),
-              Text('Com um link', style: context.text.titleSmall),
-              const SizedBox(height: 4),
-              Text(
-                'Quem abrir o link entra no grupo — se ainda não tiver conta, cria uma primeiro.',
-                style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
-                decoration: BoxDecoration(color: context.palette.muted, borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(link, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.bodyMedium),
-                    ),
-                    IconButton(
-                      tooltip: 'Copiar link',
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: link));
-                        if (context.mounted) showMessage(context, 'Link copiado.');
-                      },
-                      icon: const Icon(LucideIcons.copy, size: 18),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: share,
-                icon: const Icon(LucideIcons.share2, size: 18),
-                label: const Text('Partilhar link'),
-              ),
-              const SizedBox(height: 28),
-              Text('Por email, telemóvel ou username', style: context.text.titleSmall),
+              Text('Convidar por contacto', style: AppTheme.display(context, size: 22)),
               const SizedBox(height: 4),
               Text(
                 'Se a pessoa já tiver conta, recebe o convite na app.',
                 style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               ContactLookup(
                 actionLabel: 'Convidar',
-                onShareLink: share,
+                onShareLink: () => _shareLink(group),
                 onAction: (user) async {
                   String message = '';
                   await ref.read(groupsProvider.notifier).mutate((repo) async {

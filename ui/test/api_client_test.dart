@@ -46,10 +46,7 @@ void main() {
     final api = ApiClient('https://api.test', client: client)..onSessionExpired = () => expired = true;
     await api.restore();
 
-    await expectLater(
-      api.get('/data'),
-      throwsA(isA<ApiException>().having((e) => e.code, 'code', 'session_expired')),
-    );
+    await expectLater(api.get('/data'), throwsA(isA<ApiException>().having((e) => e.code, 'code', 'session_expired')));
     expect(expired, isTrue);
     expect(api.hasSession, isFalse);
   });

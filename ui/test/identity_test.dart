@@ -1,5 +1,7 @@
+import 'package:aniversarios/core/config/env.dart';
 import 'package:aniversarios/core/utils/identity.dart';
 import 'package:aniversarios/data/local/local_auth_repository.dart';
+import 'package:aniversarios/data/models/group_models.dart';
 import 'package:aniversarios/features/groups/invite_links.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,7 +43,31 @@ void main() {
     expect(InviteLinks.codeFrom(Uri.parse('com.eupasoft.velas://app/join/ABCDE12345')), 'ABCDE12345');
     expect(InviteLinks.codeFrom(Uri.parse('https://convite.velas.pt/g/ABCDE12345')), 'ABCDE12345');
     expect(InviteLinks.codeFrom(Uri.parse('com.eupasoft.velas://auth-callback?code=x')), isNull);
-    expect(InviteLinks.shareLink('ABC'), 'com.eupasoft.velas://app/join/ABC');
+    // Com servidor, o link partilhado é a página de convite da API.
+    expect(InviteLinks.shareLink('ABC'), '${Env.apiUrl}/g/ABC');
+  });
+
+  test('códigos de convite: formato, o que a pessoa escreve e mensagens', () {
+    expect(InviteLinks.formatCode('K7P2QX9M'), 'K7P2 QX9M');
+    expect(InviteLinks.formatCode('ABCDE12345'), 'ABCDE12345'); // códigos antigos
+    expect(InviteLinks.normalizeCode(' k7p2 qx9m '), 'K7P2QX9M');
+    expect(InviteLinks.normalizeCode('K7P2-QX9M'), 'K7P2QX9M');
+    expect(InviteLinks.normalizeCode('https://convite.velas.pt/g/K7P2QX9M'), 'K7P2QX9M');
+    expect(InviteLinks.displayLink('K7P2QX9M'), endsWith('/g/K7P2QX9M'));
+    expect(InviteLinks.displayLink('K7P2QX9M'), isNot(startsWith('http')));
+
+    final g = GiftGroup(
+      id: 'g1',
+      createdBy: 'u1',
+      title: 'Prenda para a Mãe',
+      celebrantName: 'Helena',
+      targetAmount: 80,
+      inviteCode: 'K7P2QX9M',
+      createdAt: DateTime(2026),
+    );
+    expect(InviteLinks.linkMessage(g), contains(InviteLinks.shareLink('K7P2QX9M')));
+    expect(InviteLinks.codeMessage(g), contains('Código do grupo: K7P2 QX9M'));
+    expect(InviteLinks.codeMessage(g), contains(InviteLinks.shareLink('K7P2QX9M')));
   });
 
   group('Conta local', () {

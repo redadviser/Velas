@@ -17,10 +17,10 @@ export async function registerDocs(app: FastifyInstance) {
     openapi: {
       openapi: '3.0.3',
       info: {
-        title: 'API Velas',
+        title: 'API Birthdayly',
         version: '1.0.0',
         description:
-          'API da app Velas (aniversários).\n\n' +
+          'API da app Birthdayly (aniversários).\n\n' +
           'As rotas com cadeado exigem sessão: faz login em **POST /auth/login** (ou /auth/signup), ' +
           'copia o `access_token` e cola-o em **Authorize**.\n\n' +
           'Os erros têm sempre o formato `{ "error": "<código>", "message": "<detalhe>" }`.',

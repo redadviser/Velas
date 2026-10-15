@@ -66,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {
     final json = const JsonEncoder.withIndent('  ').convert(ref.read(dataProvider).toExportJson());
-    await SharePlus.instance.share(ShareParams(text: json, subject: 'Os meus dados — Velas'));
+    await SharePlus.instance.share(ShareParams(text: json, subject: 'Os meus dados — Birthdayly'));
   }
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
@@ -304,7 +304,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'Velas · versão 1.0.0',
+              'Birthdayly · versão 1.0.0',
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),
           ),

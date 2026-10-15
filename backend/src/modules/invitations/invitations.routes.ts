@@ -45,16 +45,22 @@ export async function invitationsRoutes(app: FastifyInstance, invitations: Invit
     },
   );
 
-  // Links de convite.
+  // Links de convite (com limite, para não se adivinharem códigos).
   app.get(
     '/invite-codes/:code',
-    { schema: doc({ tag, summary: 'Ver o grupo de um código de convite', params: codeParams }) },
+    {
+      config: rateLimits.lookup,
+      schema: doc({ tag, summary: 'Ver o grupo de um código de convite', params: codeParams }),
+    },
     (req) => invitations.preview(req.uid, codeParams.parse(req.params).code),
   );
 
   app.post(
     '/invite-codes/:code/join',
-    { schema: doc({ tag, summary: 'Entrar num grupo com um código de convite', params: codeParams, body: joinSchema }) },
+    {
+      config: rateLimits.lookup,
+      schema: doc({ tag, summary: 'Entrar num grupo com um código de convite', params: codeParams, body: joinSchema }),
+    },
     async (req) => {
       const { code } = codeParams.parse(req.params);
       return { group_id: await invitations.join(req.uid, code, joinSchema.parse(req.body ?? {}).display_name) };

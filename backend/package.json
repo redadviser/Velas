@@ -1,7 +1,7 @@
 {
   "name": "velas-backend",
   "version": "1.0.0",
-  "description": "API da app Velas (aniversários) — Fastify + PostgreSQL",
+  "description": "API da app Birthdayly (aniversários) — Fastify + PostgreSQL",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -11,7 +11,7 @@
     "migrate:prod": "node dist/core/migrations.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "caprover:tar": "COPYFILE_DISABLE=1 tar -cf caprover.tar captain-definition Dockerfile .dockerignore package.json package-lock.json tsconfig.json src migrations",
+    "caprover:tar": "COPYFILE_DISABLE=1 tar -cf caprover.tar captain-definition Dockerfile .dockerignore package.json package-lock.json tsconfig.json src migrations public",
     "caprover:deploy": "npm run caprover:tar && npx caprover deploy -t caprover.tar",
     "mail:test": "tsx src/core/mail-test.ts"
   },

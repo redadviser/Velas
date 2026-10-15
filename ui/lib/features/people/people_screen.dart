@@ -66,15 +66,6 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     child: Row(
                       children: [
                         Expanded(child: Text('Pessoas', style: AppTheme.display(context, size: 30))),
-                        FilledButton.tonalIcon(
-                          onPressed: () => context.push('/import'),
-                          icon: const Icon(LucideIcons.contactRound, size: 18),
-                          label: const Text('Importar'),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 40),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                          ),
-                        ),
                         PopupMenuButton<_Sort>(
                           tooltip: 'Ordenar',
                           icon: const Icon(LucideIcons.arrowUpDown, size: 20),
@@ -141,23 +132,12 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     child: EmptyState(
                       icon: LucideIcons.usersRound,
                       title: 'Ainda não há ninguém',
-                      message:
-                          'Importa os contactos do telemóvel ou do Google, ou adiciona familiares, '
-                          'amigos e colegas um a um.',
-                      action: Column(
-                        children: [
-                          FilledButton.icon(
-                            onPressed: () => context.push('/import'),
-                            icon: const Icon(LucideIcons.contactRound, size: 18),
-                            label: const Text('Importar contactos'),
-                            style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
-                          ),
-                          const SizedBox(height: 10),
-                          TextButton(
-                            onPressed: () => context.push('/person/new'),
-                            child: const Text('Adicionar manualmente'),
-                          ),
-                        ],
+                      message: 'Adiciona familiares, amigos e colegas para nunca falhares um aniversário.',
+                      action: FilledButton.icon(
+                        onPressed: () => context.push('/person/new'),
+                        icon: const Icon(LucideIcons.userPlus, size: 18),
+                        label: const Text('Adicionar pessoa'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
                       ),
                     ),
                   )

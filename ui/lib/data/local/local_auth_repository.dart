@@ -127,7 +127,7 @@ class LocalAuthRepository implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
-    throw const AppException('O login com Google precisa do servidor da Velas.');
+    throw const AppException('O login com Google precisa do servidor da Birthdayly.');
   }
 
   @override

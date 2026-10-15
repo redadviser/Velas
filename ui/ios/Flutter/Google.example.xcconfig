@@ -1,3 +1,4 @@
+// Copia para Google.xcconfig (não vai para o git) e preenche.
 // Login com Google no iOS. Valores do client ID OAuth do tipo "iOS"
 // (Google Cloud Console → APIs e serviços → Credenciais).
 //   GOOGLE_IOS_CLIENT_ID      = 1234-abcd.apps.googleusercontent.com

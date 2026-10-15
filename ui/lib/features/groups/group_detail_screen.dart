@@ -13,7 +13,6 @@ import '../../core/widgets/common.dart';
 import '../../data/models/group_models.dart';
 import '../../data/models/payment.dart';
 import 'group_widgets.dart';
-import 'invite_links.dart';
 import 'invite_widgets.dart';
 import 'payment_widgets.dart';
 
@@ -294,7 +293,7 @@ class GroupDetailScreen extends ConsumerWidget {
               ),
             if (supportsInvites && g.inviteCode.isNotEmpty && g.purchasedAt == null) ...[
               const SizedBox(height: 12),
-              _InviteCard(group: g, isAdmin: isAdmin),
+              InviteCodeCard(group: g, onInviteContact: isAdmin ? () => showInviteSheet(context, g) : null),
             ],
             SectionTitle(
               'Participantes · ${g.members.length}',
@@ -626,53 +625,6 @@ class _BuyerCard extends StatelessWidget {
               label: Text(isMe ? 'Adicionar MB WAY / IBAN' : 'Indicar dados de pagamento'),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InviteCard extends StatelessWidget {
-  const _InviteCard({required this.group, required this.isAdmin});
-
-  final GiftGroup group;
-  final bool isAdmin;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: context.palette.accent,
-            child: Icon(LucideIcons.userPlus, size: 18, color: context.palette.accentForeground),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Convidar pessoas', style: context.text.titleSmall),
-                Text(
-                  isAdmin ? 'Por link, email, telemóvel ou username' : 'Partilha o link do grupo',
-                  style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-                ),
-              ],
-            ),
-          ),
-          if (isAdmin)
-            FilledButton(
-              onPressed: () => showInviteSheet(context, group),
-              style: FilledButton.styleFrom(minimumSize: const Size(96, 42)),
-              child: const Text('Convidar'),
-            )
-          else
-            IconButton.filled(
-              tooltip: 'Partilhar link',
-              onPressed: () => SharePlus.instance.share(ShareParams(text: InviteLinks.shareText(group))),
-              icon: const Icon(LucideIcons.share2, size: 20),
-            ),
         ],
       ),
     );

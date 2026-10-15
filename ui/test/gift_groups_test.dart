@@ -226,10 +226,11 @@ void repositoryTests() {
       final bruno = auth.current!;
       await repo.saveGroup(makeGroup([]), newMembers: [member('a', userId: 'admin-user')]);
       final code = (await repo.fetchGroups()).single.inviteCode;
-      expect(code.length, 10);
+      expect(code, matches(RegExp(r'^[A-HJ-NP-Z2-9]{8}$')));
 
       final asBruno = LocalGroupRepository(prefs, () => bruno);
-      final preview = await asBruno.previewByCode(code.toLowerCase());
+      // Como a pessoa o escreve: minúsculas e com espaço.
+      final preview = await asBruno.previewByCode('${code.substring(0, 4).toLowerCase()} ${code.substring(4)}');
       expect(preview.alreadyMember, isFalse);
       expect(await asBruno.joinByCode(code, 'Bruno'), 'g');
       expect((await asBruno.fetchGroups()).single.members.length, 2);

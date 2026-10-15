@@ -137,18 +137,3 @@ class ThemeModeController extends Notifier<ThemeMode> {
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
-
-/// Se o cartão "Importa os teus contactos" do início foi escondido.
-class ImportCardController extends Notifier<bool> {
-  static const _key = 'velas.importCardDismissed';
-
-  @override
-  bool build() => ref.watch(sharedPrefsProvider).getBool(_key) ?? false;
-
-  void dismiss() {
-    state = true;
-    ref.read(sharedPrefsProvider).setBool(_key, true);
-  }
-}
-
-final importCardDismissedProvider = NotifierProvider<ImportCardController, bool>(ImportCardController.new);

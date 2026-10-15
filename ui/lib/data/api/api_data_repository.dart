@@ -14,7 +14,8 @@ class ApiDataRepository extends CachedDataRepository {
   static List<Map<String, dynamic>> _list(Object? v) => [for (final e in (v as List? ?? const [])) (e as Map).cast()];
 
   /// O servidor devolve um URL assinado e temporário para a fotografia.
-  static Person _person(Map<String, dynamic> j) => Person.fromJson(j).copyWith(photoUrl: () => j['photo_url'] as String?);
+  static Person _person(Map<String, dynamic> j) =>
+      Person.fromJson(j).copyWith(photoUrl: () => j['photo_url'] as String?);
 
   @override
   Future<AppData> fetchAll() async {
@@ -29,7 +30,8 @@ class ApiDataRepository extends CachedDataRepository {
 
   /// Envia a fotografia e devolve a pessoa com o novo caminho e URL.
   Future<Person> _uploadPhoto(Person person, Uint8List photo) async {
-    final res = ((await _api.putBytes('/people/${person.id}/photo', photo, 'image/jpeg')) as Map).cast<String, dynamic>();
+    final res = ((await _api.putBytes('/people/${person.id}/photo', photo, 'image/jpeg')) as Map)
+        .cast<String, dynamic>();
     return person.copyWith(photoPath: () => res['photo_path'] as String?, photoUrl: () => res['photo_url'] as String?);
   }
 

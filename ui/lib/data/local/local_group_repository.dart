@@ -62,7 +62,7 @@ class LocalGroupRepository implements GroupRepository {
   static String _newCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final r = Random.secure();
-    return List.generate(10, (_) => chars[r.nextInt(chars.length)]).join();
+    return List.generate(8, (_) => chars[r.nextInt(chars.length)]).join();
   }
 
   Map<String, dynamic> _row(GiftGroup g) => {
@@ -211,7 +211,7 @@ class LocalGroupRepository implements GroupRepository {
   }
 
   GiftGroup _byCode(String code) {
-    final c = code.trim().toUpperCase();
+    final c = code.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
     final row = _read().where((r) => r['invite_code'] == c).firstOrNull;
     if (row == null) throw const AppException('Código inválido. Confirma com quem te convidou.');
     return GiftGroup.fromJson(row);
@@ -251,7 +251,10 @@ class LocalGroupRepository implements GroupRepository {
   Future<FoundUser?> findUser(String identifier) async {
     final q = identifier.trim().toLowerCase();
     final match = LocalAuthRepository.deviceProfiles(_prefs).where(
-      (p) => p.email.toLowerCase() == q || (p.username.isNotEmpty && p.username == q) || (p.phone.isNotEmpty && p.phone == q),
+      (p) =>
+          p.email.toLowerCase() == q ||
+          (p.username.isNotEmpty && p.username == q) ||
+          (p.phone.isNotEmpty && p.phone == q),
     );
     final p = match.firstOrNull;
     return p == null ? null : FoundUser(userId: p.id, name: p.name, username: p.username);
@@ -311,7 +314,9 @@ class LocalGroupRepository implements GroupRepository {
   @override
   Future<String?> respondInvitation(String invitationId, {required bool accept}) async {
     final invites = _list(_invitesKey);
-    final i = invites.indexWhere((r) => r['id'] == invitationId && r['invited_user_id'] == _me && r['status'] == 'pending');
+    final i = invites.indexWhere(
+      (r) => r['id'] == invitationId && r['invited_user_id'] == _me && r['status'] == 'pending',
+    );
     if (i == -1) throw const AppException('Este convite já não está disponível.');
     if (!accept) {
       invites[i]['status'] = 'declined';

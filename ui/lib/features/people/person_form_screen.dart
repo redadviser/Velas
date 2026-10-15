@@ -21,6 +21,8 @@ const _relationSuggestions = [
   'Pai',
   'Irmã',
   'Irmão',
+  'Filha',
+  'Filho',
   'Avó',
   'Avô',
   'Amiga',

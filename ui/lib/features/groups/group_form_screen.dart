@@ -104,7 +104,15 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
       _person = group.personId == null ? null : ref.read(dataProvider).person(group.personId!);
       for (final m in group.sortedMembers) {
         _members.add(
-          _Draft(id: m.id, name: m.name, userId: m.userId, username: m.username, original: m, amount: m.customAmount, payment: m.payment),
+          _Draft(
+            id: m.id,
+            name: m.name,
+            userId: m.userId,
+            username: m.username,
+            original: m,
+            amount: m.customAmount,
+            payment: m.payment,
+          ),
         );
       }
     } else {
@@ -239,7 +247,15 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
     );
 
     GroupMember toMember(_Draft d) =>
-        (d.original ?? GroupMember(id: d.id, groupId: group.id, name: d.name, userId: d.userId, username: d.username, createdAt: now))
+        (d.original ??
+                GroupMember(
+                  id: d.id,
+                  groupId: group.id,
+                  name: d.name,
+                  userId: d.userId,
+                  username: d.username,
+                  createdAt: now,
+                ))
             .copyWith(
               name: d.name,
               customAmount: () => _split == SplitMode.custom ? parseEuros(d.amount.text) : null,
@@ -418,8 +434,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
             ContactLookup(
               actionLabel: 'Adicionar',
               onAction: (u) async {
-                final already =
-                    _toInvite.any((x) => x.userId == u.userId) || _members.any((m) => m.userId == u.userId);
+                final already = _toInvite.any((x) => x.userId == u.userId) || _members.any((m) => m.userId == u.userId);
                 if (already) return '${u.name} já está na lista.';
                 setState(() => _toInvite.add(u));
                 return '${u.name} recebe o convite quando ${_isEdit ? 'guardares' : 'criares o grupo'}.';

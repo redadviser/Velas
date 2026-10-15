@@ -68,7 +68,7 @@ class _PaymentDetailsScreenState extends ConsumerState<PaymentDetailsScreen> {
                   Expanded(
                     child: Text(
                       'Estes dados só são mostrados às pessoas de um grupo em que és tu a comprar a prenda, '
-                      'para te poderem enviar a parte delas. A Velas não movimenta dinheiro.',
+                      'para te poderem enviar a parte delas. A Birthdayly não movimenta dinheiro.',
                       style: TextStyle(color: context.palette.accentForeground),
                     ),
                   ),

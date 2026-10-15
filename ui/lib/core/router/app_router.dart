@@ -18,7 +18,6 @@ import '../../features/groups/invite_links.dart';
 import '../../features/groups/join_group_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/messages/message_screen.dart';
-import '../../features/people/import_contacts_screen.dart';
 import '../../features/people/people_screen.dart';
 import '../../features/people/person_detail_screen.dart';
 import '../../features/people/person_form_screen.dart';
@@ -91,7 +90,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
-      GoRoute(path: '/import', parentNavigatorKey: _rootKey, builder: (_, _) => const ImportContactsScreen()),
       GoRoute(
         path: '/person/:id',
         parentNavigatorKey: _rootKey,

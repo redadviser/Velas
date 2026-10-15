@@ -12,7 +12,6 @@ import '../../core/widgets/common.dart';
 import '../../core/widgets/data_gate.dart';
 import '../../data/models/group_models.dart';
 import '../../data/models/models.dart';
-import '../people/import_contacts_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -48,36 +47,16 @@ class HomeScreen extends ConsumerWidget {
                   if (data.people.isEmpty)
                     EmptyState(
                       icon: LucideIcons.cake,
-                      title: 'Começa pelos teus contactos',
-                      message:
-                          'Importa os aniversários que já tens no telemóvel ou no Google, '
-                          'ou adiciona alguém especial. Nós tratamos de te lembrar a tempo.',
-                      action: Column(
-                        children: [
-                          FilledButton.icon(
-                            onPressed: () => context.push('/import'),
-                            icon: const Icon(LucideIcons.contactRound, size: 18),
-                            label: const Text('Importar contactos'),
-                            style: FilledButton.styleFrom(minimumSize: const Size(260, 52)),
-                          ),
-                          const SizedBox(height: 10),
-                          OutlinedButton.icon(
-                            onPressed: () => context.push('/person/new'),
-                            icon: const Icon(LucideIcons.userPlus, size: 18),
-                            label: const Text('Adicionar manualmente'),
-                            style: OutlinedButton.styleFrom(minimumSize: const Size(260, 52)),
-                          ),
-                        ],
+                      title: 'Começa por quem importa',
+                      message: 'Adiciona os aniversários da família e dos amigos. Nós tratamos de te lembrar a tempo.',
+                      action: FilledButton.icon(
+                        onPressed: () => context.push('/person/new'),
+                        icon: const Icon(LucideIcons.userPlus, size: 18),
+                        label: const Text('Adicionar aniversário'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(260, 52)),
                       ),
                     )
                   else ...[
-                    if (!ref.watch(importCardDismissedProvider))
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                        child: ImportContactsCard(
-                          onDismiss: () => ref.read(importCardDismissedProvider.notifier).dismiss(),
-                        ),
-                      ),
                     if (todays.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -139,11 +118,6 @@ class _Header extends StatelessWidget {
                 Text(name.isEmpty ? greeting : '$greeting, $name', style: AppTheme.display(context, size: 28)),
               ],
             ),
-          ),
-          IconButton(
-            tooltip: 'Importar contactos',
-            onPressed: () => context.push('/import'),
-            icon: const Icon(LucideIcons.contactRound),
           ),
           IconButton(
             tooltip: 'Perfil',

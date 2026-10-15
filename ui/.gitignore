@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Configuração local com client IDs (ver .env.example e ios/Flutter/Google.example.xcconfig)
+.env
+/ios/Flutter/Google.xcconfig

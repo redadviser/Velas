@@ -13,7 +13,7 @@ abstract class DataRepository {
   Future<void> savePerson(Person person, {Uint8List? photo, bool removePhoto = false});
   Future<void> deletePerson(String id);
 
-  /// Acrescenta várias pessoas de uma vez (importação de contactos).
+  /// Acrescenta várias pessoas de uma vez.
   /// [photos] por id da pessoa.
   Future<void> importPeople(List<Person> people, {Map<String, Uint8List> photos = const {}});
 

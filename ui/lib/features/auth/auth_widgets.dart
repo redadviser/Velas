@@ -252,10 +252,7 @@ class _GoogleLogoPainter extends CustomPainter {
     arc(_green, 45, 135);
     arc(_yellow, 135, 210);
     arc(_red, 210, 315);
-    canvas.drawRect(
-      Rect.fromLTWH(size.width / 2, (size.height - w) / 2, size.width / 2, w),
-      Paint()..color = _blue,
-    );
+    canvas.drawRect(Rect.fromLTWH(size.width / 2, (size.height - w) / 2, size.width / 2, w), Paint()..color = _blue);
   }
 
   @override

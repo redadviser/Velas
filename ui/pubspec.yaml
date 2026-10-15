@@ -53,7 +53,6 @@ dependencies:
   url_launcher: ^6.3.3
   app_links: ^7.2.2
   google_sign_in: ^7.2.0
-  flutter_contacts: ^2.6.0
   http: ^1.6.0
   flutter_secure_storage: ^11.2.0
 
@@ -78,6 +77,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/welcome/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

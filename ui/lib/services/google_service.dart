@@ -3,14 +3,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../core/config/env.dart';
 import '../core/utils/errors.dart';
 
-/// Conta Google: login (ID token validado pela API) e autorização para ler
-/// os contactos (People API).
+/// Conta Google: login (ID token validado pela API).
 class GoogleService {
   GoogleService._();
 
   static final instance = GoogleService._();
-
-  static const contactsScope = 'https://www.googleapis.com/auth/contacts.readonly';
 
   Future<void>? _init;
 
@@ -24,10 +21,10 @@ class GoogleService {
     return _init ??= _signIn.initialize(serverClientId: Env.googleServerClientId);
   }
 
-  Future<GoogleSignInAccount> _account({List<String> scopeHint = const []}) async {
+  Future<GoogleSignInAccount> _account() async {
     await _ensureInitialized();
     try {
-      return await _signIn.authenticate(scopeHint: scopeHint);
+      return await _signIn.authenticate();
     } on GoogleSignInException catch (e) {
       throw _friendly(e);
     }
@@ -39,20 +36,6 @@ class GoogleService {
     final token = account.authentication.idToken;
     if (token == null) throw const AppException('O Google não devolveu os dados da conta. Tenta novamente.');
     return token;
-  }
-
-  /// Token de acesso de curta duração só para ler contactos. Pede
-  /// autorização na primeira vez.
-  Future<String> contactsAccessToken() async {
-    final account = await _account(scopeHint: const [contactsScope]);
-    try {
-      final authz =
-          await account.authorizationClient.authorizationForScopes(const [contactsScope]) ??
-          await account.authorizationClient.authorizeScopes(const [contactsScope]);
-      return authz.accessToken;
-    } on GoogleSignInException catch (e) {
-      throw _friendly(e);
-    }
   }
 
   Future<void> signOut() async {

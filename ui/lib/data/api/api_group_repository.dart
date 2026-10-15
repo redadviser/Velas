@@ -52,7 +52,7 @@ class ApiGroupRepository implements GroupRepository {
   Future<void> setPurchased(String groupId, bool purchased) =>
       _api.post('/groups/$groupId/purchased', {'purchased': purchased});
 
-  static String _code(String code) => Uri.encodeComponent(code.trim().toUpperCase());
+  static String _code(String code) => Uri.encodeComponent(code.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase());
 
   @override
   Future<String> joinByCode(String code, String displayName) async {

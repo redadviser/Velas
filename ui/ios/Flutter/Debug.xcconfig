@@ -1,2 +1,3 @@
 #include "Generated.xcconfig"
-#include "Google.xcconfig"
+// Opcional: client ID do Google (fora do git, ver Google.example.xcconfig).
+#include? "Google.xcconfig"

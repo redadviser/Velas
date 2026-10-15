@@ -3,15 +3,47 @@ export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
+/** Pré-visualização do link nas apps de mensagens (Open Graph). */
+export interface LinkPreview {
+  description: string;
+  /** URL absoluto da imagem (1200×630). */
+  image: string;
+}
+
+function previewTags(title: string, p: LinkPreview): string {
+  const tag = (property: string, content: string) => `<meta property="${property}" content="${escapeHtml(content)}">`;
+  return [
+    tag('og:type', 'website'),
+    tag('og:site_name', 'Birthdayly'),
+    tag('og:title', title),
+    tag('og:description', p.description),
+    tag('og:image', p.image),
+    tag('og:image:width', '1200'),
+    tag('og:image:height', '630'),
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="description" content="${escapeHtml(p.description)}">`,
+  ].join('\n');
+}
+
 /**
- * Página simples com o aspeto da app (cores Velas, claro/escuro). Usada nas
+ * Página simples com o aspeto da app (cores Birthdayly, claro/escuro). Usada nas
  * páginas abertas a partir de links: convites e recuperação de palavra-passe.
  * [body] e [script] já têm de vir escapados.
  */
-export function htmlPage({ title, body, script = '' }: { title: string; body: string; script?: string }): string {
+export function htmlPage({
+  title,
+  body,
+  script = '',
+  preview,
+}: {
+  title: string;
+  body: string;
+  script?: string;
+  preview?: LinkPreview;
+}): string {
   return `<!doctype html>
 <html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>${escapeHtml(title)}</title>
+<meta name="robots" content="noindex"><title>${escapeHtml(title)}</title>${preview ? `\n${previewTags(title, preview)}` : ''}
 <style>
 :root{--bg:#fcf8f5;--fg:#281c1a;--card:#fff;--muted:#746560;--border:#e9e3df;--primary:#f05560;--on-primary:#fffbf7;--accent:#f8eaf3}
 @media (prefers-color-scheme:dark){:root{--bg:#191210;--fg:#f4ede8;--card:#241c19;--muted:#a99b94;--border:#ffffff1a;--primary:#fa686a;--on-primary:#150a08;--accent:#3e2d38}}

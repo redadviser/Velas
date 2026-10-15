@@ -1,11 +1,11 @@
-/// Configuração injetada em tempo de compilação:
+/// Configuração injetada em tempo de compilação, a partir do `.env` (fora do
+/// git; ver `.env.example`):
 ///
-///   flutter run --dart-define=API_URL=http://localhost:3000 \
-///               --dart-define=GOOGLE_SERVER_CLIENT_ID=123-abc.apps.googleusercontent.com
+///   flutter run --dart-define-from-file=.env
 ///
-/// Sem API_URL a app usa a API de produção. Com `--dart-define=API_URL=`
-/// (vazio) arranca em "modo local": os dados ficam apenas no dispositivo, o que
-/// é útil para desenvolvimento.
+/// Sem API_URL a app usa a API de produção. Com `API_URL=` (vazio) arranca em
+/// "modo local": os dados ficam apenas no dispositivo, o que é útil para
+/// desenvolvimento.
 class Env {
   const Env._();
 
@@ -24,6 +24,6 @@ class Env {
 
   static bool get hasBackend => apiUrl.isNotEmpty;
 
-  /// Login com Google e importação do Google Contacts.
+  /// Login com Google.
   static bool get hasGoogle => googleServerClientId.isNotEmpty;
 }

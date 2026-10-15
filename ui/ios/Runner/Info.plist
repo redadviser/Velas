@@ -22,8 +22,6 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
-	<key>NSContactsUsageDescription</key>
-	<string>Para importares os aniversários dos teus contactos. Só lemos o nome, a data de aniversário e a fotografia.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Para escolher uma fotografia da pessoa.</string>
 	<key>NSCameraUsageDescription</key>
@@ -37,7 +35,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Velas</string>
+	<string>Birthdayly</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,7 +43,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>aniversarios</string>
+	<string>Birthdayly</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/config/env.dart';
 import '../../core/utils/identity.dart';
 import '../../services/google_service.dart';
 import '../models/models.dart';
@@ -29,8 +28,10 @@ class ApiAuthRepository implements AuthRepository {
   @override
   bool get isLocal => false;
 
+  /// Sempre visível com servidor; sem GOOGLE_SERVER_CLIENT_ID o botão explica
+  /// que o Google ainda não está configurado (ver GoogleService).
   @override
-  bool get supportsGoogle => Env.hasGoogle;
+  bool get supportsGoogle => true;
 
   @override
   UserProfile? get current => _current;

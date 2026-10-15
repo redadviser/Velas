@@ -17,7 +17,7 @@ async function main() {
   console.log(`A enviar por ${host}:${port} (${protocol}) como ${user || 'sem autenticação'}…`);
   await createMailer(config, console)({
     to,
-    subject: 'Velas — teste de email',
+    subject: 'Birthdayly — teste de email',
     text: 'Se recebeste este email, o envio está a funcionar.',
     html: '<p>Se recebeste este email, o envio está a funcionar.</p>',
   });

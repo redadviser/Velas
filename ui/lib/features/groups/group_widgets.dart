@@ -11,6 +11,7 @@ import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/group_models.dart';
 import '../auth/auth_widgets.dart';
+import 'invite_links.dart';
 import 'invite_widgets.dart';
 
 /// Mensagem para lembrar quem ainda não pagou.
@@ -317,8 +318,8 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
   bool _loading = false;
 
   Future<void> _join() async {
-    final code = widget.controller.text.replaceAll(' ', '');
-    if (code.length < 6) return;
+    final code = InviteLinks.normalizeCode(widget.controller.text);
+    if (code.length < 4) return;
     setState(() => _loading = true);
     final nav = Navigator.of(context);
     String? id;
@@ -344,7 +345,10 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
           children: [
             Text('Entrar num grupo', style: AppTheme.display(context, size: 22)),
             const SizedBox(height: 4),
-            Text('Usa o código que te enviaram.', style: TextStyle(color: context.palette.mutedForeground)),
+            Text(
+              'Escreve o código que te enviaram ou cola o link do convite.',
+              style: TextStyle(color: context.palette.mutedForeground),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: widget.controller,
@@ -353,7 +357,8 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
               textAlign: TextAlign.center,
               style: AppTheme.display(context, size: 24).copyWith(letterSpacing: 3),
               onSubmitted: (_) => _join(),
-              decoration: const InputDecoration(hintText: 'ABCDE 12345'),
+              autocorrect: false,
+              decoration: const InputDecoration(hintText: 'K7P2 QX9M'),
             ),
             const SizedBox(height: 16),
             LoadingButton(label: 'Entrar', loading: _loading, onPressed: _join),

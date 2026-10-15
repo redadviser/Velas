@@ -10,6 +10,9 @@ export class UsersService {
     private readonly storage: PhotoStorage,
   ) {}
 
+  /** Chamado depois de mudar o perfil (ex.: o chat volta a anunciar a presença). */
+  onUpdated?: (userId: string, patch: ProfilePatch) => Promise<void>;
+
   // Dentro de uma transação de outro módulo (ex.: autenticação) -------------
 
   async profileIn(c: Tx, userId: string): Promise<Profile> {
@@ -17,7 +20,8 @@ export class UsersService {
       `select p.id, u.email, p.display_name, p.username, p.phone, p.notifications_enabled,
               p.reminder_hour, p.reminder_minute, p.default_reminder_days, p.payment_methods,
               u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
-              p.photo_path
+              p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
+              p.message_notifications, p.message_previews
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
@@ -75,7 +79,7 @@ export class UsersService {
     return tx(this.db, userId, (c) => this.profileIn(c, userId));
   }
 
-  update(userId: string, patch: ProfilePatch): Promise<Profile> {
+  async update(userId: string, patch: ProfilePatch): Promise<Profile> {
     const sets: string[] = [];
     const values: unknown[] = [userId];
     for (const col of profileColumns) {
@@ -83,10 +87,12 @@ export class UsersService {
       values.push(col === 'payment_methods' ? JSON.stringify(patch[col]) : patch[col]);
       sets.push(`${col} = $${values.length}`);
     }
-    return tx(this.db, userId, async (c) => {
+    const profile = await tx(this.db, userId, async (c) => {
       if (sets.length) await c.query(`update profiles set ${sets.join(', ')} where id = $1`, values);
       return this.profileIn(c, userId);
     });
+    await this.onUpdated?.(userId, patch).catch(() => {});
+    return profile;
   }
 
   /** Fotografia de perfil (bytes da imagem). Substitui a anterior. */

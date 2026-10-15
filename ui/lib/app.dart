@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/chat_providers.dart';
 import 'core/i18n/translations.dart';
 import 'core/providers.dart';
 import 'core/router/app_router.dart';
@@ -13,6 +14,7 @@ class VelasApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(notificationSyncProvider);
+    ref.watch(chatNotificationsProvider);
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

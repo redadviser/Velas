@@ -26,17 +26,18 @@ class GiftsScreen extends ConsumerStatefulWidget {
 
 class _GiftsScreenState extends ConsumerState<GiftsScreen> {
   bool _showPurchased = false;
-  bool _chatsTab = false;
+  // As conversas são o primeiro separador (o que se procura mais vezes).
+  bool _chatsTab = true;
   String? _tabParam;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Permite abrir diretamente as conversas: /gifts?tab=chats (ou o antigo tab=groups)
+    // Permite abrir diretamente um separador: /gifts?tab=chats (ou o antigo tab=groups) ou ?tab=ideas
     final tab = GoRouterState.of(context).uri.queryParameters['tab'];
     if (tab != _tabParam) {
       _tabParam = tab;
-      if (tab != null) _chatsTab = tab == 'chats' || tab == 'groups';
+      if (tab != null) _chatsTab = tab != 'ideas';
     }
   }
 
@@ -69,14 +70,14 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            _Tab(label: 'Ideias', selected: !_chatsTab, onTap: () => setState(() => _chatsTab = false)),
-            const SizedBox(width: 20),
             _Tab(
               label: context.tr(Keys.chatTab),
               badge: badge,
               selected: _chatsTab,
               onTap: () => setState(() => _chatsTab = true),
             ),
+            const SizedBox(width: 20),
+            _Tab(label: 'Ideias', selected: !_chatsTab, onTap: () => setState(() => _chatsTab = false)),
           ],
         ),
       ),

@@ -47,6 +47,14 @@ abstract final class ChatFormat {
     return _t.get(Keys.commonDateAt, {'date': DateFormat.yMd(_locale).format(d), 'time': time(d)});
   }
 
+  /// Uma hora no futuro (ex.: até quando está silenciada): "14:05" se for hoje, senão "18/10, 14:05".
+  static String until(DateTime d) {
+    final local = d.toLocal();
+    final today = BirthdayUtils.today();
+    if (DateTime(local.year, local.month, local.day) == today) return time(local);
+    return _t.get(Keys.commonDateAt, {'date': DateFormat.MMMd(_locale).format(local), 'time': time(local)});
+  }
+
   /// "Online" ou "Visto por último hoje às 14:05"; `null` se não se souber.
   static String? presence({required bool online, DateTime? lastSeenAt}) {
     if (online) return _t.get(Keys.chatOnline);

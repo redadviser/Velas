@@ -18,6 +18,11 @@ export interface Profile {
   google_linked: boolean;
   /** URL assinado da fotografia de perfil. */
   photo_url: string | null;
+  show_presence: boolean;
+  read_receipts: boolean;
+  typing_indicator: boolean;
+  message_notifications: boolean;
+  message_previews: boolean;
 }
 
 /** Dados para criar uma conta (registo ou primeira entrada com Google). */
@@ -48,6 +53,12 @@ export const profilePatchSchema = z
     reminder_minute: z.number().int().min(0).max(59),
     default_reminder_days: z.array(z.number().int().min(0).max(60)).max(10),
     payment_methods: paymentSchema,
+    // Definições das conversas (ver migrations/007_chat_settings.sql).
+    show_presence: z.boolean(),
+    read_receipts: z.boolean(),
+    typing_indicator: z.boolean(),
+    message_notifications: z.boolean(),
+    message_previews: z.boolean(),
   })
   .partial();
 

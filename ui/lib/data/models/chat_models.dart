@@ -383,6 +383,8 @@ class Conversation {
     this.lastMessageAt,
     this.unreadCount = 0,
     this.seenBy = const [],
+    this.mutedUntil,
+    this.pinned = false,
     required this.createdAt,
     this.participants = const [],
   });
@@ -401,7 +403,19 @@ class Conversation {
 
   /// Quem (além de mim) já viu a última mensagem.
   final List<ChatUser> seenBy;
+
+  /// Silenciada até (as minhas preferências).
+  final DateTime? mutedUntil;
+
+  /// Fixada no topo da minha lista.
+  final bool pinned;
   final DateTime createdAt;
+
+  /// "Sempre" guarda-se como o último dia de 9999.
+  static final mutedForever = DateTime.utc(9999, 12, 31);
+
+  bool get isMuted => mutedUntil != null && mutedUntil!.isAfter(DateTime.now());
+  bool get isMutedForever => mutedUntil != null && mutedUntil!.year >= 9999;
 
   /// Só em GET /conversations/:id.
   final List<Participant> participants;
@@ -413,6 +427,8 @@ class Conversation {
     int? unreadCount,
     List<Participant>? participants,
     List<ChatUser>? seenBy,
+    DateTime? Function()? mutedUntil,
+    bool? pinned,
   }) => Conversation(
     id: id,
     isGroup: isGroup,
@@ -424,6 +440,8 @@ class Conversation {
     lastMessageAt: lastMessage?.createdAt ?? lastMessageAt,
     unreadCount: unreadCount ?? this.unreadCount,
     seenBy: seenBy ?? this.seenBy,
+    mutedUntil: mutedUntil != null ? mutedUntil() : this.mutedUntil,
+    pinned: pinned ?? this.pinned,
     createdAt: createdAt,
     participants: participants ?? this.participants,
   );
@@ -439,6 +457,8 @@ class Conversation {
     lastMessageAt: _dt(j['last_message_at']),
     unreadCount: _int(j['unread_count']) ?? 0,
     seenBy: [for (final u in (j['seen_by'] as List?) ?? const []) ChatUser.fromJson((u as Map).cast())],
+    mutedUntil: _dt(j['muted_until']),
+    pinned: j['pinned'] as bool? ?? false,
     createdAt: _dt(j['created_at']) ?? DateTime.now(),
     participants: [for (final p in (j['participants'] as List?) ?? const []) Participant.fromJson((p as Map).cast())],
   );

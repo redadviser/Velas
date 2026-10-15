@@ -14,6 +14,7 @@ import '../../data/models/group_models.dart';
 import '../../data/models/models.dart';
 import '../../core/utils/text.dart';
 import '../chat/chat_widgets.dart';
+import 'home_inbox.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -45,6 +46,7 @@ class HomeScreen extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 100),
                 children: [
                   _Header(name: user?.firstName ?? '', date: today, user: user),
+                  const HomeInbox(),
                   const _GroupsBanner(),
                   if (data.people.isEmpty)
                     EmptyState(
@@ -508,7 +510,7 @@ class _Stats extends StatelessWidget {
           const SizedBox(width: 10),
           tile('$next30', 'Em 30 dias', LucideIcons.bellRing, () => context.go('/agenda')),
           const SizedBox(width: 10),
-          tile('$toBuy', 'Por comprar', LucideIcons.shoppingBag, () => context.go('/gifts')),
+          tile('$toBuy', 'Por comprar', LucideIcons.shoppingBag, () => context.go('/gifts?tab=ideas')),
         ],
       ),
     );

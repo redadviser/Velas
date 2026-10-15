@@ -34,6 +34,12 @@ export const sendSchema = z.object({
 });
 export type SendInput = z.infer<typeof sendSchema>;
 
+/** Preferências da conversa (só os campos enviados mudam). */
+export const prefsSchema = z.object({
+  muted_until: z.iso.datetime({ offset: true }).nullable().optional(),
+  pinned: z.boolean().optional(),
+});
+
 /** Uma reação por pessoa; null retira a reação. */
 export const reactionSchema = z.object({ emoji: z.string().trim().min(1).max(16).nullable() });
 
@@ -80,6 +86,10 @@ export interface ConversationJson {
   unread_count: number;
   /** Quem (além de mim) já viu a última mensagem. */
   seen_by: { user_id: string; display_name: string }[];
+  /** Silenciada até (as minhas preferências); `null` = não silenciada. */
+  muted_until: string | null;
+  /** Fixada no topo da minha lista. */
+  pinned: boolean;
   created_at: string;
 }
 

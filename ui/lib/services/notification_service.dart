@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,8 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../core/constants.dart';
+import '../core/i18n/translations.dart';
 import '../core/utils/birthday_utils.dart';
 import '../data/models/models.dart';
 
@@ -33,6 +36,19 @@ class NotificationService {
     color: Color(0xFFF05560),
   );
 
+  /// Notificações tocadas: o `payload` (ex.: `chat:<id da conversa>`).
+  final _taps = StreamController<String>.broadcast();
+  Stream<String> get taps => _taps.stream;
+
+  /// Notificação que abriu a app (lida uma vez, depois de o router existir).
+  String? takeLaunchPayload() {
+    final p = _launchPayload;
+    _launchPayload = null;
+    return p;
+  }
+
+  String? _launchPayload;
+
   Future<void> init() async {
     if (_ready || kIsWeb) return;
     try {
@@ -51,8 +67,47 @@ class NotificationService {
           requestSoundPermission: false,
         ),
       ),
+      onDidReceiveNotificationResponse: (r) {
+        if (r.payload != null) _taps.add(r.payload!);
+      },
     );
+    try {
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      final payload = (launch?.didNotificationLaunchApp ?? false) ? launch!.notificationResponse?.payload : null;
+      // Se o router já está à escuta, entrega já; senão fica para takeLaunchPayload().
+      if (payload != null && _taps.hasListener) {
+        _taps.add(payload);
+      } else {
+        _launchPayload = payload;
+      }
+    } catch (_) {}
     _ready = true;
+  }
+
+  /// Mensagem de uma conversa. Uma notificação por conversa (a nova substitui
+  /// a anterior); tocar abre a conversa.
+  Future<void> showChatMessage({required String conversationId, required String title, required String body}) async {
+    await init();
+    if (!_ready) return;
+    await _plugin.show(
+      // Os lembretes usam os ids 0–59.
+      id: 1000 + (conversationId.hashCode & 0x3fffffff),
+      title: title,
+      body: body,
+      payload: 'chat:$conversationId',
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          'messages',
+          tr(Keys.notifyChannel),
+          channelDescription: tr(Keys.notifyChannelDescription),
+          importance: Importance.high,
+          priority: Priority.high,
+          color: const Color(0xFFF05560),
+          tag: conversationId,
+        ),
+        iOS: DarwinNotificationDetails(threadIdentifier: conversationId),
+      ),
+    );
   }
 
   Future<bool> requestPermission() async {
@@ -86,7 +141,8 @@ class NotificationService {
     if (signature == _lastSignature) return;
     _lastSignature = signature;
 
-    await _plugin.cancelAll();
+    // Só os lembretes agendados: as notificações de mensagens ficam.
+    await _plugin.cancelAllPendingNotifications();
     if (!profile.notificationsEnabled) return;
 
     final now = tz.TZDateTime.now(tz.local);

@@ -20,6 +20,7 @@ import '../auth/reset_password_screen.dart';
 import '../../core/utils/text.dart';
 import '../../core/constants.dart';
 import '../../core/i18n/translations.dart';
+import '../../core/chat_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -28,31 +29,11 @@ class ProfileScreen extends ConsumerWidget {
       runGuarded(context, () => ref.read(authRepositoryProvider).updateProfile(profile));
 
   Future<void> _editName(BuildContext context, WidgetRef ref, UserProfile user) async {
-    final ctrl = TextEditingController(text: user.name);
     final name = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('O teu nome', style: AppTheme.display(ctx, size: 22)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              onSubmitted: (v) => Navigator.pop(ctx, v),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Guardar')),
-          ],
-        ),
-      ),
+      builder: (ctx) => _NameSheet(initial: user.name),
     );
-    ctrl.dispose();
     if (name != null && name.trim().isNotEmpty && context.mounted) {
       await _update(context, ref, user.copyWith(name: name.trim()));
     }
@@ -248,6 +229,12 @@ class ProfileScreen extends ConsumerWidget {
                 value: '${data.categories.length}',
                 onTap: () => context.push('/profile/categories'),
               ),
+              if (ref.watch(chatRepositoryProvider) != null)
+                _Tile(
+                  icon: LucideIcons.messageCircle,
+                  title: context.tr(Keys.chatSettingsTitle),
+                  onTap: () => context.push('/profile/chat-settings'),
+                ),
               _Tile(
                 icon: LucideIcons.languages,
                 title: context.tr(Keys.settingsLanguage),
@@ -581,4 +568,48 @@ Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
     ),
   );
   if (picked != null) ref.read(localeProvider.notifier).set(picked.$1);
+}
+
+/// Folha para mudar o nome. A caixa de texto é da folha e só é apagada quando
+/// ela sai do ecrã (apagá-la logo ao fechar rebentava durante a animação).
+class _NameSheet extends StatefulWidget {
+  const _NameSheet({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_NameSheet> createState() => _NameSheetState();
+}
+
+class _NameSheetState extends State<_NameSheet> {
+  late final _ctrl = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('O teu nome', style: AppTheme.display(context, size: 22)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            onSubmitted: (v) => Navigator.pop(context, v),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text), child: const Text('Guardar')),
+        ],
+      ),
+    );
+  }
 }

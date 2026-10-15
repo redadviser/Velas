@@ -58,6 +58,15 @@ class ApiChatRepository implements ChatRepository {
   Future<void> markRead(String conversationId) => _api.post('/conversations/$conversationId/read');
 
   @override
+  Future<Conversation> setPrefs(String conversationId, {DateTime? Function()? mutedUntil, bool? pinned}) async {
+    final body = {
+      if (mutedUntil != null) 'muted_until': mutedUntil()?.toUtc().toIso8601String(),
+      'pinned': ?pinned,
+    };
+    return Conversation.fromJson(_map(await _api.patch('/conversations/$conversationId/prefs', body)));
+  }
+
+  @override
   Future<MessagePage> fetchMessages(String conversationId, {String? before, int limit = 50}) async {
     final query = before == null ? '?limit=$limit' : '?limit=$limit&before=$before';
     return MessagePage.fromJson(_map(await _api.get('/conversations/$conversationId/messages$query')));

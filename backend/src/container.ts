@@ -42,6 +42,11 @@ export function createServices(deps: Deps) {
   const gifts = new GiftsService(db);
   const messages = new MessagesService(db);
   const hub = new RealtimeHub();
+  const chat = new ChatService(db, storage, hub);
+  // Mudar a privacidade da presença avisa logo quem a estava a ver.
+  users.onUpdated = async (userId, patch) => {
+    if (patch.show_presence !== undefined) await chat.announcePresence(userId);
+  };
   return {
     hub,
     auth: new AuthService(db, users, deps.tokens, deps.mail, deps.verifyGoogle, deps.config),
@@ -54,7 +59,7 @@ export function createServices(deps: Deps) {
     groups: new GroupsService(db, storage),
     invitations: new InvitationsService(db, storage),
     friends: new FriendsService(db, hub, storage),
-    chat: new ChatService(db, storage, hub),
+    chat,
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
   };

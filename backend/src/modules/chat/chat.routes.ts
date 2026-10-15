@@ -5,7 +5,7 @@ import { HttpError } from '../../core/errors.js';
 import { doc } from '../../core/openapi.js';
 import { PhotoStorage } from '../../core/storage.js';
 import { idParams } from '../../core/validation.js';
-import { directSchema, messagesQuery, reactionSchema, saveStickerSchema, sendSchema } from './chat.model.js';
+import { directSchema, messagesQuery, prefsSchema, reactionSchema, saveStickerSchema, sendSchema } from './chat.model.js';
 import type { ChatService } from './chat.service.js';
 import type { StickersService } from './stickers.service.js';
 
@@ -36,6 +36,20 @@ export async function chatRoutes(app: FastifyInstance, chat: ChatService, sticke
     '/conversations/direct',
     { schema: doc({ tag, summary: 'Abrir a conversa privada com um amigo', body: directSchema }) },
     (req) => chat.openDirect(req.uid, directSchema.parse(req.body).user_id),
+  );
+
+  app.patch(
+    '/conversations/:id/prefs',
+    {
+      schema: doc({
+        tag,
+        summary: 'Silenciar ou fixar a conversa (só para mim)',
+        description: 'muted_until: até quando fica silenciada ("sempre" = 9999-12-31T00:00:00Z); null tira o silêncio.',
+        params: idParams,
+        body: prefsSchema,
+      }),
+    },
+    (req) => chat.setPrefs(req.uid, idParams.parse(req.params).id, prefsSchema.parse(req.body)),
   );
 
   app.post('/conversations/:id/read', { schema: doc({ tag, summary: 'Marcar como lida', params: idParams }) }, async (req, reply) => {

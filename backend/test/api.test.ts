@@ -723,6 +723,61 @@ describe('fotografia de perfil', () => {
   });
 });
 
+describe('definições das conversas', () => {
+  it('privacidade: confirmações de leitura e presença (nos dois sentidos), silenciar e fixar', async () => {
+    const lia = await signup('Lia', 'lia', 'lia@ex.pt');
+    const max = await signup('Max', 'max', 'max@ex.pt');
+    await call('POST', '/friends/requests', { token: lia.access_token, body: { user_id: max.user.id } });
+    await call('POST', '/friends/requests', { token: max.access_token, body: { user_id: lia.user.id } });
+    const conv = (await call('POST', '/conversations/direct', { token: lia.access_token, body: { user_id: max.user.id } })).body.id;
+    await call('POST', `/conversations/${conv}/messages`, { token: lia.access_token, body: { id: uuid(), kind: 'text', body: 'Olá Max' } });
+    await call('POST', `/conversations/${conv}/read`, { token: max.access_token });
+    // O Max também fica com "visto por último".
+    await call('PATCH', '/me', { token: max.access_token, body: {} });
+    await db.query('update profiles set last_seen_at = now() where id = $1', [max.user.id]);
+
+    const liaConv = async () =>
+      (await call('GET', '/conversations', { token: lia.access_token })).body.find((c: { id: string }) => c.id === conv);
+    const maxReadAt = async () =>
+      (await call('GET', `/conversations/${conv}`, { token: lia.access_token })).body.participants.find(
+        (p: { user_id: string }) => p.user_id === max.user.id,
+      ).last_read_at;
+    expect((await liaConv()).seen_by).toHaveLength(1);
+    expect(await maxReadAt()).not.toBeNull();
+    expect((await liaConv()).other_user.last_seen_at).not.toBeNull();
+
+    // O Max desliga as confirmações de leitura: a Lia deixa de ver "vista".
+    const off = await call('PATCH', '/me', { token: max.access_token, body: { read_receipts: false, show_presence: false } });
+    expect(off.body).toMatchObject({ read_receipts: false, show_presence: false, typing_indicator: true });
+    expect((await liaConv()).seen_by).toEqual([]);
+    expect(await maxReadAt()).toBeNull();
+    expect((await liaConv()).other_user).toMatchObject({ online: false, last_seen_at: null });
+    // ...e ele também deixa de ver os da Lia (mas as suas não lidas continuam certas).
+    await call('POST', `/conversations/${conv}/read`, { token: lia.access_token });
+    const maxView = (await call('GET', `/conversations/${conv}`, { token: max.access_token })).body;
+    expect(maxView.participants.find((p: { user_id: string }) => p.user_id === lia.user.id).last_read_at).toBeNull();
+    expect(maxView.unread_count).toBe(0);
+
+    // Silenciar e fixar são só para quem muda.
+    expect((await liaConv())).toMatchObject({ muted_until: null, pinned: false });
+    const prefs = await call('PATCH', `/conversations/${conv}/prefs`, {
+      token: lia.access_token,
+      body: { muted_until: '9999-12-31T00:00:00Z', pinned: true },
+    });
+    expect(prefs.status).toBe(200);
+    expect(prefs.body.pinned).toBe(true);
+    expect(new Date(prefs.body.muted_until).getUTCFullYear()).toBe(9999);
+    expect((await call('GET', `/conversations/${conv}`, { token: max.access_token })).body).toMatchObject({ muted_until: null, pinned: false });
+    // Fixada fica no topo da lista.
+    expect((await call('GET', '/conversations', { token: lia.access_token })).body[0].id).toBe(conv);
+    await call('PATCH', `/conversations/${conv}/prefs`, { token: lia.access_token, body: { muted_until: null } });
+    expect((await liaConv())).toMatchObject({ muted_until: null, pinned: true });
+    expect((await call('PATCH', `/conversations/${conv}/prefs`, { token: lia.access_token, body: { muted_until: 'amanhã' } })).status).toBe(400);
+    const outsider = await signup('Noé', 'noe', 'noe@ex.pt');
+    expect((await call('PATCH', `/conversations/${conv}/prefs`, { token: outsider.access_token, body: { pinned: true } })).status).toBe(404);
+  });
+});
+
 describe('sistema', () => {
   it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
     const res = await call('GET', '/health');

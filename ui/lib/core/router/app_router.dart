@@ -12,6 +12,8 @@ import '../../features/auth/register_screen.dart';
 import '../../features/auth/reset_password_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/chat/chat_screen.dart';
+import '../../features/chat/chat_settings_screen.dart';
+import '../../features/chat/conversation_info_screen.dart';
 import '../../features/chat/friends_screen.dart';
 import '../../features/gifts/gifts_screen.dart';
 import '../../features/groups/group_detail_screen.dart';
@@ -27,6 +29,7 @@ import '../../features/profile/categories_screen.dart';
 import '../../features/profile/payment_details_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
+import '../../services/notification_service.dart';
 import '../providers.dart';
 import '../utils/errors.dart';
 import '../widgets/common.dart';
@@ -95,6 +98,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chats/:id',
         parentNavigatorKey: _rootKey,
         builder: (_, s) => ChatScreen(conversationId: s.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'info',
+            parentNavigatorKey: _rootKey,
+            builder: (_, s) => ConversationInfoScreen(conversationId: s.pathParameters['id']!),
+          ),
+        ],
       ),
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
@@ -139,6 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
           GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
+          GoRoute(path: 'chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
         ],
       ),
     ],
@@ -161,6 +172,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     final code = InviteLinks.codeFrom(uri);
     if (code != null) router.go('/join/${code.toUpperCase()}');
   }
+
+  // Tocar numa notificação de mensagem abre a conversa.
+  void openPayload(String? payload) {
+    if (payload == null || !payload.startsWith('chat:') || auth.current == null) return;
+    router.push('/chats/${payload.substring(5)}');
+  }
+
+  final taps = NotificationService.instance.taps.listen(openPayload);
+  ref.onDispose(taps.cancel);
+  Future.microtask(() => openPayload(NotificationService.instance.takeLaunchPayload()));
 
   final links = AppLinks();
   links.getInitialLink().then(openLink).catchError((_) {});

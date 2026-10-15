@@ -166,9 +166,12 @@ class ConversationAvatar extends StatelessWidget {
 
 /// Contador vermelho (não lidas, pedidos).
 class CountBadge extends StatelessWidget {
-  const CountBadge({super.key, required this.count});
+  const CountBadge({super.key, required this.count, this.muted = false});
 
   final int count;
+
+  /// Conversa silenciada: contador a cinzento.
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
@@ -176,11 +179,18 @@ class CountBadge extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minWidth: 20),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: context.colors.primary, borderRadius: BorderRadius.circular(99)),
+      decoration: BoxDecoration(
+        color: muted ? context.palette.mutedForeground.withValues(alpha: 0.55) : context.colors.primary,
+        borderRadius: BorderRadius.circular(99),
+      ),
       child: Text(
         count > 99 ? '99+' : '$count',
         textAlign: TextAlign.center,
-        style: TextStyle(color: context.colors.onPrimary, fontSize: 11, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: muted ? context.palette.card : context.colors.onPrimary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

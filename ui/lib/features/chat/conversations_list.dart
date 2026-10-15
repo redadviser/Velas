@@ -34,6 +34,7 @@ sealed class ConversationItem {
 
   DateTime get sortKey;
   int get unread;
+  bool get pinned;
 }
 
 class GroupItem extends ConversationItem {
@@ -49,6 +50,9 @@ class GroupItem extends ConversationItem {
 
   @override
   int get unread => conversation?.unreadCount ?? 0;
+
+  @override
+  bool get pinned => conversation?.pinned ?? false;
 }
 
 class DirectItem extends ConversationItem {
@@ -61,9 +65,13 @@ class DirectItem extends ConversationItem {
 
   @override
   int get unread => conversation.unreadCount;
+
+  @override
+  bool get pinned => conversation.pinned;
 }
 
-/// Junta as prendas em grupo e as conversas privadas, mais recentes primeiro.
+/// Junta as prendas em grupo e as conversas privadas: as fixadas no topo e,
+/// depois, as mais recentes primeiro.
 List<ConversationItem> conversationItems(
   List<GiftGroup> groups,
   List<Conversation> conversations,
@@ -80,7 +88,10 @@ List<ConversationItem> conversationItems(
   return [
     for (final i in items)
       if (filter != ConversationFilter.unread || i.unread > 0) i,
-  ]..sort((a, b) => b.sortKey.compareTo(a.sortKey));
+  ]..sort((a, b) {
+    if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
+    return b.sortKey.compareTo(a.sortKey);
+  });
 }
 
 /// Coisas à espera de mim: mensagens por ler, pedidos de amizade e prendas por pagar.
@@ -309,8 +320,12 @@ class _TileLayout extends StatelessWidget {
     this.time,
     this.unread = 0,
     this.footer,
+    this.pinned = false,
+    this.muted = false,
   });
 
+  final bool pinned;
+  final bool muted;
   final Widget avatar;
   final String title;
   final Widget preview;
@@ -350,7 +365,7 @@ class _TileLayout extends StatelessWidget {
                         Text(
                           ChatFormat.listTime(time!),
                           style: context.text.labelSmall?.copyWith(
-                            color: hasUnread ? context.colors.primary : muted,
+                            color: hasUnread && !this.muted ? context.colors.primary : muted,
                             fontWeight: hasUnread ? FontWeight.w700 : null,
                           ),
                         ),
@@ -360,7 +375,20 @@ class _TileLayout extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(child: preview),
-                      if (hasUnread) ...[const SizedBox(width: 8), CountBadge(count: unread)],
+                      if (this.muted) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          LucideIcons.bellOff,
+                          size: 15,
+                          color: muted,
+                          semanticLabel: context.tr(Keys.chatInfoMutedAlways),
+                        ),
+                      ],
+                      if (pinned) ...[
+                        const SizedBox(width: 6),
+                        Icon(LucideIcons.pin, size: 15, color: muted, semanticLabel: context.tr(Keys.chatInfoPinned)),
+                      ],
+                      if (hasUnread) ...[const SizedBox(width: 8), CountBadge(count: unread, muted: this.muted)],
                     ],
                   ),
                   if (footer != null) ...[const SizedBox(height: 6), footer!],
@@ -390,6 +418,8 @@ class ConversationTile extends StatelessWidget {
       preview: _Preview(conversation: c, myId: myId, isGroup: false, fallback: context.tr(Keys.chatSayHello)),
       time: c.lastMessage?.createdAt,
       unread: c.unreadCount,
+      pinned: c.pinned,
+      muted: c.isMuted,
       onTap: () => context.push('/chats/${c.id}'),
     );
   }
@@ -475,6 +505,8 @@ class GroupConversationTile extends StatelessWidget {
       ),
       time: c?.lastMessage?.createdAt,
       unread: c?.unreadCount ?? 0,
+      pinned: c?.pinned ?? false,
+      muted: c?.isMuted ?? false,
       // Sem conversa (modo local) abre logo a prenda.
       onTap: c == null ? openGroup : () => context.push('/chats/${c.id}'),
       footer: Row(

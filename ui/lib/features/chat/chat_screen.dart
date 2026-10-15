@@ -288,12 +288,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: summary == null
             ? null
             : InkWell(
-                // Grupo: abre a prenda. Privada: o perfil da outra pessoa.
-                onTap: groupId != null
-                    ? () => context.push('/groups/$groupId')
-                    : other == null
-                    ? null
-                    : () => showUserProfileSheet(context, other, showMessageButton: false),
+                // Detalhes da conversa: silenciar, fixar, participantes, prenda/perfil.
+                onTap: () => context.push('/chats/${widget.conversationId}/info'),
                 borderRadius: BorderRadius.circular(12),
                 child: Row(
                   children: [
@@ -332,6 +328,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onPressed: () => context.push('/groups/$groupId'),
               icon: const Icon(LucideIcons.gift, size: 20),
             ),
+          IconButton(
+            tooltip: context.tr(Keys.chatInfoTooltip),
+            onPressed: () => context.push('/chats/${widget.conversationId}/info'),
+            icon: Icon(summary?.isMuted ?? false ? LucideIcons.bellOff : LucideIcons.info, size: 20),
+          ),
         ],
       ),
       body: Column(

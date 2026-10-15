@@ -22,6 +22,10 @@ abstract class ChatRepository {
 
   Future<void> markRead(String conversationId);
 
+  /// Silenciar ([mutedUntil], `null` = deixar de silenciar) e fixar, só para mim.
+  /// Os parâmetros omitidos não mudam.
+  Future<Conversation> setPrefs(String conversationId, {DateTime? Function()? mutedUntil, bool? pinned});
+
   /// Mais recentes primeiro; [before] pede as anteriores a essa mensagem.
   Future<MessagePage> fetchMessages(String conversationId, {String? before, int limit = 50});
 

@@ -214,31 +214,36 @@ class GroupCard extends StatelessWidget {
 }
 
 Future<void> showJoinGroupSheet(BuildContext context, WidgetRef ref) async {
-  final code = TextEditingController();
   final router = GoRouter.of(context);
   final groupId = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => _JoinSheet(controller: code),
+    builder: (ctx) => const _JoinSheet(),
   );
-  code.dispose();
   if (groupId != null) router.push('/groups/$groupId');
 }
 
 class _JoinSheet extends ConsumerStatefulWidget {
-  const _JoinSheet({required this.controller});
-
-  final TextEditingController controller;
+  const _JoinSheet();
 
   @override
   ConsumerState<_JoinSheet> createState() => _JoinSheetState();
 }
 
 class _JoinSheetState extends ConsumerState<_JoinSheet> {
+  // É da folha: só é apagado quando ela sai do ecrã (depois da animação de
+  // fechar). Apagá-lo assim que a folha devolvia o resultado rebentava o ecrã.
+  final _code = TextEditingController();
   bool _loading = false;
 
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
   Future<void> _join() async {
-    final code = InviteLinks.normalizeCode(widget.controller.text);
+    final code = InviteLinks.normalizeCode(_code.text);
     if (code.length < 4) return;
     setState(() => _loading = true);
     final nav = Navigator.of(context);
@@ -271,7 +276,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: widget.controller,
+              controller: _code,
               autofocus: true,
               textCapitalization: TextCapitalization.characters,
               textAlign: TextAlign.center,

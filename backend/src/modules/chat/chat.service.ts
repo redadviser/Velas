@@ -22,9 +22,12 @@ const conversationsQuery = `
     g.celebrant_name,
     case when c.group_id is null then
       json_build_object('user_id', op.id, 'display_name', op.display_name, 'username', op.username,
-                        'photo_path', op.photo_path, 'last_seen_at', op.last_seen_at)
+                        'photo_path', op.photo_path, 'last_seen_at', op.last_seen_at,
+                        'show_presence', op.show_presence)
     end as other_user,
     c.last_message_at, c.created_at,
+    pr.muted_until, pr.pinned_at is not null as pinned,
+    mp.show_presence as viewer_show_presence,
     (select count(*)::int from chat_messages m
      where m.conversation_id = c.id and m.deleted_at is null and m.sender_id is distinct from $1
        and m.created_at > coalesce(r.last_read_at, '-infinity'::timestamptz)) as unread_count,
@@ -38,13 +41,17 @@ const conversationsQuery = `
                               order by r2.last_read_at), '[]')
      from conversation_reads r2 join profiles rp on rp.id = r2.user_id
      where r2.conversation_id = c.id and r2.user_id <> $1
+       -- Sem confirmações de leitura (de quem leu ou minhas), não se mostra "vista".
+       and rp.read_receipts and mp.read_receipts
        and c.last_message_at is not null and r2.last_read_at >= c.last_message_at
        and r2.user_id in (select u.id from conversation_user_ids(c.id) as u(id))) as seen_by
   from mine c
+  join profiles mp on mp.id = $1
+  left join conversation_prefs pr on pr.conversation_id = c.id and pr.user_id = $1
   left join gift_groups g on g.id = c.group_id
   left join profiles op on c.group_id is null and op.id = case when c.user_a = $1 then c.user_b else c.user_a end
   left join conversation_reads r on r.conversation_id = c.id and r.user_id = $1
-  order by coalesce(c.last_message_at, c.created_at) desc`;
+  order by pr.pinned_at desc nulls last, coalesce(c.last_message_at, c.created_at) desc`;
 
 /** Mensagens com remetente, resposta e reações. */
 const messagesSelect = `
@@ -66,10 +73,20 @@ type MessageRow = Omit<MessageJson, 'media_url' | 'sender_photo_url'> & {
 };
 
 type ConversationRow = Omit<ConversationJson, 'other_user'> & {
+  viewer_show_presence: boolean;
   other_user:
-    | (Omit<NonNullable<ConversationJson['other_user']>, 'photo_url' | 'online'> & { photo_path: string | null })
+    | (Omit<NonNullable<ConversationJson['other_user']>, 'photo_url' | 'online'> & {
+        photo_path: string | null;
+        show_presence: boolean;
+      })
     | null;
 };
+
+/** Presença de [p] vista por quem a pede: só se os dois a mostram (como no WhatsApp). */
+function visiblePresence(hub: RealtimeHub, p: { user_id: string; show_presence: boolean; last_seen_at: string | null }, viewerShows: boolean) {
+  const visible = p.show_presence && viewerShows;
+  return { online: visible && hub.isOnline(p.user_id), last_seen_at: visible ? p.last_seen_at : null };
+}
 
 /**
  * Conversas dos grupos e privadas entre amigos. Os dados vão e vêm pela API
@@ -97,11 +114,16 @@ export class ChatService {
   }
 
   private conversation(row: ConversationRow): ConversationJson {
-    if (!row.other_user) return { ...row, other_user: null };
-    const { photo_path, ...other } = row.other_user;
+    const { viewer_show_presence, ...conv } = row;
+    if (!conv.other_user) return { ...conv, other_user: null };
+    const { photo_path, show_presence, ...other } = conv.other_user;
     return {
-      ...row,
-      other_user: { ...other, photo_url: this.storage.urlOf(photo_path), online: this.hub.isOnline(other.user_id) },
+      ...conv,
+      other_user: {
+        ...other,
+        photo_url: this.storage.urlOf(photo_path),
+        ...visiblePresence(this.hub, { ...other, show_presence }, viewer_show_presence),
+      },
     };
   }
 
@@ -143,21 +165,32 @@ export class ChatService {
     return this.as(userId, async (c) => {
       const conv = (await this.conversationsIn(c, userId, conversationId))[0];
       if (!conv) throw notFound();
-      const { rows } = await c.query<Omit<Participant, 'photo_url' | 'online'> & { photo_path: string | null }>(
-        `select p.id as user_id, p.display_name, p.username, p.photo_path, p.last_seen_at, r.last_read_at
+      const { rows } = await c.query<
+        Omit<Participant, 'photo_url' | 'online'> & { photo_path: string | null; show_presence: boolean; read_receipts: boolean }
+      >(
+        `select p.id as user_id, p.display_name, p.username, p.photo_path, p.last_seen_at, r.last_read_at,
+                p.show_presence, p.read_receipts
          from conversation_user_ids($1) as u(id)
          join profiles p on p.id = u.id
          left join conversation_reads r on r.conversation_id = $1 and r.user_id = p.id
          order by lower(p.display_name)`,
         [conversationId],
       );
+      const viewer = rows.find((p) => p.user_id === userId);
       return {
         ...conv,
-        participants: rows.map(({ photo_path, ...p }) => ({
-          ...p,
-          photo_url: this.storage.urlOf(photo_path),
-          online: this.hub.isOnline(p.user_id),
-        })),
+        participants: rows.map(({ photo_path, show_presence, read_receipts, ...p }) => {
+          const self = p.user_id === userId;
+          return {
+            ...p,
+            photo_url: this.storage.urlOf(photo_path),
+            // Até onde leu: só com as confirmações de leitura ligadas dos dois lados.
+            last_read_at: self || (read_receipts && (viewer?.read_receipts ?? true)) ? p.last_read_at : null,
+            ...(self
+              ? { online: this.hub.isOnline(p.user_id), last_seen_at: p.last_seen_at }
+              : visiblePresence(this.hub, { ...p, show_presence }, viewer?.show_presence ?? true)),
+          };
+        }),
       };
     });
   }
@@ -181,9 +214,39 @@ export class ChatService {
     });
   }
 
+  /** Silenciar e fixar (só para quem muda). */
+  async setPrefs(
+    userId: string,
+    conversationId: string,
+    prefs: { muted_until?: string | null; pinned?: boolean },
+  ): Promise<ConversationJson> {
+    return this.as(userId, async (c) => {
+      await ChatService.requireAccess(c, conversationId);
+      await c.query(
+        `insert into conversation_prefs (conversation_id, user_id) values ($1, $2) on conflict do nothing`,
+        [conversationId, userId],
+      );
+      if (prefs.muted_until !== undefined) {
+        await c.query('update conversation_prefs set muted_until = $3 where conversation_id = $1 and user_id = $2', [
+          conversationId,
+          userId,
+          prefs.muted_until,
+        ]);
+      }
+      if (prefs.pinned !== undefined) {
+        await c.query(
+          `update conversation_prefs set pinned_at = case when $3 then coalesce(pinned_at, now()) end
+           where conversation_id = $1 and user_id = $2`,
+          [conversationId, userId, prefs.pinned],
+        );
+      }
+      return (await this.conversationsIn(c, userId, conversationId))[0]!;
+    });
+  }
+
   /** Marca a conversa como lida até agora. */
   async markRead(userId: string, conversationId: string): Promise<void> {
-    const { at, ids, name } = await this.as(userId, async (c) => {
+    const { at, ids, name, receipts } = await this.as(userId, async (c) => {
       await ChatService.requireAccess(c, conversationId);
       const { rows } = await c.query<{ last_read_at: Date }>(
         `insert into conversation_reads (conversation_id, user_id) values ($1, $2)
@@ -191,13 +254,24 @@ export class ChatService {
          returning last_read_at`,
         [conversationId, userId],
       );
-      const me = await c.query<{ display_name: string }>('select display_name from profiles where id = $1', [userId]);
+      const me = await c.query<{ display_name: string; read_receipts: boolean }>(
+        'select display_name, read_receipts from profiles where id = $1',
+        [userId],
+      );
+      // Só avisa quem também tem as confirmações de leitura ligadas.
+      const { rows: others } = await c.query<{ id: string }>(
+        `select u.id from conversation_user_ids($1) as u(id) join profiles p on p.id = u.id where p.read_receipts`,
+        [conversationId],
+      );
       return {
         at: rows[0]!.last_read_at,
-        ids: await ChatService.participantIds(c, conversationId),
+        ids: others.map((r) => r.id),
         name: me.rows[0]?.display_name ?? '',
+        receipts: me.rows[0]?.read_receipts ?? true,
       };
     });
+    // Sem confirmações de leitura: fica lida para mim (não lidas), mas ninguém é avisado.
+    if (!receipts) return;
     this.hub.send(
       ids,
       { type: 'read', conversation_id: conversationId, user_id: userId, name, last_read_at: new Date(at).toISOString() },
@@ -210,37 +284,63 @@ export class ChatService {
    * partilha conversas com a pessoa. Ao sair guarda a hora ("visto por último").
    */
   async presence(userId: string, online: boolean): Promise<void> {
-    const seen = online
-      ? await this.db.query<{ last_seen_at: Date | null }>('select last_seen_at from profiles where id = $1', [userId])
-      : await this.db.query<{ last_seen_at: Date | null }>(
-          'update profiles set last_seen_at = now() where id = $1 returning last_seen_at',
-          [userId],
-        );
-    const { rows } = await this.db.query<{ id: string }>(
-      `select case when requester_id = $1 then addressee_id else requester_id end as id
-       from friendships where status = 'accepted' and $1 in (requester_id, addressee_id)
-       union
-       select u.id from conversations c, conversation_user_ids(c.id) as u(id)
-       where $1 in (c.user_a, c.user_b)
-          or c.group_id in (select id from gift_groups where created_by = $1
-                            union select group_id from group_members where user_id = $1)`,
+    if (!online) await this.db.query('update profiles set last_seen_at = now() where id = $1', [userId]);
+    await this.announcePresence(userId, online);
+  }
+
+  /**
+   * Envia a presença atual a quem a pode ver: amigos e quem partilha conversas,
+   * desde que também mostrem a sua. Quem esconde a presença aparece offline e
+   * sem "visto por último" (chamado também quando a definição muda).
+   */
+  async announcePresence(userId: string, online = this.hub.isOnline(userId)): Promise<void> {
+    const { rows: me } = await this.db.query<{ show_presence: boolean; last_seen_at: Date | null }>(
+      'select show_presence, last_seen_at from profiles where id = $1',
       [userId],
     );
-    const at = seen.rows[0]?.last_seen_at;
+    if (!me[0]) return;
+    const { rows } = await this.db.query<{ id: string }>(
+      `select x.id from (
+         select case when requester_id = $1 then addressee_id else requester_id end as id
+         from friendships where status = 'accepted' and $1 in (requester_id, addressee_id)
+         union
+         select u.id from conversations c, conversation_user_ids(c.id) as u(id)
+         where $1 in (c.user_a, c.user_b)
+            or c.group_id in (select id from gift_groups where created_by = $1
+                              union select group_id from group_members where user_id = $1)
+       ) x join profiles p on p.id = x.id
+       where p.show_presence`,
+      [userId],
+    );
+    const visible = me[0].show_presence;
+    const at = me[0].last_seen_at;
     this.hub.send(
       rows.map((r) => r.id),
-      { type: 'presence', user_id: userId, online, last_seen_at: at ? new Date(at).toISOString() : null },
+      {
+        type: 'presence',
+        user_id: userId,
+        online: visible && online,
+        last_seen_at: visible && at ? new Date(at).toISOString() : null,
+      },
       userId,
     );
   }
 
   /** "Está a escrever…" (chamado pelo WebSocket). */
   async typing(userId: string, conversationId: string): Promise<void> {
-    const { name, ids } = await this.as(userId, async (c) => {
+    const { name, ids, enabled } = await this.as(userId, async (c) => {
       await ChatService.requireAccess(c, conversationId);
-      const { rows } = await c.query<{ display_name: string }>('select display_name from profiles where id = $1', [userId]);
-      return { name: rows[0]?.display_name ?? '', ids: await ChatService.participantIds(c, conversationId) };
+      const { rows } = await c.query<{ display_name: string; typing_indicator: boolean }>(
+        'select display_name, typing_indicator from profiles where id = $1',
+        [userId],
+      );
+      return {
+        name: rows[0]?.display_name ?? '',
+        enabled: rows[0]?.typing_indicator ?? true,
+        ids: await ChatService.participantIds(c, conversationId),
+      };
     });
+    if (!enabled) return;
     this.hub.send(ids, { type: 'typing', conversation_id: conversationId, user_id: userId, name }, userId);
   }
 

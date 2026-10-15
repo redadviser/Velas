@@ -9,6 +9,9 @@ import '../data/api/api_chat_repository.dart';
 import '../data/api/chat_socket.dart';
 import '../data/models/chat_models.dart';
 import '../data/repositories/chat_repository.dart';
+import '../services/notification_service.dart';
+import 'constants.dart';
+import 'i18n/translations.dart';
 import 'providers.dart';
 
 /// Amigos e conversas só existem com servidor: `null` no modo local.
@@ -215,6 +218,28 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
 
   void setOpen(String? conversationId) => _open = conversationId;
 
+  /// A conversa aberta no ecrã (as notificações dela não aparecem).
+  String? get openConversationId => _open;
+
+  /// Silenciar / fixar, com atualização imediata.
+  Future<void> setPrefs(String conversationId, {DateTime? Function()? mutedUntil, bool? pinned}) async {
+    final previous = state.value;
+    if (previous != null) {
+      state = AsyncData([
+        for (final c in previous)
+          c.id == conversationId ? c.copyWith(mutedUntil: mutedUntil, pinned: pinned) : c,
+      ]);
+    }
+    try {
+      final updated = await ref.read(chatRepositoryProvider)!.setPrefs(conversationId, mutedUntil: mutedUntil, pinned: pinned);
+      final list = state.value;
+      if (list != null) state = AsyncData([for (final c in list) c.id == conversationId ? updated : c]);
+    } catch (_) {
+      if (previous != null) state = AsyncData(previous);
+      rethrow;
+    }
+  }
+
   /// Atualiza a lista com o que o ecrã da conversa já sabe (ex.: mensagem enviada daqui).
   void applyLocal(ChatMessage message) => _onEvent(MessageReceived(message));
 
@@ -239,9 +264,12 @@ final conversationsProvider = AsyncNotifierProvider<ConversationsController, Lis
   ConversationsController.new,
 );
 
-/// Mensagens por ler em todas as conversas (contador do separador).
+/// Mensagens por ler em todas as conversas (contador do separador). As
+/// silenciadas não contam (como no WhatsApp).
 final unreadTotalProvider = Provider<int>(
-  (ref) => (ref.watch(conversationsProvider).value ?? const []).fold(0, (n, c) => n + c.unreadCount),
+  (ref) => (ref.watch(conversationsProvider).value ?? const [])
+      .where((c) => !c.isMuted)
+      .fold(0, (n, c) => n + c.unreadCount),
 );
 
 /// Não lidas da conversa de um grupo.
@@ -515,8 +543,10 @@ class ChatController extends Notifier<ChatState> {
     if (v) _scheduleRead();
   }
 
-  /// Avisa os outros que estou a escrever (no máximo a cada 3 s).
+  /// Avisa os outros que estou a escrever (no máximo a cada 3 s), se a
+  /// pessoa não o desligou nas definições.
   void typing() {
+    if (!(ref.read(currentUserProvider)?.typingIndicator ?? true)) return;
     final now = DateTime.now();
     if (now.difference(_lastTypingSent) < const Duration(seconds: 3)) return;
     _lastTypingSent = now;
@@ -670,3 +700,38 @@ class ChatController extends Notifier<ChatState> {
 }
 
 final chatProvider = NotifierProvider.autoDispose.family<ChatController, ChatState, String>(ChatController.new);
+
+// ---------------------------------------------------------------------------
+// Notificações das mensagens
+// ---------------------------------------------------------------------------
+
+typedef ShowChatNotification =
+    Future<void> Function({required String conversationId, required String title, required String body});
+
+/// Quem mostra a notificação (o sistema; substituído nos testes).
+final showChatNotificationProvider = Provider<ShowChatNotification>((_) => NotificationService.instance.showChatMessage);
+
+/// Mostra uma notificação quando chega uma mensagem e não se está nessa
+/// conversa — salvo se estiver silenciada ou desligada nas definições.
+/// Por agora só com a app aberta (o push fica para o Firebase).
+final chatNotificationsProvider = Provider<void>((ref) {
+  final sub = _events(ref).listen((e) {
+    if (e is! MessageReceived) return;
+    final m = e.message;
+    final user = ref.read(currentUserProvider);
+    if (user == null || m.senderId == user.id || m.deleted || !user.messageNotifications) return;
+    if (ref.read(conversationsProvider.notifier).openConversationId == m.conversationId) return;
+    final conv = ref.read(conversationsProvider).value?.where((c) => c.id == m.conversationId).firstOrNull;
+    if (conv?.isMuted ?? false) return;
+
+    final isGroup = conv?.isGroup ?? false;
+    final title = conv?.title.isNotEmpty ?? false ? conv!.title : m.senderName;
+    final body = !user.messagePreviews
+        ? tr(Keys.notifyNewMessage)
+        : isGroup
+        ? tr(Keys.chatPreviewSender, {'name': m.senderName.split(' ').first, 'text': m.preview})
+        : m.preview;
+    ref.read(showChatNotificationProvider)(conversationId: m.conversationId, title: title, body: body);
+  });
+  ref.onDispose(sub.cancel);
+});

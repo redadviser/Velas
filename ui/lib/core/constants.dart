@@ -23,7 +23,6 @@ abstract final class Keys {
   static const commonYesterday = 'common.yesterday';
   static const commonYesterdayAt = 'common.yesterdayAt';
   static const commonDateAt = 'common.dateAt';
-
   /// Plural (`.one` / `.other`).
   static const commonPeople = 'common.people';
 
@@ -44,7 +43,6 @@ abstract final class Keys {
   static const chatFilterGifts = 'chat.filter.gifts';
   static const chatFilterDirect = 'chat.filter.direct';
   static const chatFilterUnread = 'chat.filter.unread';
-
   /// Plural (`.one` / `.other`).
   static const chatFriendRequests = 'chat.friendRequests';
   static const chatEmptyTitle = 'chat.empty.title';
@@ -61,7 +59,6 @@ abstract final class Keys {
   static const chatPreviewSender = 'chat.previewSender';
   static const chatGroupTalkHere = 'chat.group.talkHere';
   static const chatGiftPurchased = 'chat.gift.purchased';
-
   /// Plural (`.one` / `.other`).
   static const chatGiftAwaiting = 'chat.gift.awaiting';
   static const chatGiftYouBuy = 'chat.gift.youBuy';
@@ -196,4 +193,52 @@ abstract final class Keys {
   static const errorNotFriendsAnymore = 'error.notFriendsAnymore';
   static const errorTooManyStickers = 'error.tooManyStickers';
   static const errorGifsUnavailable = 'error.gifsUnavailable';
+
+  // chatSettings ----------------------------------------------------------
+  static const chatSettingsTitle = 'chatSettings.title';
+  static const chatSettingsPrivacy = 'chatSettings.privacy';
+  static const chatSettingsPresenceTitle = 'chatSettings.presenceTitle';
+  static const chatSettingsPresenceHint = 'chatSettings.presenceHint';
+  static const chatSettingsReceiptsTitle = 'chatSettings.receiptsTitle';
+  static const chatSettingsReceiptsHint = 'chatSettings.receiptsHint';
+  static const chatSettingsTypingTitle = 'chatSettings.typingTitle';
+  static const chatSettingsTypingHint = 'chatSettings.typingHint';
+  static const chatSettingsNotifications = 'chatSettings.notifications';
+  static const chatSettingsMessagesTitle = 'chatSettings.messagesTitle';
+  static const chatSettingsMessagesHint = 'chatSettings.messagesHint';
+  static const chatSettingsPreviewsTitle = 'chatSettings.previewsTitle';
+  static const chatSettingsPreviewsHint = 'chatSettings.previewsHint';
+  static const chatSettingsWhileOpen = 'chatSettings.whileOpen';
+
+  // chatInfo --------------------------------------------------------------
+  static const chatInfoTitle = 'chatInfo.title';
+  static const chatInfoTooltip = 'chatInfo.tooltip';
+  static const chatInfoMute = 'chatInfo.mute';
+  static const chatInfoNotificationsOn = 'chatInfo.notificationsOn';
+  static const chatInfoMutedUntil = 'chatInfo.mutedUntil';
+  static const chatInfoMutedAlways = 'chatInfo.mutedAlways';
+  static const chatInfoMute8h = 'chatInfo.mute8h';
+  static const chatInfoMute1w = 'chatInfo.mute1w';
+  static const chatInfoMuteAlways = 'chatInfo.muteAlways';
+  static const chatInfoUnmute = 'chatInfo.unmute';
+  static const chatInfoPin = 'chatInfo.pin';
+  static const chatInfoPinHint = 'chatInfo.pinHint';
+  static const chatInfoPinned = 'chatInfo.pinned';
+  static const chatInfoMembers = 'chatInfo.members';
+  static const chatInfoYou = 'chatInfo.you';
+  static const chatInfoViewProfile = 'chatInfo.viewProfile';
+  static const chatInfoAllSettings = 'chatInfo.allSettings';
+
+  // notify ----------------------------------------------------------------
+  static const notifyNewMessage = 'notify.newMessage';
+  static const notifyChannel = 'notify.channel';
+  static const notifyChannelDescription = 'notify.channelDescription';
+
+  // homeInbox -------------------------------------------------------------
+  static const homeInboxTitle = 'homeInbox.title';
+  /// Plural (`.one` / `.other`).
+  static const homeInboxUnread = 'homeInbox.unread';
+  /// Plural (`.one` / `.other`).
+  static const homeInboxMore = 'homeInbox.more';
+  static const homeInboxSeeAll = 'homeInbox.seeAll';
 }

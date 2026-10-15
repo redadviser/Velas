@@ -44,6 +44,11 @@ class UserProfile {
     this.defaultReminderDays = kDefaultReminderDays,
     this.payment = PaymentDetails.empty,
     this.photoUrl,
+    this.showPresence = true,
+    this.readReceipts = true,
+    this.typingIndicator = true,
+    this.messageNotifications = true,
+    this.messagePreviews = true,
   });
 
   final String id;
@@ -52,6 +57,20 @@ class UserProfile {
 
   /// Fotografia de perfil: URL (servidor) ou caminho do ficheiro (modo local).
   final String? photoUrl;
+
+  // Definições das conversas (ver backend/migrations/007_chat_settings.sql).
+  /// "Online" e "visto por último" (desligado, também não vê o dos outros).
+  final bool showPresence;
+
+  /// "Vista" (desligado, também não vê quem viu as suas).
+  final bool readReceipts;
+
+  /// Avisar os outros de que está a escrever.
+  final bool typingIndicator;
+  final bool messageNotifications;
+
+  /// Mostrar o texto da mensagem na notificação.
+  final bool messagePreviews;
 
   /// Único, em minúsculas. Vazio em contas antigas que ainda não o definiram.
   final String username;
@@ -78,6 +97,11 @@ class UserProfile {
     List<int>? defaultReminderDays,
     PaymentDetails? payment,
     String? Function()? photoUrl,
+    bool? showPresence,
+    bool? readReceipts,
+    bool? typingIndicator,
+    bool? messageNotifications,
+    bool? messagePreviews,
   }) => UserProfile(
     id: id,
     email: email,
@@ -90,6 +114,11 @@ class UserProfile {
     defaultReminderDays: defaultReminderDays ?? this.defaultReminderDays,
     payment: payment ?? this.payment,
     photoUrl: photoUrl != null ? photoUrl() : this.photoUrl,
+    showPresence: showPresence ?? this.showPresence,
+    readReceipts: readReceipts ?? this.readReceipts,
+    typingIndicator: typingIndicator ?? this.typingIndicator,
+    messageNotifications: messageNotifications ?? this.messageNotifications,
+    messagePreviews: messagePreviews ?? this.messagePreviews,
   );
 
   /// Campos que o próprio altera com PATCH /me (a fotografia vai à parte).
@@ -102,6 +131,11 @@ class UserProfile {
     'reminder_minute': reminderMinute,
     'default_reminder_days': defaultReminderDays,
     'payment_methods': payment.toJson(),
+    'show_presence': showPresence,
+    'read_receipts': readReceipts,
+    'typing_indicator': typingIndicator,
+    'message_notifications': messageNotifications,
+    'message_previews': messagePreviews,
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> j, {required String id, required String email}) => UserProfile(
@@ -120,6 +154,11 @@ class UserProfile {
         : _intList(j['default_reminder_days']),
     payment: PaymentDetails.fromJson((j['payment_methods'] as Map?)?.cast<String, dynamic>()),
     photoUrl: j['photo_url'] as String?,
+    showPresence: j['show_presence'] as bool? ?? true,
+    readReceipts: j['read_receipts'] as bool? ?? true,
+    typingIndicator: j['typing_indicator'] as bool? ?? true,
+    messageNotifications: j['message_notifications'] as bool? ?? true,
+    messagePreviews: j['message_previews'] as bool? ?? true,
   );
 }
 

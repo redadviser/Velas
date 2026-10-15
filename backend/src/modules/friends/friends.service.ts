@@ -23,11 +23,14 @@ export class FriendsService {
         username: string | null;
         photo_path: string | null;
         last_seen_at: string | null;
+        show_presence: boolean;
+        viewer_show_presence: boolean;
         created_at: string;
         responded_at: string | null;
       }>(
         `select f.id, f.status, f.addressee_id = $1 as incoming, p.id as user_id, p.display_name, p.username,
-                p.photo_path, p.last_seen_at, f.created_at, f.responded_at
+                p.photo_path, p.last_seen_at, p.show_presence,
+                (select show_presence from profiles where id = $1) as viewer_show_presence, f.created_at, f.responded_at
          from friendships f
          join profiles p on p.id = case when f.requester_id = $1 then f.addressee_id else f.requester_id end
          where $1 in (f.requester_id, f.addressee_id)
@@ -46,8 +49,9 @@ export class FriendsService {
           .map((r) => ({
             ...user(r),
             since: r.responded_at ?? r.created_at,
-            online: this.hub.isOnline(r.user_id),
-            last_seen_at: r.last_seen_at,
+            // Só se os dois mostram a presença (como no WhatsApp).
+            online: r.show_presence && r.viewer_show_presence && this.hub.isOnline(r.user_id),
+            last_seen_at: r.show_presence && r.viewer_show_presence ? r.last_seen_at : null,
           })),
         incoming: rows
           .filter((r) => r.status === 'pending' && r.incoming)

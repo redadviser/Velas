@@ -118,7 +118,10 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
     }
     final groups = groupsAsync.value;
     if (groups == null) {
-      return const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)));
+      return const Padding(
+        padding: EdgeInsets.all(40),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+      );
     }
     final conversations = conversationsAsync.value ?? const <Conversation>[];
     final items = conversationItems(groups, conversations, chat ? _filter : ConversationFilter.gifts);
@@ -186,8 +189,7 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
                   const SizedBox(height: 8),
                   TextButton(onPressed: () => showJoinGroupSheet(context, ref), child: const Text('Tenho um código')),
                 ],
-                if (chat)
-                  TextButton(onPressed: () => context.push('/friends'), child: const Text('Adicionar amigos')),
+                if (chat) TextButton(onPressed: () => context.push('/friends'), child: const Text('Adicionar amigos')),
               ],
             ),
           )
@@ -370,7 +372,11 @@ class GroupConversationTile extends StatelessWidget {
         : me == null
         ? ('${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}', context.palette.muted, muted)
         : switch (g.statusOf(me)) {
-            ContributionStatus.pending => ('Pagar ${Fmt.money(g.shareOf(me))}', context.colors.primary, context.colors.onPrimary),
+            ContributionStatus.pending => (
+              'Pagar ${Fmt.money(g.shareOf(me))}',
+              context.colors.primary,
+              context.colors.onPrimary,
+            ),
             final s => (statusStyle(context, s).label, statusStyle(context, s).bg, statusStyle(context, s).fg),
           };
 
@@ -504,6 +510,9 @@ Future<void> startDirectChat(BuildContext context, WidgetRef ref) async {
 Future<void> openDirectChat(BuildContext context, WidgetRef ref, String userId) async {
   final router = GoRouter.of(context);
   String? id;
-  final ok = await runGuarded(context, () async => id = await ref.read(conversationsProvider.notifier).openDirect(userId));
+  final ok = await runGuarded(
+    context,
+    () async => id = await ref.read(conversationsProvider.notifier).openDirect(userId),
+  );
   if (ok && id != null) router.push('/chats/$id');
 }

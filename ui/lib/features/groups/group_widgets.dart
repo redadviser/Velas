@@ -13,6 +13,7 @@ import '../../data/models/group_models.dart';
 import '../auth/auth_widgets.dart';
 import '../chat/chat_widgets.dart';
 import 'invite_links.dart';
+import '../../core/utils/text.dart';
 
 /// Mensagem para lembrar quem ainda não pagou.
 String reminderText(GiftGroup g, List<GroupMember> pending) {
@@ -76,13 +77,15 @@ class MemberRow extends StatelessWidget {
         child: Row(
           children: [
             if (member.photoUrl != null)
-              ClipOval(child: SizedBox.square(dimension: 36, child: ChatImage(url: member.photoUrl)))
+              ClipOval(
+                child: SizedBox.square(dimension: 36, child: ChatImage(url: member.photoUrl)),
+              )
             else
               CircleAvatar(
                 radius: 18,
                 backgroundColor: swatch(index).withValues(alpha: 0.16),
                 child: Text(
-                  member.name.isEmpty ? '?' : member.name[0].toUpperCase(),
+                  initialOf(member.name),
                   style: TextStyle(color: swatch(index), fontWeight: FontWeight.w700),
                 ),
               ),

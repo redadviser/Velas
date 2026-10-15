@@ -10,7 +10,9 @@ import 'package:aniversarios/data/models/group_models.dart';
 import 'package:aniversarios/data/models/models.dart';
 import 'package:aniversarios/data/repositories/chat_repository.dart';
 import 'package:aniversarios/features/chat/chat_screen.dart';
+import 'package:aniversarios/core/utils/text.dart';
 import 'package:aniversarios/features/chat/conversations_list.dart';
+import 'package:aniversarios/features/chat/user_profile_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -98,6 +100,14 @@ class FakeChatRepository implements ChatRepository {
   @override
   Future<List<Sticker>> fetchStickers() async => const [];
 
+  final requested = <String>[];
+
+  @override
+  Future<FriendRequestResult> requestFriend(String userId) async {
+    requested.add(userId);
+    return FriendRequestResult.sent;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(invocation.memberName.toString());
 }
@@ -145,6 +155,17 @@ void main() {
       expect(msg('a', body: '🎉🎉🎉🎉').isBigEmoji, isFalse);
       expect(msg('a', body: 'parabéns 🎉').isBigEmoji, isFalse);
       expect(msg('a', body: '1').isBigEmoji, isFalse);
+    });
+
+    test('o avatar sem fotografia mostra só a primeira letra, sem símbolos', () {
+      expect(initialOf('@joão.silva'), 'J');
+      expect(initialOf('🎉 ana costa'), 'A');
+      expect(initialOf('  _.rui'), 'R');
+      expect(initialOf('Élio'), 'É');
+      expect(initialOf('007 Bond'), '0');
+      expect(initialOf('!!!'), '?');
+      expect(const ChatUser(userId: 'u', name: '@Gil Costa').initials, 'G');
+      expect(Person(id: 'p', name: '🎂 Rita Lopes', day: 1, month: 1, createdAt: DateTime(2026)).initials, 'RL');
     });
 
     test('a mensagem enviada só leva os campos usados', () {
@@ -329,6 +350,42 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       expect(repo.reads, contains('c1'));
     });
+  });
+
+  testWidgets('o perfil aberto no chat permite pedir amizade', (tester) async {
+    final repo = FakeChatRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWithValue(me),
+          chatRepositoryProvider.overrideWithValue(repo),
+          chatEventsProvider.overrideWithValue(const Stream.empty()),
+        ],
+        child: MaterialApp(
+          theme: ThemeData(extensions: const [AppPalette.light]),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showUserProfileSheet(
+                  context,
+                  const ChatUser(userId: 'hugo', name: '#Hugo Matos', username: 'hugo'),
+                ),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('H'), findsOneWidget); // inicial sem o "#"
+    expect(find.text('@hugo'), findsOneWidget);
+    await tester.tap(find.text('Adicionar amigo'));
+    await tester.pumpAndSettle();
+    expect(repo.requested, ['hugo']);
+    expect(find.text('Pedido enviado a #Hugo.'), findsOneWidget);
   });
 
   testWidgets('o ecrã da conversa mostra mensagens, "visto" e a caixa de escrita', (tester) async {

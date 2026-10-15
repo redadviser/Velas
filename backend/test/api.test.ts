@@ -705,6 +705,19 @@ describe('fotografia de perfil', () => {
   });
 });
 
+describe('sistema', () => {
+  it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
+    const res = await call('GET', '/health');
+    expect(res.body).toEqual({ ok: true, schema: expect.stringMatching(/^\d{3}_.+\.sql$/), storage: true });
+  });
+
+  it('sem pasta gravável, falha com um erro claro (e não um erro interno)', async () => {
+    const broken = new PhotoStorage('/dev/null/uploads', 'http://api.test', secret);
+    expect(await broken.writable()).toBe(false);
+    await expect(broken.put(`${uuid()}/x.jpg`, jpeg)).rejects.toMatchObject({ status: 503, code: 'storage_unavailable' });
+  });
+});
+
 describe('documentação', () => {
   it('serve o Swagger UI e a especificação OpenAPI gerada a partir dos schemas', async () => {
     expect((await app.inject({ method: 'GET', url: '/docs/' })).statusCode).toBe(200);

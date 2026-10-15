@@ -122,8 +122,7 @@ class _EmojiTab extends StatelessWidget {
   final TextEditingController controller;
 
   @override
-  Widget build(BuildContext context) =>
-      EmojiPicker(textEditingController: controller, config: emojiConfig(context));
+  Widget build(BuildContext context) => EmojiPicker(textEditingController: controller, config: emojiConfig(context));
 }
 
 /// Pesquisa de GIFs ou stickers no GIPHY, com os populares sem pesquisa.
@@ -222,7 +221,11 @@ class _GifSearchState extends ConsumerState<GifSearch> with AutomaticKeepAliveCl
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: context.palette.mutedForeground)),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.palette.mutedForeground),
+                    ),
                   ),
                 )
               : GridView.builder(
@@ -236,7 +239,9 @@ class _GifSearchState extends ConsumerState<GifSearch> with AutomaticKeepAliveCl
                   itemCount: _results.length + (_loading ? 1 : 0),
                   itemBuilder: (context, i) {
                     if (i == _results.length) {
-                      return const Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)));
+                      return const Center(
+                        child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
                     }
                     final g = _results[i];
                     return GestureDetector(
@@ -259,7 +264,10 @@ class _GifSearchState extends ConsumerState<GifSearch> with AutomaticKeepAliveCl
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Text(
             'Powered by GIPHY',
-            style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground, fontWeight: FontWeight.w700),
+            style: context.text.labelSmall?.copyWith(
+              color: context.palette.mutedForeground,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -291,7 +299,12 @@ class _StickersTabState extends ConsumerState<_StickersTab> {
   }
 
   Future<void> _manage(Sticker s) async {
-    final ok = await confirmDialog(context, title: 'Apagar sticker?', message: 'Deixa de aparecer nos teus stickers.', confirm: 'Apagar');
+    final ok = await confirmDialog(
+      context,
+      title: 'Apagar sticker?',
+      message: 'Deixa de aparecer nos teus stickers.',
+      confirm: 'Apagar',
+    );
     if (ok && mounted) await runGuarded(context, () => ref.read(stickersProvider.notifier).delete(s));
   }
 
@@ -339,7 +352,10 @@ class _StickersTabState extends ConsumerState<_StickersTab> {
                               children: [
                                 Icon(LucideIcons.imagePlus, color: context.palette.mutedForeground),
                                 const SizedBox(height: 4),
-                                Text('Criar', style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground)),
+                                Text(
+                                  'Criar',
+                                  style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
+                                ),
                               ],
                             ),
                           ),

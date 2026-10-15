@@ -31,10 +31,15 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   app.setValidatorCompiler(() => (value) => ({ value }));
   if (deps.config.docs) await registerDocs(app);
 
-  app.get('/health', { schema: doc({ tag: 'Sistema', summary: 'Estado da API e da base de dados' }) }, async () => {
-    await deps.db.query('select 1');
-    return { ok: true };
-  });
+  app.get(
+    '/health',
+    { schema: doc({ tag: 'Sistema', summary: 'Estado da API, da base de dados e do armazenamento de imagens' }) },
+    async () => {
+      const { rows } = await deps.db.query<{ name: string | null }>('select max(name) as name from schema_migrations');
+      // storage: false = UPLOAD_DIR não é gravável (fotografias e imagens do chat falham).
+      return { ok: true, schema: rows[0]?.name ?? null, storage: await deps.storage.writable() };
+    },
+  );
 
   // Rotas públicas.
   await authRoutes(app, services.auth);

@@ -85,7 +85,10 @@ class FriendsScreen extends ConsumerWidget {
               onAction: (user) async => friendRequestMessage(await ctrl.request(user.userId), user.name),
             ),
             if (list.incoming.isNotEmpty) ...[
-              SectionTitle('Pedidos recebidos · ${list.incoming.length}', padding: const EdgeInsets.fromLTRB(4, 28, 0, 8)),
+              SectionTitle(
+                'Pedidos recebidos · ${list.incoming.length}',
+                padding: const EdgeInsets.fromLTRB(4, 28, 0, 8),
+              ),
               for (final r in list.incoming)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -120,7 +123,10 @@ class FriendsScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(4, 28, 0, 8),
             ),
             if (async.isLoading && !async.hasValue)
-              const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)))
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+              )
             else if (list.friends.isEmpty)
               Text('Ainda não tens amigos na Birthdayly.', style: TextStyle(color: muted))
             else
@@ -154,7 +160,8 @@ class FriendsScreen extends ConsumerWidget {
                   title: Text(r.user.name),
                   subtitle: const Text('À espera de resposta'),
                   trailing: TextButton(
-                    onPressed: () => runGuarded(context, () => ctrl.remove(r.user.userId), success: 'Pedido cancelado.'),
+                    onPressed: () =>
+                        runGuarded(context, () => ctrl.remove(r.user.userId), success: 'Pedido cancelado.'),
                     child: const Text('Cancelar'),
                   ),
                 ),

@@ -73,5 +73,10 @@ export function errorHandler(error: FastifyError | Error, req: FastifyRequest, r
     req.log.error(error);
     return reply.status(500).send({ error: 'internal_error', message: 'Erro interno.' });
   }
+  // Problemas do servidor (ex.: armazenamento) ficam no log com o detalhe; a app só recebe o código.
+  if (http.status >= 500) {
+    req.log.error({ code: http.code, detail: http.message }, 'erro do servidor');
+    return reply.status(http.status).send({ error: http.code, message: 'Erro do servidor.' });
+  }
   return reply.status(http.status).send({ error: http.code, message: http.message });
 }

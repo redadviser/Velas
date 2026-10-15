@@ -46,6 +46,7 @@ String _apiError(ApiException e) => switch (e.code) {
   'not_found' => 'Este registo já não existe. Atualiza e tenta novamente.',
   'validation_error' || 'invalid_value' || 'invalid_reference' => 'Há um valor inválido. Confirma os dados.',
   'too_large' || 'unsupported_media_type' => 'Não foi possível carregar a fotografia.',
+  'storage_unavailable' => 'O servidor não conseguiu guardar a imagem. Tenta novamente daqui a pouco.',
   _ when e.status >= 500 => 'O servidor está indisponível. Tenta novamente daqui a pouco.',
   _ => 'Não foi possível guardar as alterações. Tenta novamente.',
 };

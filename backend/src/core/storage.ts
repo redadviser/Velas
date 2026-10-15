@@ -1,6 +1,9 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, copyFile, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import { HttpError } from './errors.js';
 
 /**
  * Fotografias em disco, servidas por URLs assinados e temporários (como os
@@ -35,10 +38,25 @@ export class PhotoStorage {
     return path.join(this.root, key);
   }
 
+  /** Falha com 503 storage_unavailable se a pasta não for gravável (ex.: permissões do volume). */
   async put(key: string, data: Buffer): Promise<void> {
     const file = this.file(key);
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, data);
+    try {
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, data);
+    } catch (e) {
+      throw new HttpError(503, 'storage_unavailable', `UPLOAD_DIR (${this.root}): ${(e as Error).message}`);
+    }
+  }
+
+  /** Para o /health: a pasta existe e pode ser escrita? */
+  async writable(): Promise<boolean> {
+    try {
+      await access(this.root, constants.W_OK);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async read(key: string): Promise<Buffer | null> {
@@ -54,9 +72,13 @@ export class PhotoStorage {
   }
 
   async copy(from: string, to: string): Promise<boolean> {
-    const data = await this.read(from);
-    if (!data) return false;
-    await this.put(to, data);
+    if (!(await this.read(from))) return false;
+    try {
+      await mkdir(path.dirname(this.file(to)), { recursive: true });
+      await copyFile(this.file(from), this.file(to));
+    } catch (e) {
+      throw new HttpError(503, 'storage_unavailable', `UPLOAD_DIR (${this.root}): ${(e as Error).message}`);
+    }
     return true;
   }
 

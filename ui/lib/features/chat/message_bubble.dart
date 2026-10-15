@@ -22,6 +22,7 @@ class MessageBubble extends StatelessWidget {
     this.onReact,
     this.onRetry,
     this.onTapReply,
+    this.onTapSender,
   });
 
   final ChatMessage message;
@@ -37,6 +38,9 @@ class MessageBubble extends StatelessWidget {
   final ValueChanged<String>? onReact;
   final VoidCallback? onRetry;
   final VoidCallback? onTapReply;
+
+  /// Tocar no avatar ou no nome de quem enviou (abre o perfil).
+  final VoidCallback? onTapSender;
 
   bool get _mine => message.senderId == myId;
 
@@ -75,9 +79,12 @@ class MessageBubble extends StatelessWidget {
             SizedBox(
               width: 30,
               child: lastInRun && m.senderId != null
-                  ? UserAvatar(
-                      user: ChatUser(userId: m.senderId!, name: m.senderName, photoUrl: m.senderPhotoUrl),
-                      size: 30,
+                  ? GestureDetector(
+                      onTap: onTapSender,
+                      child: UserAvatar(
+                        user: ChatUser(userId: m.senderId!, name: m.senderName, photoUrl: m.senderPhotoUrl),
+                        size: 30,
+                      ),
                     )
                   : null,
             ),
@@ -89,13 +96,16 @@ class MessageBubble extends StatelessWidget {
               crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 if (isGroup && !mine && firstInRun)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12, bottom: 2),
-                    child: Text(
-                      m.senderId == null ? 'Conta eliminada' : m.senderName,
-                      style: context.text.labelMedium?.copyWith(
-                        color: m.senderId == null ? context.palette.mutedForeground : userColor(context, m.senderId!),
-                        fontWeight: FontWeight.w700,
+                  GestureDetector(
+                    onTap: onTapSender,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12, bottom: 2),
+                      child: Text(
+                        m.senderId == null ? 'Conta eliminada' : m.senderName,
+                        style: context.text.labelMedium?.copyWith(
+                          color: m.senderId == null ? context.palette.mutedForeground : userColor(context, m.senderId!),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -210,7 +220,13 @@ class _ReplyQuote extends StatelessWidget {
 }
 
 class _TextBubble extends StatelessWidget {
-  const _TextBubble({required this.message, required this.mine, required this.lastInRun, required this.seen, this.onTapReply});
+  const _TextBubble({
+    required this.message,
+    required this.mine,
+    required this.lastInRun,
+    required this.seen,
+    this.onTapReply,
+  });
 
   final ChatMessage message;
   final bool mine;
@@ -343,8 +359,7 @@ class _MediaBubble extends StatelessWidget {
                 color: Color(0x33000000),
                 child: Center(child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)),
               ),
-            if (m.kind == MessageKind.gif)
-              const Positioned(left: 8, top: 8, child: _GifTag()),
+            if (m.kind == MessageKind.gif) const Positioned(left: 8, top: 8, child: _GifTag()),
             if (caption.isEmpty)
               Positioned(
                 right: 8,
@@ -370,7 +385,10 @@ class _MediaBubble extends StatelessWidget {
           if (m.reply != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-              child: SizedBox(width: width - 12, child: _ReplyQuote(reply: m.reply!, mine: mine, onTap: onTapReply)),
+              child: SizedBox(
+                width: width - 12,
+                child: _ReplyQuote(reply: m.reply!, mine: mine, onTap: onTapReply),
+              ),
             ),
           GestureDetector(onTap: onTap, child: image),
           if (caption.isNotEmpty)
@@ -402,7 +420,10 @@ class _GifTag extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
     decoration: BoxDecoration(color: const Color(0x99000000), borderRadius: BorderRadius.circular(6)),
-    child: const Text('GIF', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+    child: const Text(
+      'GIF',
+      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+    ),
   );
 }
 

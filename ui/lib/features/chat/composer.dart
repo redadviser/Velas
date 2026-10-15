@@ -147,9 +147,17 @@ class _ComposerState extends ConsumerState<Composer> {
                         children: [
                           Text(
                             'A responder a ${reply.senderName}',
-                            style: context.text.labelMedium?.copyWith(color: context.colors.primary, fontWeight: FontWeight.w700),
+                            style: context.text.labelMedium?.copyWith(
+                              color: context.colors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          Text(reply.preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted)),
+                          Text(
+                            reply.preview,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: muted),
+                          ),
                         ],
                       ),
                     ),
@@ -185,9 +193,18 @@ class _ComposerState extends ConsumerState<Composer> {
                         counterText: '',
                         isDense: true,
                         contentPadding: const EdgeInsets.fromLTRB(16, 11, 4, 11),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
                         filled: true,
                         fillColor: context.palette.muted,
                         suffixIcon: IconButton(

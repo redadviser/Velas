@@ -12,6 +12,8 @@ import '../../core/widgets/common.dart';
 import '../../core/widgets/data_gate.dart';
 import '../../data/models/group_models.dart';
 import '../../data/models/models.dart';
+import '../../core/utils/text.dart';
+import '../chat/chat_widgets.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -122,14 +124,18 @@ class _Header extends StatelessWidget {
           IconButton(
             tooltip: 'Perfil',
             onPressed: () => context.push('/profile'),
-            icon: CircleAvatar(
-              radius: 20,
-              backgroundColor: context.palette.accent,
-              child: Text(
-                (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : '?',
-                style: TextStyle(color: context.palette.accentForeground, fontWeight: FontWeight.w700),
-              ),
-            ),
+            icon: user?.photoUrl != null
+                ? ClipOval(
+                    child: SizedBox.square(dimension: 40, child: ChatImage(url: user!.photoUrl)),
+                  )
+                : CircleAvatar(
+                    radius: 20,
+                    backgroundColor: context.palette.accent,
+                    child: Text(
+                      initialOf(user?.name ?? ''),
+                      style: TextStyle(color: context.palette.accentForeground, fontWeight: FontWeight.w700),
+                    ),
+                  ),
           ),
         ],
       ),

@@ -17,6 +17,7 @@ import 'chat_widgets.dart';
 import 'composer.dart';
 import 'media_panel.dart';
 import 'message_bubble.dart';
+import 'user_profile_sheet.dart';
 
 const quickReactions = ['❤️', '😂', '😮', '😢', '🎉', '👍'];
 
@@ -137,7 +138,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         await Clipboard.setData(ClipboardData(text: m.body));
         if (mounted) showMessage(context, 'Texto copiado.');
       case 'sticker':
-        await runGuarded(context, () => ref.read(stickersProvider.notifier).saveFromMessage(m), success: 'Guardado nos teus stickers.');
+        await runGuarded(
+          context,
+          () => ref.read(stickersProvider.notifier).saveFromMessage(m),
+          success: 'Guardado nos teus stickers.',
+        );
       case 'retry':
         await _chat.retry(m).catchError((_) {});
       case 'discard':
@@ -163,13 +168,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     builder: (ctx) => SafeArea(
       child: SizedBox(
         height: 340,
-        child: EmojiPicker(
-          onEmojiSelected: (_, e) => Navigator.pop(ctx, e.emoji),
-          config: emojiConfig(ctx),
-        ),
+        child: EmojiPicker(onEmojiSelected: (_, e) => Navigator.pop(ctx, e.emoji), config: emojiConfig(ctx)),
       ),
     ),
   );
+
+  /// Perfil de quem enviou: com o @username dos participantes, se já tiverem carregado.
+  void _openSender(ChatMessage m, ChatState state) {
+    final id = m.senderId;
+    if (id == null) return;
+    final known = state.conversation?.participants.where((p) => p.user.userId == id).firstOrNull?.user;
+    showUserProfileSheet(context, known ?? ChatUser(userId: id, name: m.senderName, photoUrl: m.senderPhotoUrl));
+  }
 
   void _openMedia(ChatMessage m) {
     if (m.mediaUrl == null && m.localBytes == null) return;
@@ -178,7 +188,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         fullscreenDialog: true,
         builder: (_) => _MediaViewer(
           message: m,
-          onSaveSticker: m.state == SendState.sent ? () => ref.read(stickersProvider.notifier).saveFromMessage(m) : null,
+          onSaveSticker: m.state == SendState.sent
+              ? () => ref.read(stickersProvider.notifier).saveFromMessage(m)
+              : null,
         ),
       ),
     );
@@ -192,13 +204,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         state.conversation ??
         ref.watch(conversationsProvider).value?.where((c) => c.id == widget.conversationId).firstOrNull;
     final groupId = summary?.groupId;
-    final group = groupId == null
-        ? null
-        : ref.watch(groupsProvider).value?.where((g) => g.id == groupId).firstOrNull;
+    final group = groupId == null ? null : ref.watch(groupsProvider).value?.where((g) => g.id == groupId).firstOrNull;
     final other = summary?.otherUser;
     final friends = ref.watch(friendsProvider).value;
     // Deixaram de ser amigos: a conversa fica, mas não se escreve.
-    final blocked = summary != null && !summary.isGroup && other != null && friends != null && !friends.isFriend(other.userId);
+    final blocked =
+        summary != null && !summary.isGroup && other != null && friends != null && !friends.isFriend(other.userId);
 
     final otherRead = !(summary?.isGroup ?? true) && other != null
         ? state.conversation?.participants.where((p) => p.user.userId == other.userId).firstOrNull?.lastReadAt
@@ -210,7 +221,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: summary == null
             ? null
             : InkWell(
-                onTap: groupId == null ? null : () => context.push('/groups/$groupId'),
+                // Grupo: abre a prenda. Privada: o perfil da outra pessoa.
+                onTap: groupId != null
+                    ? () => context.push('/groups/$groupId')
+                    : other == null
+                    ? null
+                    : () => showUserProfileSheet(context, other, showMessageButton: false),
                 borderRadius: BorderRadius.circular(12),
                 child: Row(
                   children: [
@@ -220,7 +236,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(summary.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleMedium),
+                          Text(
+                            summary.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.titleMedium,
+                          ),
                           Text(
                             _subtitle(summary, state, me),
                             maxLines: 1,
@@ -265,7 +286,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       if (i == list.length) {
                         return const Padding(
                           padding: EdgeInsets.all(16),
-                          child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                          child: Center(
+                            child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
                         );
                       }
                       final m = list[i];
@@ -290,6 +313,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ? (e) => runGuarded(context, () => _chat.react(m, e))
                                 : null,
                             onRetry: () => _chat.retry(m).catchError((_) {}),
+                            onTapSender: mine ? null : () => _openSender(m, state),
                           ),
                         ],
                       );
@@ -333,7 +357,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (typing.length == 1) return '${typing.first} está a escrever…';
     if (typing.length > 1) return '${typing.join(', ')} estão a escrever…';
     if (!c.isGroup) return c.otherUser?.username.isNotEmpty ?? false ? '@${c.otherUser!.username}' : 'Conversa privada';
-    final names = state.conversation?.participants.where((p) => p.user.userId != me).map((p) => p.user.firstName).toList();
+    final names = state.conversation?.participants
+        .where((p) => p.user.userId != me)
+        .map((p) => p.user.firstName)
+        .toList();
     if (names == null || names.isEmpty) return c.celebrantName == null ? 'Grupo' : 'Prenda para ${c.celebrantName}';
     return names.length <= 3 ? 'Tu, ${names.join(', ')}' : 'Tu, ${names.take(3).join(', ')} e mais ${names.length - 3}';
   }
@@ -408,7 +435,9 @@ class _GiftBanner extends StatelessWidget {
                       'Para ${g.celebrantName} · $status',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.text.bodySmall?.copyWith(color: context.palette.accentForeground.withValues(alpha: 0.8)),
+                      style: context.text.bodySmall?.copyWith(
+                        color: context.palette.accentForeground.withValues(alpha: 0.8),
+                      ),
                     ),
                   ],
                 ),
@@ -459,10 +488,7 @@ class _MediaViewer extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(
-          message.senderName,
-          style: AppTheme.display(context, size: 18, color: Colors.white),
-        ),
+        title: Text(message.senderName, style: AppTheme.display(context, size: 18, color: Colors.white)),
         actions: [
           if (onSaveSticker != null)
             IconButton(
@@ -477,7 +503,9 @@ class _MediaViewer extends StatelessWidget {
           Expanded(
             child: InteractiveViewer(
               maxScale: 5,
-              child: Center(child: ChatImage(url: message.mediaUrl, bytes: message.localBytes, fit: BoxFit.contain)),
+              child: Center(
+                child: ChatImage(url: message.mediaUrl, bytes: message.localBytes, fit: BoxFit.contain),
+              ),
             ),
           ),
           if (message.body.trim().isNotEmpty && message.kind == MessageKind.image)

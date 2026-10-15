@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show StringCharacters;
 
+import '../../core/utils/text.dart';
+
 DateTime? _dt(Object? v) => v == null ? null : DateTime.parse(v as String).toLocal();
 int? _int(Object? v) => (v as num?)?.toInt();
 
@@ -16,12 +18,8 @@ class ChatUser {
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
 
-  String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    final first = parts.first.characters.first;
-    return (parts.length == 1 ? first : first + parts.last.characters.first).toUpperCase();
-  }
+  /// Só a primeira letra (sem símbolos), para o avatar sem fotografia.
+  String get initials => initialOf(name);
 
   factory ChatUser.fromJson(Map<String, dynamic> j) => ChatUser(
     userId: j['user_id'] as String,

@@ -17,6 +17,7 @@ import '../../services/notification_service.dart';
 import '../chat/chat_widgets.dart';
 import 'identity_sheets.dart';
 import '../auth/reset_password_screen.dart';
+import '../../core/utils/text.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -497,7 +498,7 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
                         color: context.palette.accent,
                         child: Center(
                           child: Text(
-                            user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                            initialOf(user.name),
                             style: AppTheme.display(context, size: 26, color: context.palette.accentForeground),
                           ),
                         ),

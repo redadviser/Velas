@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/utils/birthday_utils.dart';
+import '../../core/utils/text.dart';
 import 'payment.dart';
 
 export 'payment.dart';
@@ -188,11 +189,16 @@ class Person {
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
 
+  /// Iniciais do primeiro e do último nome, sem símbolos nem emojis.
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .map(initialOf)
+        .where((i) => i != '?')
+        .toList();
     if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return parts.length == 1 ? parts.first : parts.first + parts.last;
   }
 
   DateTime nextBirthday([DateTime? from]) => BirthdayUtils.nextOccurrence(day, month, from: from);

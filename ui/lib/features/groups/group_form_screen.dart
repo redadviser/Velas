@@ -16,6 +16,7 @@ import '../../data/models/models.dart';
 import '../auth/auth_widgets.dart';
 import 'invite_widgets.dart';
 import 'payment_widgets.dart';
+import '../../core/utils/text.dart';
 
 double? parseEuros(String text) {
   final t = text.trim().replaceAll(' ', '').replaceAll(',', '.');
@@ -468,7 +469,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                             radius: 16,
                             backgroundColor: swatch(i).withValues(alpha: 0.16),
                             child: Text(
-                              m.name.isEmpty ? '?' : m.name[0].toUpperCase(),
+                              initialOf(m.name),
                               style: TextStyle(color: swatch(i), fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                           ),

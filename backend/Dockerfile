@@ -23,7 +23,9 @@ COPY migrations ./migrations
 COPY public ./public
 # Pasta das fotografias (montar como "Persistent Directory" no CapRover).
 RUN mkdir -p /data/uploads && chown -R node:node /data
-USER node
+# Arranca como root só para acertar o dono de UPLOAD_DIR; a API corre como node.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"

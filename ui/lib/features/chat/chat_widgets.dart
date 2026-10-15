@@ -29,7 +29,12 @@ class UserAvatar extends StatelessWidget {
     final color = userColor(context, user.userId);
     final photo = user.photoUrl;
     if (photo != null) {
-      return ClipOval(child: SizedBox.square(dimension: size, child: ChatImage(url: photo)));
+      return ClipOval(
+        child: SizedBox.square(
+          dimension: size,
+          child: ChatImage(url: photo),
+        ),
+      );
     }
     return Container(
       width: size,

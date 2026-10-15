@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
@@ -274,7 +277,7 @@ class GroupDetailScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
           children: [
-            _Header(group: g),
+            _Header(group: g, canEditPhoto: isAdmin && supportsInvites),
             if (g.conversationId != null) ...[
               const SizedBox(height: 12),
               _GroupChatCard(conversationId: g.conversationId!),
@@ -440,9 +443,10 @@ class _GroupChatCard extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.group});
+  const _Header({required this.group, this.canEditPhoto = false});
 
   final GiftGroup group;
+  final bool canEditPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -486,7 +490,13 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text(g.title, style: AppTheme.display(context, size: 26)),
+          Row(
+            children: [
+              _GroupPhoto(group: g, editable: canEditPhoto),
+              const SizedBox(width: 14),
+              Expanded(child: Text(g.title, style: AppTheme.display(context, size: 26))),
+            ],
+          ),
           if (g.giftDescription.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(g.giftDescription, style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground)),
@@ -744,6 +754,131 @@ class _PendingInviteRow extends StatelessWidget {
               icon: Icon(LucideIcons.x, size: 18, color: muted),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Fotografia do grupo; o administrador toca para escolher, tirar ou remover.
+class _GroupPhoto extends ConsumerStatefulWidget {
+  const _GroupPhoto({required this.group, required this.editable});
+
+  final GiftGroup group;
+  final bool editable;
+
+  @override
+  ConsumerState<_GroupPhoto> createState() => _GroupPhotoState();
+}
+
+class _GroupPhotoState extends ConsumerState<_GroupPhoto> {
+  bool _busy = false;
+
+  Future<void> _change() async {
+    final g = widget.group;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(ctx.tr(Keys.groupPhotoChange), style: AppTheme.display(ctx, size: 22)),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.images),
+              title: Text(ctx.tr(Keys.commonGallery)),
+              onTap: () => Navigator.pop(ctx, 'gallery'),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.camera),
+              title: Text(ctx.tr(Keys.commonCamera)),
+              onTap: () => Navigator.pop(ctx, 'camera'),
+            ),
+            if (g.photoUrl != null)
+              ListTile(
+                leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
+                title: Text(ctx.tr(Keys.groupPhotoRemove), style: TextStyle(color: ctx.colors.error)),
+                onTap: () => Navigator.pop(ctx, 'remove'),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+
+    Uint8List? bytes;
+    if (action != 'remove') {
+      try {
+        // Pequena: só aparece em avatares (até 2 MB no servidor).
+        final picked = await pickChatImage(action == 'camera' ? ImageSource.camera : ImageSource.gallery, maxSide: 640);
+        if (picked == null) return;
+        bytes = picked.bytes;
+      } catch (_) {
+        if (mounted) showMessage(context, context.tr(Keys.commonPhotosPermission));
+        return;
+      }
+    }
+    if (!mounted) return;
+    setState(() => _busy = true);
+    final photo = bytes;
+    await runGuarded(context, () async {
+      await ref.read(groupsProvider.notifier).mutate((repo) => repo.setGroupPhoto(g.id, photo));
+      // A conversa do grupo também mostra a fotografia.
+      await ref.read(conversationsProvider.notifier).refresh().catchError((_) {});
+    }, success: context.tr(photo == null ? Keys.groupPhotoRemoved : Keys.groupPhotoUpdated));
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 64.0;
+    final avatar = GroupAvatar(
+      photoUrl: widget.group.photoUrl,
+      size: size,
+      purchased: widget.group.purchasedAt != null,
+    );
+    if (!widget.editable) return avatar;
+    return Semantics(
+      button: true,
+      label: context.tr(Keys.groupPhotoChange),
+      child: GestureDetector(
+        onTap: _busy ? null : _change,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            avatar,
+            if (_busy)
+              const Positioned.fill(
+                child: ClipOval(
+                  child: ColoredBox(
+                    color: Color(0x66000000),
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: context.colors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: context.colors.surface, width: 2),
+                ),
+                child: Icon(LucideIcons.camera, size: 13, color: context.colors.onPrimary),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -56,7 +56,7 @@ export function createServices(deps: Deps) {
     gifts,
     messages,
     sync: new SyncService(db, categories, people, gifts, messages),
-    groups: new GroupsService(db, storage),
+    groups: new GroupsService(db, storage, hub),
     invitations: new InvitationsService(db, storage),
     friends: new FriendsService(db, hub, storage),
     chat,

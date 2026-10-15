@@ -378,6 +378,7 @@ class Conversation {
     this.groupId,
     required this.title,
     this.celebrantName,
+    this.photoUrl,
     this.otherUser,
     this.lastMessage,
     this.lastMessageAt,
@@ -396,6 +397,9 @@ class Conversation {
   /// Título do grupo ou nome da outra pessoa.
   final String title;
   final String? celebrantName;
+
+  /// Fotografia do grupo (nas privadas usa-se a de [otherUser]).
+  final String? photoUrl;
   final ChatUser? otherUser;
   final LastMessage? lastMessage;
   final DateTime? lastMessageAt;
@@ -435,6 +439,7 @@ class Conversation {
     groupId: groupId,
     title: title,
     celebrantName: celebrantName,
+    photoUrl: photoUrl,
     otherUser: otherUser,
     lastMessage: lastMessage ?? this.lastMessage,
     lastMessageAt: lastMessage?.createdAt ?? lastMessageAt,
@@ -452,6 +457,7 @@ class Conversation {
     groupId: j['group_id'] as String?,
     title: j['title'] as String? ?? '',
     celebrantName: j['celebrant_name'] as String?,
+    photoUrl: j['photo_url'] as String?,
     otherUser: j['other_user'] == null ? null : ChatUser.fromJson((j['other_user'] as Map).cast()),
     lastMessage: j['last_message'] == null ? null : LastMessage.fromJson((j['last_message'] as Map).cast()),
     lastMessageAt: _dt(j['last_message_at']),

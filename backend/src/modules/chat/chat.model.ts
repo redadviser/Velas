@@ -80,6 +80,8 @@ export interface ConversationJson {
   /** Título do grupo ou nome da outra pessoa. */
   title: string;
   celebrant_name: string | null;
+  /** Fotografia do grupo (nas privadas, a da pessoa vem em other_user). */
+  photo_url: string | null;
   other_user: (Presence & { user_id: string; display_name: string; username: string | null; photo_url: string | null }) | null;
   last_message: Pick<MessageJson, 'id' | 'sender_id' | 'sender_name' | 'kind' | 'body' | 'created_at' | 'deleted'> | null;
   last_message_at: string | null;

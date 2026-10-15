@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants.dart';
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -11,22 +13,26 @@ import '../../data/models/payment.dart';
 import '../auth/auth_widgets.dart';
 
 IconData paymentIcon(PaymentMethod m) => switch (m) {
+  PaymentMethod.card => LucideIcons.creditCard,
   PaymentMethod.mbway => LucideIcons.smartphone,
-  PaymentMethod.transfer => LucideIcons.landmark,
-  PaymentMethod.revolut => LucideIcons.creditCard,
   PaymentMethod.paypal => LucideIcons.wallet,
+  PaymentMethod.skrill => LucideIcons.wallet,
+  PaymentMethod.revolut => LucideIcons.creditCard,
+  PaymentMethod.transfer => LucideIcons.landmark,
   PaymentMethod.cash => LucideIcons.banknote,
 };
 
 /// Logótipo do método (ver assets/images/CREDITS.md), ou `null` se não tiver.
 String? paymentLogoAsset(PaymentMethod m) => switch (m) {
+  PaymentMethod.card => 'assets/images/payments/card.png',
   PaymentMethod.mbway => 'assets/images/payments/mbway.png',
-  PaymentMethod.revolut => 'assets/images/payments/revolut.png',
   PaymentMethod.paypal => 'assets/images/payments/paypal.png',
+  PaymentMethod.skrill => 'assets/images/payments/skrill.png',
+  PaymentMethod.revolut => 'assets/images/payments/revolut.png',
   PaymentMethod.transfer || PaymentMethod.cash => null,
 };
 
-/// Logótipo do MB WAY, Revolut ou PayPal; ícone para transferência e dinheiro.
+/// Logótipo (cartão VISA/Mastercard, MB WAY, PayPal, Skrill, Revolut); ícone para transferência e dinheiro.
 class PaymentLogo extends StatelessWidget {
   const PaymentLogo(this.method, {super.key, this.size = 24, this.color});
 
@@ -56,8 +62,7 @@ class PaymentLogo extends StatelessWidget {
 }
 
 /// Logótipo dentro de um campo de texto.
-Widget _fieldLogo(PaymentMethod m) =>
-    Padding(padding: const EdgeInsets.all(12), child: PaymentLogo(m, size: 22));
+Widget _fieldLogo(PaymentMethod m) => Padding(padding: const EdgeInsets.all(12), child: PaymentLogo(m, size: 22));
 
 /// Campos editáveis dos dados de pagamento (perfil ou comprador sem conta).
 class PaymentDetailsFields extends StatefulWidget {
@@ -76,11 +81,12 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
   late final _holder = TextEditingController(text: widget.initial.ibanHolder);
   late final _revolut = TextEditingController(text: widget.initial.revolutTag);
   late final _paypal = TextEditingController(text: widget.initial.paypalUser);
+  late final _skrill = TextEditingController(text: widget.initial.skrillEmail);
   late bool _cash = widget.initial.acceptsCash;
 
   @override
   void dispose() {
-    for (final c in [_phone, _iban, _holder, _revolut, _paypal]) {
+    for (final c in [_phone, _iban, _holder, _revolut, _paypal, _skrill]) {
       c.dispose();
     }
     super.dispose();
@@ -93,6 +99,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
       ibanHolder: _holder.text.trim(),
       revolutTag: PaymentFormat.cleanHandle(_revolut.text),
       paypalUser: PaymentFormat.cleanHandle(_paypal.text),
+      skrillEmail: PaymentFormat.normalizeEmail(_skrill.text) ?? '',
       acceptsCash: _cash,
     ),
   );
@@ -111,10 +118,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
           validator: (v) => (v == null || v.trim().isEmpty || PaymentFormat.normalizePhone(v) != null)
               ? null
               : 'Número de telemóvel inválido.',
-          decoration: InputDecoration(
-            hintText: '912 345 678',
-            prefixIcon: _fieldLogo(PaymentMethod.mbway),
-          ),
+          decoration: InputDecoration(hintText: '912 345 678', prefixIcon: _fieldLogo(PaymentMethod.mbway)),
         ),
         const SizedBox(height: 18),
         const FieldLabel('Transferência bancária'),
@@ -170,6 +174,31 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
           ],
         ),
         const SizedBox(height: 8),
+        Row(
+          children: [
+            const PaymentLogo(PaymentMethod.card, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                context.tr(Keys.payFormCardHint),
+                style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        FieldLabel(context.tr(Keys.payFormSkrill)),
+        TextFormField(
+          controller: _skrill,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          onChanged: (_) => _emit(),
+          validator: (v) => (v == null || v.trim().isEmpty || PaymentFormat.normalizeEmail(v) != null)
+              ? null
+              : context.tr(Keys.payFormSkrillInvalid),
+          decoration: InputDecoration(hintText: 'nome@email.com', prefixIcon: _fieldLogo(PaymentMethod.skrill)),
+        ),
+        const SizedBox(height: 8),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Aceito dinheiro em mão'),
@@ -184,8 +213,12 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
   }
 }
 
-/// Ecrã "Pagar a …": mostra como pagar com cada método e permite marcar
-/// "Já paguei". Devolve o método escolhido, ou `null` se cancelado.
+/// Ecrã "Pagar a …": escolher o método (cartão VISA/Mastercard, MB WAY,
+/// PayPal, Skrill, Revolut, transferência ou em mão), enviar pelo link ou app
+/// certos e marcar "Já paguei". Devolve o método, ou `null` se cancelado.
+///
+/// A app não movimenta dinheiro: o cartão paga-se na página segura do Revolut
+/// ou do PayPal de quem recebe.
 Future<PaymentMethod?> showPaySheet(
   BuildContext context, {
   required String payeeName,
@@ -215,25 +248,124 @@ class _PaySheet extends StatefulWidget {
 class _PaySheetState extends State<_PaySheet> {
   late PaymentMethod? _selected = widget.payee.methods.firstOrNull;
 
+  PaymentDetails get _p => widget.payee;
   String get _amountPlain => widget.amount.toStringAsFixed(2).replaceAll('.', ',');
+  String get _money => Fmt.money(widget.amount);
 
   Future<void> _copy(String value, String what) async {
     await Clipboard.setData(ClipboardData(text: value));
-    if (mounted) showMessage(context, '$what copiado.');
+    if (mounted) showMessage(context, context.tr(Keys.payCopied, {'what': what}));
   }
 
   Future<void> _open(Uri uri) async {
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) showMessage(context, 'Não foi possível abrir o link.');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
+    if (!ok && mounted) showMessage(context, context.tr(Keys.payOpenFailed));
+  }
+
+  Uri get _revolutLink => Uri.https('revolut.me', '/${_p.revolutTag}');
+  Uri get _paypalLink => Uri.https('paypal.me', '/${_p.paypalUser}/${widget.amount.toStringAsFixed(2)}EUR');
+
+  /// O que fazer para "enviar" com cada método.
+  ({List<String> steps, List<Widget> details, String? sendLabel, Future<void> Function()? send}) _flow(
+    PaymentMethod m,
+  ) {
+    final name = widget.payeeName;
+    return switch (m) {
+      PaymentMethod.card => (
+        steps: [
+          context.tr(_p.revolutTag.isNotEmpty ? Keys.payStepsCardRevolut : Keys.payStepsCardPaypal, {'name': name}),
+        ],
+        details: const [],
+        sendLabel: context.tr(Keys.paySendCard, {'amount': _money}),
+        send: () => _open(_p.revolutTag.isNotEmpty ? _revolutLink : _paypalLink),
+      ),
+      PaymentMethod.mbway => (
+        steps: [context.tr(Keys.payStepsMbway)],
+        details: [
+          _CopyRow(
+            label: context.tr(Keys.payFieldNumber),
+            value: PaymentFormat.displayPhone(_p.mbwayPhone),
+            onCopy: () => _copy(_p.mbwayPhone, context.tr(Keys.payFieldNumber)),
+          ),
+        ],
+        sendLabel: context.tr(Keys.paySendCopyNumber),
+        send: () => _copy(_p.mbwayPhone, context.tr(Keys.payFieldNumber)),
+      ),
+      PaymentMethod.paypal => (
+        steps: [context.tr(Keys.payStepsPaypal)],
+        details: const [],
+        sendLabel: context.tr(Keys.paySendLink, {'amount': _money, 'method': m.label}),
+        send: () => _open(_paypalLink),
+      ),
+      PaymentMethod.skrill => (
+        steps: [
+          context.tr(Keys.payStepsSkrill, {'amount': _money}),
+        ],
+        details: [
+          _CopyRow(
+            label: context.tr(Keys.payFieldEmail),
+            value: _p.skrillEmail,
+            onCopy: () => _copy(_p.skrillEmail, context.tr(Keys.payFieldEmail)),
+          ),
+        ],
+        sendLabel: context.tr(Keys.paySendSkrill),
+        send: () async {
+          await _copy(_p.skrillEmail, context.tr(Keys.payFieldEmail));
+          await _open(Uri.https('www.skrill.com', '/'));
+        },
+      ),
+      PaymentMethod.revolut => (
+        steps: [
+          context.tr(Keys.payStepsRevolut, {'amount': _money}),
+        ],
+        details: const [],
+        sendLabel: context.tr(Keys.paySendLink, {'amount': _money, 'method': m.label}),
+        send: () => _open(_revolutLink),
+      ),
+      PaymentMethod.transfer => (
+        steps: [context.tr(Keys.payStepsTransfer)],
+        details: [
+          _CopyRow(
+            label: context.tr(Keys.payFieldIban),
+            value: PaymentFormat.displayIban(_p.iban),
+            onCopy: () => _copy(_p.iban, context.tr(Keys.payFieldIban)),
+          ),
+          if (_p.ibanHolder.isNotEmpty)
+            _CopyRow(
+              label: context.tr(Keys.payFieldHolder),
+              value: _p.ibanHolder,
+              onCopy: () => _copy(_p.ibanHolder, context.tr(Keys.payFieldHolder)),
+            ),
+          _CopyRow(
+            label: context.tr(Keys.payFieldReference),
+            value: widget.reference,
+            onCopy: () => _copy(widget.reference, context.tr(Keys.payFieldReference)),
+          ),
+        ],
+        sendLabel: context.tr(Keys.paySendIban),
+        send: () => _copy(_p.iban, context.tr(Keys.payFieldIban)),
+      ),
+      PaymentMethod.cash => (
+        steps: [
+          context.tr(Keys.payStepsCash, {'name': name}),
+        ],
+        details: const [],
+        sendLabel: null,
+        send: null,
+      ),
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.payee;
-    final methods = p.methods;
+    final p = _p;
+    final selected = _selected;
+    final flow = selected == null ? null : _flow(selected);
+    final muted = context.palette.mutedForeground;
+
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.8,
+      initialChildSize: 0.85,
       maxChildSize: 0.95,
       builder: (context, scroll) => Column(
         children: [
@@ -243,104 +375,96 @@ class _PaySheetState extends State<_PaySheet> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               children: [
                 Text(
-                  'Pagar a ${widget.payeeName}',
+                  context.tr(Keys.payTitle, {'name': widget.payeeName}),
                   style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(Fmt.money(widget.amount), style: AppTheme.display(context, size: 40)),
+                    Text(_money, style: AppTheme.display(context, size: 40)),
                     const SizedBox(width: 8),
                     IconButton(
-                      tooltip: 'Copiar valor',
-                      onPressed: () => _copy(_amountPlain, 'Valor'),
-                      icon: Icon(LucideIcons.copy, size: 18, color: context.palette.mutedForeground),
+                      tooltip: context.tr(Keys.payCopyAmount),
+                      onPressed: () => _copy(_amountPlain, context.tr(Keys.payCopyAmount)),
+                      icon: Icon(LucideIcons.copy, size: 18, color: muted),
                     ),
                   ],
                 ),
-                Text(widget.reference, style: TextStyle(color: context.palette.mutedForeground)),
-                const SizedBox(height: 20),
-                if (!p.hasAnyDigital)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: AppCard(
-                      color: context.palette.muted,
-                      child: Text(
-                        '${widget.payeeName} ainda não adicionou MB WAY, IBAN ou outra forma de pagamento. '
-                        'Podes pagar em mão ou pedir-lhe os dados.',
-                        style: TextStyle(color: context.palette.mutedForeground),
-                      ),
+                Text(widget.reference, style: TextStyle(color: muted)),
+                if (!p.hasAnyDigital) ...[
+                  const SizedBox(height: 16),
+                  AppCard(
+                    color: context.palette.muted,
+                    child: Text(
+                      context.tr(Keys.payNoMethods, {'name': widget.payeeName}),
+                      style: TextStyle(color: muted),
                     ),
                   ),
-                for (final m in methods)
-                  _MethodTile(
-                    method: m,
-                    selected: _selected == m,
-                    onTap: () => setState(() => _selected = m),
-                    child: switch (m) {
-                      PaymentMethod.mbway => _Steps(
-                        lines: const [
-                          'Abre a app MB WAY ou a do teu banco.',
-                          'Escolhe "Enviar dinheiro" e usa este número.',
-                        ],
-                        actions: [
-                          _CopyRow(
-                            label: 'Número',
-                            value: PaymentFormat.displayPhone(p.mbwayPhone),
-                            onCopy: () => _copy(p.mbwayPhone, 'Número'),
-                          ),
-                        ],
+                ],
+                const SizedBox(height: 20),
+                Text(context.tr(Keys.payChoose), style: context.text.titleSmall),
+                const SizedBox(height: 10),
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 0.95,
+                  children: [
+                    for (final m in PaymentMethod.values)
+                      _MethodChoice(
+                        method: m,
+                        available: p.accepts(m),
+                        selected: selected == m,
+                        onTap: () => p.accepts(m)
+                            ? setState(() => _selected = m)
+                            : showMessage(context, context.tr(Keys.payUnavailableHint, {'name': widget.payeeName})),
                       ),
-                      PaymentMethod.transfer => _Steps(
-                        lines: const ['Faz uma transferência a partir do teu banco.'],
-                        actions: [
-                          _CopyRow(
-                            label: 'IBAN',
-                            value: PaymentFormat.displayIban(p.iban),
-                            onCopy: () => _copy(p.iban, 'IBAN'),
-                          ),
-                          if (p.ibanHolder.isNotEmpty)
-                            _CopyRow(
-                              label: 'Titular',
-                              value: p.ibanHolder,
-                              onCopy: () => _copy(p.ibanHolder, 'Titular'),
+                  ],
+                ),
+                if (selected != null && flow != null) ...[
+                  const SizedBox(height: 16),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            PaymentLogo(selected, size: 28),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text(selected.label, style: context.text.titleSmall)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        for (final line in flow.steps)
+                          Text(line, style: context.text.bodySmall?.copyWith(color: muted, fontSize: 13)),
+                        if (flow.details.isNotEmpty) const SizedBox(height: 10),
+                        for (final d in flow.details) Padding(padding: const EdgeInsets.only(bottom: 6), child: d),
+                        if (flow.send != null) ...[
+                          const SizedBox(height: 8),
+                          FilledButton.tonalIcon(
+                            onPressed: flow.send,
+                            icon: Icon(
+                              selected == PaymentMethod.mbway || selected == PaymentMethod.transfer
+                                  ? LucideIcons.copy
+                                  : LucideIcons.send,
+                              size: 18,
                             ),
-                          _CopyRow(
-                            label: 'Descritivo',
-                            value: widget.reference,
-                            onCopy: () => _copy(widget.reference, 'Descritivo'),
+                            label: Text(flow.sendLabel!),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            context.tr(Keys.payAfterSend, {'name': widget.payeeName}),
+                            textAlign: TextAlign.center,
+                            style: context.text.bodySmall?.copyWith(color: muted),
                           ),
                         ],
-                      ),
-                      PaymentMethod.revolut => _Steps(
-                        lines: ['Abre o link e envia ${Fmt.money(widget.amount)}.'],
-                        actions: [
-                          OutlinedButton.icon(
-                            onPressed: () => _open(Uri.https('revolut.me', '/${p.revolutTag}')),
-                            icon: const Icon(LucideIcons.externalLink, size: 16),
-                            label: Text('revolut.me/${p.revolutTag}'),
-                          ),
-                        ],
-                      ),
-                      PaymentMethod.paypal => _Steps(
-                        lines: const ['O link já leva o valor preenchido.'],
-                        actions: [
-                          OutlinedButton.icon(
-                            onPressed: () => _open(
-                              Uri.https('paypal.me', '/${p.paypalUser}/${widget.amount.toStringAsFixed(2)}EUR'),
-                            ),
-                            icon: const Icon(LucideIcons.externalLink, size: 16),
-                            label: Text('paypal.me/${p.paypalUser}'),
-                          ),
-                        ],
-                      ),
-                      PaymentMethod.cash => _Steps(
-                        lines: ['Combina com ${widget.payeeName} entregar em mão.'],
-                        actions: const [],
-                      ),
-                    },
+                      ],
+                    ),
                   ),
+                ],
               ],
             ),
           ),
@@ -349,9 +473,13 @@ class _PaySheetState extends State<_PaySheet> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
               child: FilledButton.icon(
-                onPressed: _selected == null ? null : () => Navigator.pop(context, _selected),
+                onPressed: selected == null ? null : () => Navigator.pop(context, selected),
                 icon: const Icon(LucideIcons.check, size: 18),
-                label: Text(_selected == null ? 'Escolhe como pagaste' : 'Já paguei por ${_selected!.label}'),
+                label: Text(
+                  selected == null
+                      ? context.tr(Keys.payConfirmChoose)
+                      : context.tr(Keys.payConfirm, {'method': selected.label}),
+                ),
               ),
             ),
           ),
@@ -361,83 +489,67 @@ class _PaySheetState extends State<_PaySheet> {
   }
 }
 
-class _MethodTile extends StatelessWidget {
-  const _MethodTile({required this.method, required this.selected, required this.onTap, required this.child});
+/// Um método na grelha: logótipo e nome (indisponível se quem recebe não o indicou).
+class _MethodChoice extends StatelessWidget {
+  const _MethodChoice({required this.method, required this.available, required this.selected, required this.onTap});
 
   final PaymentMethod method;
+  final bool available;
   final bool selected;
   final VoidCallback onTap;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: context.palette.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radius),
-          side: BorderSide(
-            color: selected ? context.colors.primary : context.palette.border,
-            width: selected ? 1.6 : 1,
+    final muted = context.palette.mutedForeground;
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: available,
+      child: Opacity(
+        opacity: available ? 1 : 0.45,
+        child: Material(
+          color: selected ? context.palette.accent : context.palette.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: selected ? context.colors.primary : context.palette.border,
+              width: selected ? 1.8 : 1,
+            ),
           ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radius),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    PaymentLogo(
-                      method,
-                      size: 28,
-                      color: selected ? context.colors.primary : context.palette.mutedForeground,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(method.label, style: context.text.titleSmall)),
-                    Icon(
-                      selected ? LucideIcons.circleCheck : LucideIcons.circle,
-                      size: 20,
-                      color: selected ? context.colors.primary : context.palette.border,
-                    ),
-                  ],
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 180),
-                  alignment: Alignment.topCenter,
-                  child: selected
-                      ? Padding(padding: const EdgeInsets.only(top: 12), child: child)
-                      : const SizedBox(width: double.infinity),
-                ),
-              ],
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  PaymentLogo(method, size: 40, color: selected ? context.colors.primary : muted),
+                  const SizedBox(height: 8),
+                  Text(
+                    method.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    !available
+                        ? context.tr(Keys.payUnavailable)
+                        : method == PaymentMethod.card
+                        ? context.tr(Keys.payCardBrands)
+                        : ' ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.labelSmall?.copyWith(color: muted, fontSize: 10),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-}
-
-class _Steps extends StatelessWidget {
-  const _Steps({required this.lines, required this.actions});
-
-  final List<String> lines;
-  final List<Widget> actions;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      for (final l in lines)
-        Text(l, style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground, fontSize: 13)),
-      if (actions.isNotEmpty) const SizedBox(height: 10),
-      for (final a in actions) Padding(padding: const EdgeInsets.only(bottom: 6), child: a),
-    ],
-  );
 }
 
 class _CopyRow extends StatelessWidget {
@@ -463,7 +575,11 @@ class _CopyRow extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(tooltip: 'Copiar', onPressed: onCopy, icon: const Icon(LucideIcons.copy, size: 18)),
+          IconButton(
+            tooltip: context.tr(Keys.payCopy),
+            onPressed: onCopy,
+            icon: const Icon(LucideIcons.copy, size: 18),
+          ),
         ],
       ),
     );

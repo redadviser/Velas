@@ -257,6 +257,7 @@ class GiftGroup {
     this.members = const [],
     this.invitations = const [],
     this.conversationId,
+    this.photoUrl,
   });
 
   final String id;
@@ -288,6 +289,9 @@ class GiftGroup {
 
   /// Conversa do grupo (só com servidor).
   final String? conversationId;
+
+  /// Fotografia do grupo (escolhida pelo administrador; só com servidor).
+  final String? photoUrl;
 
   List<GroupMember> get sortedMembers => [...members]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
@@ -381,6 +385,7 @@ class GiftGroup {
     members: members ?? this.members,
     invitations: invitations ?? this.invitations,
     conversationId: conversationId,
+    photoUrl: photoUrl,
   );
 
   /// Colunas da tabela `gift_groups` (sem membros).
@@ -432,6 +437,7 @@ class GiftGroup {
           GroupInvitation.fromJson((i as Map).cast<String, dynamic>()),
       ].where((i) => i.isPending).toList(),
       conversationId: j['conversation_id'] as String?,
+      photoUrl: j['photo_url'] as String?,
     );
   }
 }

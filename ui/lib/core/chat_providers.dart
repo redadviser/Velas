@@ -198,7 +198,10 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
                   )
                 : c,
         ]);
-      case ChatConnected() || ConversationsChanged():
+      case ConversationsChanged():
+        _scheduleRefresh();
+        ref.read(groupsProvider.notifier).refresh().catchError((_) {});
+      case ChatConnected():
         _scheduleRefresh();
       default:
         break;

@@ -142,7 +142,9 @@ export class UsersService {
       // Conversas que desaparecem com a conta: as privadas e as dos grupos que administra.
       const { rows } = await c.query<{ id: string }>(
         `select c.id from conversations c left join gift_groups g on g.id = c.group_id
-         where $1 in (c.user_a, c.user_b) or g.created_by = $1`,
+         where $1 in (c.user_a, c.user_b) or g.created_by = $1
+         union
+         select id from gift_groups where created_by = $1`,
         [userId],
       );
       // Primeiro os grupos de que é administrador (levam os membros consigo);

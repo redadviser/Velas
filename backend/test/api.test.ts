@@ -778,6 +778,44 @@ describe('definições das conversas', () => {
   });
 });
 
+describe('fotografia do grupo e métodos de pagamento', () => {
+  it('só o administrador muda a fotografia; aparece aos membros e na conversa; regista cartão e Skrill', async () => {
+    const ivo = await signup('Ivo', 'ivo', 'ivo@ex.pt');
+    const zoe = await signup('Zoe', 'zoe', 'zoe@ex.pt');
+    const groupId = uuid();
+    await call('PUT', `/groups/${groupId}`, {
+      token: ivo.access_token,
+      body: { group: { title: 'Prenda do Tó', celebrant_name: 'Tó', target_amount: 40 }, new_members: [{ id: uuid(), user_id: ivo.user.id, display_name: 'Ivo' }] },
+    });
+    const code = (await call('GET', '/groups', { token: ivo.access_token })).body.find((g: { id: string }) => g.id === groupId).invite_code;
+    await call('POST', `/invite-codes/${code}/join`, { token: zoe.access_token, body: {} });
+
+    expect((await call('PUT', `/groups/${groupId}/photo`, { token: zoe.access_token, raw: jpeg })).status).toBe(404);
+    const up = await call('PUT', `/groups/${groupId}/photo`, { token: ivo.access_token, raw: jpeg });
+    expect(up.status).toBe(200);
+    expect(up.body.photo_url).toMatch(new RegExp(`/files/${groupId}/photo-\\d+\\.jpg`));
+    expect(up.body.photo_path).toBeUndefined();
+    const url = new URL(up.body.photo_url);
+    expect((await call('GET', url.pathname + url.search)).status).toBe(200);
+
+    const zoeGroup = (await call('GET', '/groups', { token: zoe.access_token })).body.find((g: { id: string }) => g.id === groupId);
+    expect(zoeGroup.photo_url).toBe(up.body.photo_url);
+    const conv = (await call('GET', '/conversations', { token: zoe.access_token })).body.find((c: { group_id: string }) => c.group_id === groupId);
+    expect(conv.photo_url).toBe(up.body.photo_url);
+
+    // Pagar com cartão (pelo link do Revolut/PayPal de quem recebe) ou Skrill.
+    const zoeMember = zoeGroup.group_members.find((m: { user_id: string }) => m.user_id === zoe.user.id);
+    expect((await call('POST', `/group-members/${zoeMember.id}/paid`, { token: zoe.access_token, body: { method: 'card' } })).status).toBe(204);
+    expect((await call('POST', `/group-members/${zoeMember.id}/paid`, { token: zoe.access_token, body: { method: 'skrill' } })).status).toBe(204);
+    expect((await call('POST', `/group-members/${zoeMember.id}/paid`, { token: zoe.access_token, body: { method: 'bitcoin' } })).status).toBe(400);
+    const after = (await call('GET', '/groups', { token: ivo.access_token })).body.find((g: { id: string }) => g.id === groupId);
+    expect(after.group_members.find((m: { id: string }) => m.id === zoeMember.id).paid_method).toBe('skrill');
+
+    expect((await call('DELETE', `/groups/${groupId}/photo`, { token: ivo.access_token })).body.photo_url).toBeNull();
+    expect((await call('GET', url.pathname + url.search)).status).toBe(404);
+  });
+});
+
 describe('sistema', () => {
   it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
     const res = await call('GET', '/health');

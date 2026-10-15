@@ -63,6 +63,13 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                   child: const Icon(LucideIcons.usersRound, size: 22),
                 ),
               ),
+            // Definições gerais das conversas (privacidade e notificações).
+            if (_chatsTab && chat)
+              IconButton(
+                tooltip: context.tr(Keys.chatInfoAllSettings),
+                onPressed: () => context.push('/chat-settings'),
+                icon: const Icon(LucideIcons.settings, size: 22),
+              ),
           ],
         ),
       ),

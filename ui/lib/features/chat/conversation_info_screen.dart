@@ -184,16 +184,6 @@ class ConversationInfoScreen extends ConsumerWidget {
               ),
             ),
           ],
-          const SizedBox(height: 20),
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(LucideIcons.settings),
-              title: Text(context.tr(Keys.chatInfoAllSettings)),
-              trailing: Icon(LucideIcons.chevronRight, size: 18, color: muted),
-              onTap: () => context.push('/profile/chat-settings'),
-            ),
-          ),
         ],
       ),
     );

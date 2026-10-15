@@ -20,3 +20,5 @@ são usadas apenas para identificar o método de pagamento.
 | `mbway.png`   | https://commons.wikimedia.org/wiki/File:Logo_MBWay.svg (domínio público)                 | Sobre fundo branco                     |
 | `revolut.png` | https://commons.wikimedia.org/wiki/File:Revolut_logo.svg (domínio público)               | Só o "R", branco sobre preto           |
 | `paypal.png`  | https://commons.wikimedia.org/wiki/File:PayPal_Logo_Icon_2014.svg (domínio público)      | Monograma sobre fundo branco           |
+| `card.png`    | https://commons.wikimedia.org/wiki/File:Mastercard_2019_logo.svg e https://commons.wikimedia.org/wiki/File:Visa_Inc._logo_(2021–present).svg (domínio público) | Os dois juntos: Mastercard em cima, VISA em baixo |
+| `skrill.png`  | https://commons.wikimedia.org/wiki/File:Skrill_primary_logo_RGB.svg (domínio público)     | Sobre fundo branco                     |

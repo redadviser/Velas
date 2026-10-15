@@ -483,16 +483,7 @@ class GroupConversationTile extends StatelessWidget {
     final others = g.members.where((m) => m.userId != null && m.userId != myId).length;
 
     return _TileLayout(
-      avatar: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          gradient: g.purchasedAt == null ? AppColors.brandGradient : null,
-          color: g.purchasedAt == null ? null : context.palette.muted,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(LucideIcons.gift, color: g.purchasedAt == null ? Colors.white : muted, size: 22),
-      ),
+      avatar: GroupAvatar(photoUrl: g.photoUrl ?? c?.photoUrl, purchased: g.purchasedAt != null),
       title: g.title,
       preview: _Preview(
         conversation: c,

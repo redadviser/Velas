@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
+import { HttpError } from '../../core/errors.js';
 import { doc } from '../../core/openapi.js';
 import { idParams } from '../../core/validation.js';
 import {
@@ -50,6 +51,25 @@ export async function groupsRoutes(app: FastifyInstance, groups: GroupsService) 
       await groups.setPurchased(req.uid, id, purchasedSchema.parse(req.body).purchased);
       return reply.status(204).send();
     },
+  );
+
+  app.put(
+    '/groups/:id/photo',
+    {
+      schema: {
+        ...doc({ tag, summary: 'Fotografia do grupo (só o administrador; bytes da imagem no corpo)', params: idParams }),
+        consumes: ['image/jpeg', 'image/png', 'image/webp'],
+        body: { type: 'string', format: 'binary' },
+      },
+    },
+    (req) => {
+      if (!Buffer.isBuffer(req.body)) throw new HttpError(415, 'unsupported_media_type');
+      return groups.setPhoto(req.uid, idParams.parse(req.params).id, req.body);
+    },
+  );
+
+  app.delete('/groups/:id/photo', { schema: doc({ tag, summary: 'Remover a fotografia do grupo', params: idParams }) }, (req) =>
+    groups.removePhoto(req.uid, idParams.parse(req.params).id),
   );
 
   app.get('/groups/:id/payee', { schema: doc({ tag, summary: 'A quem pagar (dados de pagamento do comprador)', params: idParams }) }, (req) =>

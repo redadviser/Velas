@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -129,6 +130,11 @@ class LocalGroupRepository implements GroupRepository {
     await _write(_read()..removeWhere((r) => r['id'] == groupId));
     await _writeInvites(_list(_invitesKey)..removeWhere((r) => r['group_id'] == groupId));
   }
+
+  /// Sem servidor não há fotografia de grupo (o ecrã nem mostra a opção).
+  @override
+  Future<GiftGroup> setGroupPhoto(String groupId, Uint8List? bytes) =>
+      throw const AppException('A fotografia do grupo precisa do servidor.');
 
   Future<void> _member(GroupMember member, GroupMember Function(GroupMember) change) => _update(
     member.groupId,

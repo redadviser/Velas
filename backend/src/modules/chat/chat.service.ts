@@ -20,6 +20,7 @@ const conversationsQuery = `
     c.group_id,
     coalesce(g.title, op.display_name, '') as title,
     g.celebrant_name,
+    g.photo_path as group_photo_path,
     case when c.group_id is null then
       json_build_object('user_id', op.id, 'display_name', op.display_name, 'username', op.username,
                         'photo_path', op.photo_path, 'last_seen_at', op.last_seen_at,
@@ -72,8 +73,9 @@ type MessageRow = Omit<MessageJson, 'media_url' | 'sender_photo_url'> & {
   sender_photo_path: string | null;
 };
 
-type ConversationRow = Omit<ConversationJson, 'other_user'> & {
+type ConversationRow = Omit<ConversationJson, 'other_user' | 'photo_url'> & {
   viewer_show_presence: boolean;
+  group_photo_path: string | null;
   other_user:
     | (Omit<NonNullable<ConversationJson['other_user']>, 'photo_url' | 'online'> & {
         photo_path: string | null;
@@ -114,7 +116,8 @@ export class ChatService {
   }
 
   private conversation(row: ConversationRow): ConversationJson {
-    const { viewer_show_presence, ...conv } = row;
+    const { viewer_show_presence, group_photo_path, ...rest } = row;
+    const conv = { ...rest, photo_url: this.storage.urlOf(group_photo_path) };
     if (!conv.other_user) return { ...conv, other_user: null };
     const { photo_path, show_presence, ...other } = conv.other_user;
     return {

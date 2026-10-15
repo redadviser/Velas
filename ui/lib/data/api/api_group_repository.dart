@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../core/utils/errors.dart';
 import '../models/group_models.dart';
 import '../models/payment.dart';
@@ -29,6 +31,14 @@ class ApiGroupRepository implements GroupRepository {
 
   @override
   Future<void> deleteGroup(String groupId) => _api.delete('/groups/$groupId');
+
+  @override
+  Future<GiftGroup> setGroupPhoto(String groupId, Uint8List? bytes) async {
+    final res = bytes == null
+        ? await _api.delete('/groups/$groupId/photo')
+        : await _api.putBytes('/groups/$groupId/photo', bytes, 'image/jpeg');
+    return GiftGroup.fromJson((res as Map).cast<String, dynamic>());
+  }
 
   @override
   Future<void> updateMemberInfo(GroupMember member) => _api.patch('/group-members/${member.id}', {

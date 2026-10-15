@@ -1,3 +1,4 @@
+import 'package:aniversarios/core/i18n/translations.dart';
 import 'package:aniversarios/core/theme/app_colors.dart';
 import 'package:aniversarios/data/models/group_models.dart';
 import 'package:aniversarios/data/models/models.dart';
@@ -29,7 +30,8 @@ void main() {
     expect(m.copyWith(name: 'I').photoUrl, m.photoUrl);
   });
 
-  testWidgets('mostra os logótipos do MB WAY, Revolut e PayPal', (tester) async {
+  testWidgets('mostra os logótipos (cartão, MB WAY, PayPal, Skrill, Revolut)', (tester) async {
+    await tester.runAsync(() => Translations.load(const Locale('pt')));
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(extensions: const [AppPalette.light]),
@@ -37,8 +39,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(Image), findsNWidgets(3));
-    for (final label in ['MB WAY', 'Revolut', 'PayPal']) {
+    expect(find.byType(Image), findsNWidgets(5));
+    for (final label in ['Cartão', 'MB WAY', 'PayPal', 'Skrill', 'Revolut']) {
       expect(find.bySemanticsLabel(label), findsOneWidget);
     }
     expect(find.byType(Icon), findsNWidgets(2)); // transferência e dinheiro

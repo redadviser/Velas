@@ -112,7 +112,8 @@ void paymentTests() {
 
     test('métodos disponíveis seguem os dados preenchidos', () {
       const p = PaymentDetails(mbwayPhone: '912345678', paypalUser: 'ana', acceptsCash: false);
-      expect(p.methods, [PaymentMethod.mbway, PaymentMethod.paypal]);
+      // Com PayPal também se pode pagar com cartão (VISA / Mastercard).
+      expect(p.methods, [PaymentMethod.card, PaymentMethod.mbway, PaymentMethod.paypal]);
       expect(PaymentDetails.fromJson(p.toJson()).methods, p.methods);
     });
   });

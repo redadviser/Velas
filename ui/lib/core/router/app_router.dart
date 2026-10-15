@@ -107,6 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
+      GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
       GoRoute(
         path: '/person/:id',
@@ -149,7 +150,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
           GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
-          GoRoute(path: 'chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
         ],
       ),
     ],

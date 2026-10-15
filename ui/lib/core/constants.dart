@@ -241,4 +241,53 @@ abstract final class Keys {
   /// Plural (`.one` / `.other`).
   static const homeInboxMore = 'homeInbox.more';
   static const homeInboxSeeAll = 'homeInbox.seeAll';
+
+  // pay -------------------------------------------------------------------
+  static const payMethodCard = 'pay.method.card';
+  static const payMethodMbway = 'pay.method.mbway';
+  static const payMethodPaypal = 'pay.method.paypal';
+  static const payMethodSkrill = 'pay.method.skrill';
+  static const payMethodRevolut = 'pay.method.revolut';
+  static const payMethodTransfer = 'pay.method.transfer';
+  static const payMethodCash = 'pay.method.cash';
+  static const payCardBrands = 'pay.cardBrands';
+  static const payTitle = 'pay.title';
+  static const payCopyAmount = 'pay.copyAmount';
+  static const payChoose = 'pay.choose';
+  static const payUnavailable = 'pay.unavailable';
+  static const payUnavailableHint = 'pay.unavailableHint';
+  static const payNoMethods = 'pay.noMethods';
+  static const payStepsCardRevolut = 'pay.steps.cardRevolut';
+  static const payStepsCardPaypal = 'pay.steps.cardPaypal';
+  static const payStepsMbway = 'pay.steps.mbway';
+  static const payStepsPaypal = 'pay.steps.paypal';
+  static const payStepsSkrill = 'pay.steps.skrill';
+  static const payStepsRevolut = 'pay.steps.revolut';
+  static const payStepsTransfer = 'pay.steps.transfer';
+  static const payStepsCash = 'pay.steps.cash';
+  static const paySendCard = 'pay.send.card';
+  static const paySendLink = 'pay.send.link';
+  static const paySendCopyNumber = 'pay.send.copyNumber';
+  static const paySendSkrill = 'pay.send.skrill';
+  static const paySendIban = 'pay.send.iban';
+  static const payAfterSend = 'pay.afterSend';
+  static const payFieldNumber = 'pay.field.number';
+  static const payFieldIban = 'pay.field.iban';
+  static const payFieldHolder = 'pay.field.holder';
+  static const payFieldReference = 'pay.field.reference';
+  static const payFieldEmail = 'pay.field.email';
+  static const payCopy = 'pay.copy';
+  static const payCopied = 'pay.copied';
+  static const payOpenFailed = 'pay.openFailed';
+  static const payConfirm = 'pay.confirm';
+  static const payConfirmChoose = 'pay.confirmChoose';
+  static const payFormSkrill = 'pay.form.skrill';
+  static const payFormSkrillInvalid = 'pay.form.skrillInvalid';
+  static const payFormCardHint = 'pay.form.cardHint';
+
+  // groupPhoto ------------------------------------------------------------
+  static const groupPhotoChange = 'groupPhoto.change';
+  static const groupPhotoRemove = 'groupPhoto.remove';
+  static const groupPhotoUpdated = 'groupPhoto.updated';
+  static const groupPhotoRemoved = 'groupPhoto.removed';
 }

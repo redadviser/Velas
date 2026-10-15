@@ -144,7 +144,42 @@ class _TypingDotsState extends State<TypingDots> with SingleTickerProviderStateM
   }
 }
 
-/// Avatar de uma conversa: a prenda (grupo) ou as iniciais da pessoa.
+/// Avatar de um grupo: a fotografia, ou o presente em gradiente (cinzento se já comprada).
+class GroupAvatar extends StatelessWidget {
+  const GroupAvatar({super.key, this.photoUrl, this.size = 48, this.purchased = false});
+
+  final String? photoUrl;
+  final double size;
+  final bool purchased;
+
+  @override
+  Widget build(BuildContext context) {
+    if (photoUrl != null) {
+      return ClipOval(
+        child: SizedBox.square(
+          dimension: size,
+          child: ChatImage(url: photoUrl),
+        ),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: purchased ? null : AppColors.brandGradient,
+        color: purchased ? context.palette.muted : null,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        LucideIcons.gift,
+        color: purchased ? context.palette.mutedForeground : Colors.white,
+        size: size * 0.46,
+      ),
+    );
+  }
+}
+
+/// Avatar de uma conversa: a fotografia do grupo ou a da pessoa (ou as iniciais).
 class ConversationAvatar extends StatelessWidget {
   const ConversationAvatar({super.key, required this.conversation, this.size = 48});
 
@@ -155,12 +190,7 @@ class ConversationAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final other = conversation.otherUser;
     if (!conversation.isGroup && other != null) return PresenceAvatar(user: other, size: size);
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(gradient: AppColors.brandGradient, shape: BoxShape.circle),
-      child: Icon(LucideIcons.gift, color: Colors.white, size: size * 0.46),
-    );
+    return GroupAvatar(photoUrl: conversation.photoUrl, size: size);
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/group_models.dart';
 import '../models/payment.dart';
 
@@ -13,6 +15,9 @@ abstract class GroupRepository {
   Future<void> saveGroup(GiftGroup group, {List<GroupMember> newMembers = const []});
 
   Future<void> deleteGroup(String groupId);
+
+  /// Fotografia do grupo (só o administrador). `null` remove-a. Só com servidor.
+  Future<GiftGroup> setGroupPhoto(String groupId, Uint8List? bytes);
 
   /// Nome, valor personalizado e dados de pagamento (administrador).
   Future<void> updateMemberInfo(GroupMember member);

@@ -1,6 +1,7 @@
 import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
-import type { PhotoStorage } from '../../core/storage.js';
+import type { RealtimeHub } from '../../core/realtime.js';
+import { imageType, type PhotoStorage } from '../../core/storage.js';
 import type { PaymentMethods } from '../../core/validation.js';
 import type { GroupInput, GroupJson, MemberInfo, NewMemberInput, PaymentMethod } from './groups.model.js';
 
@@ -23,6 +24,7 @@ export class GroupsService {
   constructor(
     private readonly db: Db,
     private readonly storage: PhotoStorage,
+    private readonly hub?: RealtimeHub,
   ) {}
 
   /** Executa como [userId], para os triggers e funções SQL saberem quem é. */
@@ -35,10 +37,11 @@ export class GroupsService {
     if (!res.rowCount) throw notFound();
   }
 
-  /** A fotografia de cada membro com conta, como URL assinado. */
-  private withPhotos(g: GroupJson): GroupJson {
+  /** A fotografia do grupo e a de cada membro com conta, como URLs assinados. */
+  private withPhotos({ photo_path, ...g }: GroupJson): GroupJson {
     return {
       ...g,
+      photo_url: this.storage.urlOf(photo_path as string | null),
       group_members: g.group_members.map(({ photo_path, ...m }) => ({
         ...m,
         photo_url: this.storage.urlOf(photo_path as string | null),
@@ -113,8 +116,53 @@ export class GroupsService {
         [groupId, userId],
       ),
     );
-    // As imagens da conversa do grupo vão com ele.
-    if (rows[0]) await this.storage.removeFolder(rows[0].id);
+    // As imagens da conversa do grupo (e a fotografia do grupo) vão com ele.
+    if (rows[0]) {
+      await this.storage.removeFolder(rows[0].id);
+      await this.storage.removeFolder(groupId);
+    }
+  }
+
+  /** Fotografia do grupo (só o administrador). Substitui a anterior. */
+  async setPhoto(userId: string, groupId: string, data: Buffer): Promise<GroupJson> {
+    const type = imageType(data);
+    if (!type) throw new HttpError(415, 'unsupported_media_type');
+    const key = `${groupId}/photo-${Date.now()}.${type.ext}`;
+    await this.as(userId, async (c) => {
+      if (!(await c.query('select 1 from gift_groups where id = $1 and created_by = $2', [groupId, userId])).rowCount) {
+        throw notFound();
+      }
+    });
+    await this.storage.put(key, data);
+    return this.replacePhoto(userId, groupId, key);
+  }
+
+  removePhoto(userId: string, groupId: string): Promise<GroupJson> {
+    return this.replacePhoto(userId, groupId, null);
+  }
+
+  private async replacePhoto(userId: string, groupId: string, key: string | null): Promise<GroupJson> {
+    const { previous, group, members } = await this.as(userId, async (c) => {
+      const { rows } = await c.query<{ photo_path: string | null }>(
+        'select photo_path from gift_groups where id = $1 and created_by = $2 for update',
+        [groupId, userId],
+      );
+      if (!rows[0]) throw notFound();
+      await c.query('update gift_groups set photo_path = $2 where id = $1', [groupId, key]);
+      const { rows: g } = await c.query<GroupJson>(`${groupsQuery} where g.id = $1`, [groupId]);
+      const { rows: m } = await c.query<{ id: string }>(
+        `select user_id as id from group_members where group_id = $1 and user_id is not null`,
+        [groupId],
+      );
+      return { previous: rows[0].photo_path, group: g[0]!, members: m.map((r) => r.id) };
+    }).catch(async (e) => {
+      if (key) await this.storage.remove(key);
+      throw e;
+    });
+    if (previous && previous !== key) await this.storage.remove(previous);
+    // Os outros membros veem a fotografia nova nas conversas.
+    this.hub?.send(members, { type: 'conversations' }, userId);
+    return this.withPhotos(group);
   }
 
   /** Marca a prenda como comprada (comprador ou administrador). */

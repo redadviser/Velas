@@ -1,15 +1,23 @@
 import 'package:flutter/foundation.dart';
 
-/// Formas de pagamento habituais em Portugal para acertar contas entre amigos.
-enum PaymentMethod {
-  mbway('MB WAY'),
-  transfer('Transferência'),
-  revolut('Revolut'),
-  paypal('PayPal'),
-  cash('Dinheiro');
+import '../../core/i18n/translations.dart';
 
-  const PaymentMethod(this.label);
-  final String label;
+/// Formas de pagamento para acertar contas entre amigos. A app não movimenta
+/// dinheiro: abre o link/app certo e regista o "já paguei".
+///
+/// [card] (VISA / Mastercard) paga-se na página segura do Revolut ou do PayPal
+/// de quem recebe, que aceitam cartão de quem não tem conta.
+enum PaymentMethod {
+  card,
+  mbway,
+  paypal,
+  skrill,
+  revolut,
+  transfer,
+  cash;
+
+  /// Nome na língua da app (chaves `pay.method.<nome>`).
+  String get label => tr('pay.method.$name');
 
   static PaymentMethod? tryParse(String? v) => PaymentMethod.values.where((m) => m.name == v).firstOrNull;
 }
@@ -23,6 +31,7 @@ class PaymentDetails {
     this.ibanHolder = '',
     this.revolutTag = '',
     this.paypalUser = '',
+    this.skrillEmail = '',
     this.acceptsCash = true,
   });
 
@@ -31,19 +40,33 @@ class PaymentDetails {
   final String ibanHolder;
   final String revolutTag;
   final String paypalUser;
+  final String skrillEmail;
   final bool acceptsCash;
 
   static const empty = PaymentDetails();
 
-  bool get hasAnyDigital => mbwayPhone.isNotEmpty || iban.isNotEmpty || revolutTag.isNotEmpty || paypalUser.isNotEmpty;
+  bool get hasAnyDigital =>
+      mbwayPhone.isNotEmpty ||
+      iban.isNotEmpty ||
+      revolutTag.isNotEmpty ||
+      paypalUser.isNotEmpty ||
+      skrillEmail.isNotEmpty;
 
-  List<PaymentMethod> get methods => [
-    if (mbwayPhone.isNotEmpty) PaymentMethod.mbway,
-    if (iban.isNotEmpty) PaymentMethod.transfer,
-    if (revolutTag.isNotEmpty) PaymentMethod.revolut,
-    if (paypalUser.isNotEmpty) PaymentMethod.paypal,
-    if (acceptsCash) PaymentMethod.cash,
-  ];
+  /// Cartão VISA / Mastercard: pelo Revolut (não pede conta) ou pelo PayPal.
+  bool get acceptsCard => revolutTag.isNotEmpty || paypalUser.isNotEmpty;
+
+  bool accepts(PaymentMethod m) => switch (m) {
+    PaymentMethod.card => acceptsCard,
+    PaymentMethod.mbway => mbwayPhone.isNotEmpty,
+    PaymentMethod.paypal => paypalUser.isNotEmpty,
+    PaymentMethod.skrill => skrillEmail.isNotEmpty,
+    PaymentMethod.revolut => revolutTag.isNotEmpty,
+    PaymentMethod.transfer => iban.isNotEmpty,
+    PaymentMethod.cash => acceptsCash,
+  };
+
+  /// Os métodos que quem recebe aceita, pela ordem de [PaymentMethod].
+  List<PaymentMethod> get methods => PaymentMethod.values.where(accepts).toList();
 
   PaymentDetails copyWith({
     String? mbwayPhone,
@@ -51,6 +74,7 @@ class PaymentDetails {
     String? ibanHolder,
     String? revolutTag,
     String? paypalUser,
+    String? skrillEmail,
     bool? acceptsCash,
   }) => PaymentDetails(
     mbwayPhone: mbwayPhone ?? this.mbwayPhone,
@@ -58,6 +82,7 @@ class PaymentDetails {
     ibanHolder: ibanHolder ?? this.ibanHolder,
     revolutTag: revolutTag ?? this.revolutTag,
     paypalUser: paypalUser ?? this.paypalUser,
+    skrillEmail: skrillEmail ?? this.skrillEmail,
     acceptsCash: acceptsCash ?? this.acceptsCash,
   );
 
@@ -67,6 +92,7 @@ class PaymentDetails {
     'iban_holder': ibanHolder,
     'revolut_tag': revolutTag,
     'paypal_user': paypalUser,
+    'skrill_email': skrillEmail,
     'accepts_cash': acceptsCash,
   };
 
@@ -78,6 +104,7 @@ class PaymentDetails {
       ibanHolder: j['iban_holder'] as String? ?? '',
       revolutTag: j['revolut_tag'] as String? ?? '',
       paypalUser: j['paypal_user'] as String? ?? '',
+      skrillEmail: j['skrill_email'] as String? ?? '',
       acceptsCash: j['accepts_cash'] as bool? ?? true,
     );
   }
@@ -118,4 +145,10 @@ class PaymentFormat {
       [for (var i = 0; i < s.length; i += 4) s.substring(i, i + 4 > s.length ? s.length : i + 4)].join(' ');
 
   static String cleanHandle(String input) => input.trim().replaceFirst(RegExp(r'^@'), '').replaceAll(' ', '');
+
+  /// Email (Skrill), em minúsculas; `null` se não parecer um email.
+  static String? normalizeEmail(String input) {
+    final s = input.trim().toLowerCase();
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s) ? s : null;
+  }
 }

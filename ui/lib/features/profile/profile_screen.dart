@@ -233,7 +233,7 @@ class ProfileScreen extends ConsumerWidget {
                 _Tile(
                   icon: LucideIcons.messageCircle,
                   title: context.tr(Keys.chatSettingsTitle),
-                  onTap: () => context.push('/profile/chat-settings'),
+                  onTap: () => context.push('/chat-settings'),
                 ),
               _Tile(
                 icon: LucideIcons.languages,

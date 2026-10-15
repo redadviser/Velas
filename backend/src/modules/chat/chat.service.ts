@@ -21,7 +21,8 @@ const conversationsQuery = `
     coalesce(g.title, op.display_name, '') as title,
     g.celebrant_name,
     case when c.group_id is null then
-      json_build_object('user_id', op.id, 'display_name', op.display_name, 'username', op.username)
+      json_build_object('user_id', op.id, 'display_name', op.display_name, 'username', op.username,
+                        'photo_path', op.photo_path)
     end as other_user,
     c.last_message_at, c.created_at,
     (select count(*)::int from chat_messages m
@@ -41,7 +42,7 @@ const conversationsQuery = `
 
 /** Mensagens com remetente, resposta e reações. */
 const messagesSelect = `
-  select m.id, m.conversation_id, m.sender_id, p.display_name as sender_name, m.kind,
+  select m.id, m.conversation_id, m.sender_id, p.display_name as sender_name, p.photo_path as sender_photo_path, m.kind,
     case when m.deleted_at is null then m.body else '' end as body,
     m.media_key, m.media_url, m.width, m.height, m.created_at, m.deleted_at is not null as deleted,
     (select json_build_object('id', q.id, 'sender_name', qp.display_name, 'kind', q.kind,
@@ -52,7 +53,15 @@ const messagesSelect = `
               from chat_reactions r where r.message_id = m.id), '[]') as reactions
   from chat_messages m left join profiles p on p.id = m.sender_id`;
 
-type MessageRow = Omit<MessageJson, 'media_url'> & { media_key: string | null; media_url: string | null };
+type MessageRow = Omit<MessageJson, 'media_url' | 'sender_photo_url'> & {
+  media_key: string | null;
+  media_url: string | null;
+  sender_photo_path: string | null;
+};
+
+type ConversationRow = Omit<ConversationJson, 'other_user'> & {
+  other_user: (Omit<NonNullable<ConversationJson['other_user']>, 'photo_url'> & { photo_path: string | null }) | null;
+};
 
 /**
  * Conversas dos grupos e privadas entre amigos. Os dados vão e vêm pela API
@@ -71,8 +80,23 @@ export class ChatService {
   }
 
   private message(row: MessageRow): MessageJson {
-    const { media_key, ...rest } = row;
-    return { ...rest, media_url: !row.deleted && media_key ? this.storage.signedUrl(media_key) : row.deleted ? null : row.media_url };
+    const { media_key, sender_photo_path, ...rest } = row;
+    return {
+      ...rest,
+      sender_photo_url: this.storage.urlOf(sender_photo_path),
+      media_url: !row.deleted && media_key ? this.storage.signedUrl(media_key) : row.deleted ? null : row.media_url,
+    };
+  }
+
+  private conversation(row: ConversationRow): ConversationJson {
+    if (!row.other_user) return { ...row, other_user: null };
+    const { photo_path, ...other } = row.other_user;
+    return { ...row, other_user: { ...other, photo_url: this.storage.urlOf(photo_path) } };
+  }
+
+  private async conversationsIn(c: Tx, userId: string, conversationId: string | null): Promise<ConversationJson[]> {
+    const { rows } = await c.query<ConversationRow>(conversationsQuery, [userId, conversationId]);
+    return rows.map((r) => this.conversation(r));
   }
 
   private async messageIn(c: Tx, messageId: string): Promise<MessageJson> {
@@ -101,22 +125,25 @@ export class ChatService {
   // Conversas ---------------------------------------------------------------
 
   list(userId: string): Promise<ConversationJson[]> {
-    return this.as(userId, async (c) => (await c.query<ConversationJson>(conversationsQuery, [userId, null])).rows);
+    return this.as(userId, (c) => this.conversationsIn(c, userId, null));
   }
 
   get(userId: string, conversationId: string): Promise<ConversationJson & { participants: Participant[] }> {
     return this.as(userId, async (c) => {
-      const conv = (await c.query<ConversationJson>(conversationsQuery, [userId, conversationId])).rows[0];
+      const conv = (await this.conversationsIn(c, userId, conversationId))[0];
       if (!conv) throw notFound();
-      const { rows } = await c.query<Participant>(
-        `select p.id as user_id, p.display_name, p.username, r.last_read_at
+      const { rows } = await c.query<Omit<Participant, 'photo_url'> & { photo_path: string | null }>(
+        `select p.id as user_id, p.display_name, p.username, p.photo_path, r.last_read_at
          from conversation_user_ids($1) as u(id)
          join profiles p on p.id = u.id
          left join conversation_reads r on r.conversation_id = $1 and r.user_id = p.id
          order by lower(p.display_name)`,
         [conversationId],
       );
-      return { ...conv, participants: rows };
+      return {
+        ...conv,
+        participants: rows.map(({ photo_path, ...p }) => ({ ...p, photo_url: this.storage.urlOf(photo_path) })),
+      };
     });
   }
 
@@ -135,7 +162,7 @@ export class ChatService {
         'select id from conversations where group_id is null and user_a = $1 and user_b = $2',
         [a, b],
       );
-      return (await c.query<ConversationJson>(conversationsQuery, [userId, rows[0]!.id])).rows[0]!;
+      return (await this.conversationsIn(c, userId, rows[0]!.id))[0]!;
     });
   }
 

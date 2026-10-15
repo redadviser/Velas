@@ -42,11 +42,15 @@ class UserProfile {
     this.reminderMinute = 0,
     this.defaultReminderDays = kDefaultReminderDays,
     this.payment = PaymentDetails.empty,
+    this.photoUrl,
   });
 
   final String id;
   final String email;
   final String name;
+
+  /// Fotografia de perfil: URL (servidor) ou caminho do ficheiro (modo local).
+  final String? photoUrl;
 
   /// Único, em minúsculas. Vazio em contas antigas que ainda não o definiram.
   final String username;
@@ -72,6 +76,7 @@ class UserProfile {
     int? reminderMinute,
     List<int>? defaultReminderDays,
     PaymentDetails? payment,
+    String? Function()? photoUrl,
   }) => UserProfile(
     id: id,
     email: email,
@@ -83,8 +88,10 @@ class UserProfile {
     reminderMinute: reminderMinute ?? this.reminderMinute,
     defaultReminderDays: defaultReminderDays ?? this.defaultReminderDays,
     payment: payment ?? this.payment,
+    photoUrl: photoUrl != null ? photoUrl() : this.photoUrl,
   );
 
+  /// Campos que o próprio altera com PATCH /me (a fotografia vai à parte).
   Map<String, dynamic> toPrefsJson() => {
     'display_name': name,
     'username': username.isEmpty ? null : username,
@@ -111,6 +118,7 @@ class UserProfile {
         ? kDefaultReminderDays
         : _intList(j['default_reminder_days']),
     payment: PaymentDetails.fromJson((j['payment_methods'] as Map?)?.cast<String, dynamic>()),
+    photoUrl: j['photo_url'] as String?,
   );
 }
 

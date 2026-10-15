@@ -542,7 +542,7 @@ class _GroupsBanner extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: AppCard(
         color: context.palette.accent,
-        onTap: () => single != null ? context.push('/groups/${single.id}') : context.go('/gifts?tab=groups'),
+        onTap: () => single != null ? context.push('/groups/${single.id}') : context.go('/gifts?tab=chats'),
         child: Row(
           children: [
             Icon(LucideIcons.usersRound, color: context.palette.accentForeground, size: 20),

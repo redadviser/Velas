@@ -7,11 +7,12 @@ int? _int(Object? v) => (v as num?)?.toInt();
 /// Outra conta, com o mínimo para a reconhecer.
 @immutable
 class ChatUser {
-  const ChatUser({required this.userId, required this.name, this.username = ''});
+  const ChatUser({required this.userId, required this.name, this.username = '', this.photoUrl});
 
   final String userId;
   final String name;
   final String username;
+  final String? photoUrl;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
 
@@ -26,6 +27,7 @@ class ChatUser {
     userId: j['user_id'] as String,
     name: j['display_name'] as String? ?? '',
     username: j['username'] as String? ?? '',
+    photoUrl: j['photo_url'] as String?,
   );
 }
 
@@ -134,6 +136,7 @@ class ChatMessage {
     required this.conversationId,
     required this.senderId,
     this.senderName = '',
+    this.senderPhotoUrl,
     this.kind = MessageKind.text,
     this.body = '',
     this.mediaUrl,
@@ -153,6 +156,7 @@ class ChatMessage {
   /// `null` quando a conta foi eliminada.
   final String? senderId;
   final String senderName;
+  final String? senderPhotoUrl;
   final MessageKind kind;
   final String body;
   final String? mediaUrl;
@@ -219,6 +223,7 @@ class ChatMessage {
     conversationId: conversationId,
     senderId: senderId,
     senderName: senderName,
+    senderPhotoUrl: senderPhotoUrl,
     kind: kind,
     body: body,
     mediaUrl: mediaUrl ?? this.mediaUrl,
@@ -237,6 +242,7 @@ class ChatMessage {
     conversationId: j['conversation_id'] as String,
     senderId: j['sender_id'] as String?,
     senderName: j['sender_name'] as String? ?? '',
+    senderPhotoUrl: j['sender_photo_url'] as String?,
     kind: _kind(j['kind']),
     body: j['body'] as String? ?? '',
     mediaUrl: j['media_url'] as String?,

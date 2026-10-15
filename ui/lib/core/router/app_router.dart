@@ -12,7 +12,6 @@ import '../../features/auth/register_screen.dart';
 import '../../features/auth/reset_password_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/chat/chat_screen.dart';
-import '../../features/chat/conversations_screen.dart';
 import '../../features/chat/friends_screen.dart';
 import '../../features/gifts/gifts_screen.dart';
 import '../../features/groups/group_detail_screen.dart';
@@ -89,9 +88,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/gifts', builder: (_, _) => const GiftsScreen())],
-          ),
-          StatefulShellBranch(
-            routes: [GoRoute(path: '/chats', builder: (_, _) => const ConversationsScreen())],
           ),
         ],
       ),

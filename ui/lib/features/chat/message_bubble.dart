@@ -75,7 +75,10 @@ class MessageBubble extends StatelessWidget {
             SizedBox(
               width: 30,
               child: lastInRun && m.senderId != null
-                  ? UserAvatar(user: ChatUser(userId: m.senderId!, name: m.senderName), size: 30)
+                  ? UserAvatar(
+                      user: ChatUser(userId: m.senderId!, name: m.senderName, photoUrl: m.senderPhotoUrl),
+                      size: 30,
+                    )
                   : null,
             ),
             const SizedBox(width: 6),

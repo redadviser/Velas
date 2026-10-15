@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/providers.dart';
@@ -13,6 +14,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../../core/utils/identity.dart';
 import '../../services/notification_service.dart';
+import '../chat/chat_widgets.dart';
 import 'identity_sheets.dart';
 import '../auth/reset_password_screen.dart';
 
@@ -100,14 +102,7 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: context.palette.accent,
-                child: Text(
-                  user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
-                  style: AppTheme.display(context, size: 26, color: context.palette.accentForeground),
-                ),
-              ),
+              _ProfilePhoto(user: user),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -415,4 +410,130 @@ class _Tile extends StatelessWidget {
 
 extension on String {
   String ifEmpty(String fallback) => isEmpty ? fallback : this;
+}
+
+/// Fotografia de perfil: tocar para escolher outra, tirar uma ou remover.
+class _ProfilePhoto extends ConsumerStatefulWidget {
+  const _ProfilePhoto({required this.user});
+
+  final UserProfile user;
+
+  @override
+  ConsumerState<_ProfilePhoto> createState() => _ProfilePhotoState();
+}
+
+class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
+  bool _busy = false;
+
+  Future<void> _change() async {
+    final hasPhoto = widget.user.photoUrl != null;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.images),
+              title: const Text('Escolher da galeria'),
+              onTap: () => Navigator.pop(ctx, 'gallery'),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.camera),
+              title: const Text('Tirar fotografia'),
+              onTap: () => Navigator.pop(ctx, 'camera'),
+            ),
+            if (hasPhoto)
+              ListTile(
+                leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
+                title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
+                onTap: () => Navigator.pop(ctx, 'remove'),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    final auth = ref.read(authRepositoryProvider);
+    if (action == 'remove') {
+      setState(() => _busy = true);
+      await runGuarded(context, () => auth.updatePhoto(null), success: 'Fotografia removida.');
+    } else {
+      PickedImage? picked;
+      try {
+        // Pequena e quadrada o suficiente para os avatares (até 2 MB no servidor).
+        picked = await pickChatImage(action == 'camera' ? ImageSource.camera : ImageSource.gallery, maxSide: 640);
+      } catch (_) {
+        if (mounted) showMessage(context, 'Não foi possível aceder às fotografias. Verifica as permissões.');
+        return;
+      }
+      if (picked == null || !mounted) return;
+      setState(() => _busy = true);
+      final bytes = picked.bytes;
+      await runGuarded(context, () => auth.updatePhoto(bytes), success: 'Fotografia atualizada.');
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.user;
+    const size = 64.0;
+    return Semantics(
+      button: true,
+      label: 'Alterar fotografia de perfil',
+      child: GestureDetector(
+        onTap: _busy ? null : _change,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipOval(
+              child: SizedBox.square(
+                dimension: size,
+                child: user.photoUrl != null
+                    ? ChatImage(url: user.photoUrl)
+                    : ColoredBox(
+                        color: context.palette.accent,
+                        child: Center(
+                          child: Text(
+                            user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                            style: AppTheme.display(context, size: 26, color: context.palette.accentForeground),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            if (_busy)
+              const Positioned.fill(
+                child: ClipOval(
+                  child: ColoredBox(
+                    color: Color(0x66000000),
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: context.colors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: context.colors.surface, width: 2),
+                ),
+                child: Icon(LucideIcons.camera, size: 13, color: context.colors.onPrimary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

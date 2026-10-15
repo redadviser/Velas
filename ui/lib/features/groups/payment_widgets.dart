@@ -18,6 +18,47 @@ IconData paymentIcon(PaymentMethod m) => switch (m) {
   PaymentMethod.cash => LucideIcons.banknote,
 };
 
+/// Logótipo do método (ver assets/images/CREDITS.md), ou `null` se não tiver.
+String? paymentLogoAsset(PaymentMethod m) => switch (m) {
+  PaymentMethod.mbway => 'assets/images/payments/mbway.png',
+  PaymentMethod.revolut => 'assets/images/payments/revolut.png',
+  PaymentMethod.paypal => 'assets/images/payments/paypal.png',
+  PaymentMethod.transfer || PaymentMethod.cash => null,
+};
+
+/// Logótipo do MB WAY, Revolut ou PayPal; ícone para transferência e dinheiro.
+class PaymentLogo extends StatelessWidget {
+  const PaymentLogo(this.method, {super.key, this.size = 24, this.color});
+
+  final PaymentMethod method;
+  final double size;
+
+  /// Cor do ícone (métodos sem logótipo).
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = paymentLogoAsset(method);
+    if (asset == null) {
+      return SizedBox.square(
+        dimension: size,
+        child: Icon(paymentIcon(method), size: size * 0.82, color: color ?? context.palette.mutedForeground),
+      );
+    }
+    return Image.asset(
+      asset,
+      width: size,
+      height: size,
+      filterQuality: FilterQuality.medium,
+      semanticLabel: method.label,
+    );
+  }
+}
+
+/// Logótipo dentro de um campo de texto.
+Widget _fieldLogo(PaymentMethod m) =>
+    Padding(padding: const EdgeInsets.all(12), child: PaymentLogo(m, size: 22));
+
 /// Campos editáveis dos dados de pagamento (perfil ou comprador sem conta).
 class PaymentDetailsFields extends StatefulWidget {
   const PaymentDetailsFields({super.key, required this.initial, required this.onChanged});
@@ -70,9 +111,9 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
           validator: (v) => (v == null || v.trim().isEmpty || PaymentFormat.normalizePhone(v) != null)
               ? null
               : 'Número de telemóvel inválido.',
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: '912 345 678',
-            prefixIcon: Icon(LucideIcons.smartphone, size: 18),
+            prefixIcon: _fieldLogo(PaymentMethod.mbway),
           ),
         ),
         const SizedBox(height: 18),
@@ -107,7 +148,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
                   TextFormField(
                     controller: _revolut,
                     onChanged: (_) => _emit(),
-                    decoration: const InputDecoration(hintText: '@utilizador'),
+                    decoration: InputDecoration(hintText: '@utilizador', prefixIcon: _fieldLogo(PaymentMethod.revolut)),
                   ),
                 ],
               ),
@@ -121,7 +162,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
                   TextFormField(
                     controller: _paypal,
                     onChanged: (_) => _emit(),
-                    decoration: const InputDecoration(hintText: 'utilizador'),
+                    decoration: InputDecoration(hintText: 'utilizador', prefixIcon: _fieldLogo(PaymentMethod.paypal)),
                   ),
                 ],
               ),
@@ -351,9 +392,9 @@ class _MethodTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      paymentIcon(method),
-                      size: 20,
+                    PaymentLogo(
+                      method,
+                      size: 28,
                       color: selected ? context.colors.primary : context.palette.mutedForeground,
                     ),
                     const SizedBox(width: 12),

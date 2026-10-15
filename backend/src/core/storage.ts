@@ -70,6 +70,11 @@ export class PhotoStorage {
     return createHmac('sha256', this.secret).update(`photo:${key}:${exp}`).digest('base64url');
   }
 
+  /** URL assinado de uma chave opcional (ex.: fotografia de perfil que pode não existir). */
+  urlOf(key: string | null | undefined): string | null {
+    return key ? this.signedUrl(key) : null;
+  }
+
   /**
    * A validade termina sempre à meia-noite (UTC), para o mesmo ficheiro ter o
    * mesmo URL durante o dia e a app o poder guardar em cache.

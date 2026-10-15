@@ -6,9 +6,11 @@ import 'package:aniversarios/core/providers.dart';
 import 'package:aniversarios/core/theme/app_colors.dart';
 import 'package:aniversarios/data/api/chat_socket.dart';
 import 'package:aniversarios/data/models/chat_models.dart';
+import 'package:aniversarios/data/models/group_models.dart';
 import 'package:aniversarios/data/models/models.dart';
 import 'package:aniversarios/data/repositories/chat_repository.dart';
 import 'package:aniversarios/features/chat/chat_screen.dart';
+import 'package:aniversarios/features/chat/conversations_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -189,6 +191,48 @@ void main() {
       );
       expect(merged.map((m) => m.id), ['c', 'b', 'a']);
       expect(merged.last.body, 'editada');
+    });
+  });
+
+  group('Lista de conversas', () {
+    Conversation conv(String id, {bool group = false, int unread = 0, int? hour}) => Conversation(
+      id: id,
+      isGroup: group,
+      title: id,
+      unreadCount: unread,
+      lastMessageAt: hour == null ? null : DateTime(2026, 10, 15, hour),
+      createdAt: DateTime(2026, 10, 1),
+    );
+    GiftGroup gift(String id, {String? conversation, DateTime? created}) => GiftGroup(
+      id: id,
+      createdBy: 'me',
+      title: id,
+      celebrantName: 'Rita',
+      targetAmount: 50,
+      createdAt: created ?? DateTime(2026, 9, 1),
+      conversationId: conversation,
+    );
+
+    final groups = [gift('prenda-rita', conversation: 'cg1'), gift('prenda-local', created: DateTime(2026, 10, 10))];
+    final conversations = [conv('cg1', group: true, unread: 2, hour: 9), conv('gil', unread: 1, hour: 12), conv('ana', hour: 8)];
+
+    List<String> ids(ConversationFilter f) => [
+      for (final i in conversationItems(groups, conversations, f))
+        switch (i) {
+          GroupItem(:final group) => group.id,
+          DirectItem(:final conversation) => conversation.id,
+        },
+    ];
+
+    test('mistura prendas e conversas privadas pela atividade mais recente', () {
+      // A conversa do grupo não aparece duas vezes: vem dentro da prenda.
+      expect(ids(ConversationFilter.all), ['gil', 'prenda-rita', 'ana', 'prenda-local']);
+    });
+
+    test('filtra prendas, privadas e não lidas', () {
+      expect(ids(ConversationFilter.gifts), ['prenda-rita', 'prenda-local']);
+      expect(ids(ConversationFilter.direct), ['gil', 'ana']);
+      expect(ids(ConversationFilter.unread), ['gil', 'prenda-rita']);
     });
   });
 

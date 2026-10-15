@@ -1,6 +1,7 @@
 import { tx, type Db } from '../../core/database.js';
 import { HttpError } from '../../core/errors.js';
 import type { RealtimeHub } from '../../core/realtime.js';
+import type { PhotoStorage } from '../../core/storage.js';
 import type { FriendRequestResult, FriendsList } from './friends.model.js';
 
 /** Pedidos de amizade e lista de amigos. */
@@ -8,6 +9,7 @@ export class FriendsService {
   constructor(
     private readonly db: Db,
     private readonly hub: RealtimeHub,
+    private readonly storage: PhotoStorage,
   ) {}
 
   list(userId: string): Promise<FriendsList> {
@@ -19,18 +21,24 @@ export class FriendsService {
         user_id: string;
         display_name: string;
         username: string | null;
+        photo_path: string | null;
         created_at: string;
         responded_at: string | null;
       }>(
         `select f.id, f.status, f.addressee_id = $1 as incoming, p.id as user_id, p.display_name, p.username,
-                f.created_at, f.responded_at
+                p.photo_path, f.created_at, f.responded_at
          from friendships f
          join profiles p on p.id = case when f.requester_id = $1 then f.addressee_id else f.requester_id end
          where $1 in (f.requester_id, f.addressee_id)
          order by lower(p.display_name), f.created_at`,
         [userId],
       );
-      const user = (r: (typeof rows)[number]) => ({ user_id: r.user_id, display_name: r.display_name, username: r.username });
+      const user = (r: (typeof rows)[number]) => ({
+        user_id: r.user_id,
+        display_name: r.display_name,
+        username: r.username,
+        photo_url: this.storage.urlOf(r.photo_path),
+      });
       return {
         friends: rows.filter((r) => r.status === 'accepted').map((r) => ({ ...user(r), since: r.responded_at ?? r.created_at })),
         incoming: rows

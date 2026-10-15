@@ -1,7 +1,7 @@
 import { tx, type Db, type Tx } from '../../core/database.js';
-import { notFound } from '../../core/errors.js';
+import { HttpError, notFound } from '../../core/errors.js';
 import { hashPassword } from '../../core/passwords.js';
-import type { PhotoStorage } from '../../core/storage.js';
+import { imageType, type PhotoStorage } from '../../core/storage.js';
 import { defaultCategories, profileColumns, type NewUser, type Profile, type ProfilePatch } from './users.model.js';
 
 export class UsersService {
@@ -13,16 +13,18 @@ export class UsersService {
   // Dentro de uma transação de outro módulo (ex.: autenticação) -------------
 
   async profileIn(c: Tx, userId: string): Promise<Profile> {
-    const { rows } = await c.query<Profile>(
+    const { rows } = await c.query<Omit<Profile, 'photo_url'> & { photo_path: string | null }>(
       `select p.id, u.email, p.display_name, p.username, p.phone, p.notifications_enabled,
               p.reminder_hour, p.reminder_minute, p.default_reminder_days, p.payment_methods,
-              u.password_hash is not null as has_password, u.google_sub is not null as google_linked
+              u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
+              p.photo_path
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
     );
     if (!rows[0]) throw notFound();
-    return rows[0];
+    const { photo_path, ...profile } = rows[0];
+    return { ...profile, photo_url: this.storage.urlOf(photo_path) };
   }
 
   /** Cria a conta, o perfil e as categorias por defeito. Devolve o id. */
@@ -85,6 +87,42 @@ export class UsersService {
       if (sets.length) await c.query(`update profiles set ${sets.join(', ')} where id = $1`, values);
       return this.profileIn(c, userId);
     });
+  }
+
+  /** Fotografia de perfil (bytes da imagem). Substitui a anterior. */
+  async setPhoto(userId: string, data: Buffer): Promise<Profile> {
+    const type = imageType(data);
+    if (!type) throw new HttpError(415, 'unsupported_media_type');
+    const key = `${userId}/avatar-${Date.now()}.${type.ext}`;
+    await this.storage.put(key, data);
+    try {
+      const { previous, profile } = await tx(this.db, userId, async (c) => {
+        const { rows } = await c.query<{ photo_path: string | null }>(
+          'select photo_path from profiles where id = $1 for update',
+          [userId],
+        );
+        await c.query('update profiles set photo_path = $2 where id = $1', [userId, key]);
+        return { previous: rows[0]?.photo_path, profile: await this.profileIn(c, userId) };
+      });
+      if (previous && previous !== key) await this.storage.remove(previous);
+      return profile;
+    } catch (e) {
+      await this.storage.remove(key);
+      throw e;
+    }
+  }
+
+  async removePhoto(userId: string): Promise<Profile> {
+    const { previous, profile } = await tx(this.db, userId, async (c) => {
+      const { rows } = await c.query<{ photo_path: string | null }>(
+        'select photo_path from profiles where id = $1 for update',
+        [userId],
+      );
+      await c.query('update profiles set photo_path = null where id = $1', [userId]);
+      return { previous: rows[0]?.photo_path, profile: await this.profileIn(c, userId) };
+    });
+    if (previous) await this.storage.remove(previous);
+    return profile;
   }
 
   /** Definir ou alterar a palavra-passe (também em contas criadas com o Google). */

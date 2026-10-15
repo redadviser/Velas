@@ -9,7 +9,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import '../groups/invite_widgets.dart';
 import 'chat_widgets.dart';
-import 'conversations_screen.dart';
+import 'conversations_list.dart';
 
 String friendRequestMessage(FriendRequestResult r, String name) => switch (r) {
   FriendRequestResult.sent => 'Pedido enviado a $name.',

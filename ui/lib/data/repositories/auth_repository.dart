@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/models.dart';
 
 enum SignUpResult { signedIn, needsEmailConfirmation }
@@ -49,6 +51,9 @@ abstract class AuthRepository {
   Future<void> updatePassword(String newPassword);
 
   Future<void> updateProfile(UserProfile profile);
+
+  /// Muda a fotografia de perfil (já reduzida). `null` remove-a.
+  Future<void> updatePhoto(Uint8List? bytes);
 
   /// Elimina a conta e todos os dados associados (direito ao apagamento, RGPD).
   Future<void> deleteAccount();

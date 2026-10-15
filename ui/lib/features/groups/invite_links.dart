@@ -44,7 +44,7 @@ class InviteLinks {
   static String codeMessage(GiftGroup g) =>
       'Junta-te à prenda em grupo "${g.title}" na Birthdayly 🎁\n\n'
       'Código do grupo: ${formatCode(g.inviteCode)}\n'
-      'Na app: Presentes → Em grupo → Tenho um código.\n\n'
+      'Na app: Presentes → Conversas → Nova → Entrar com código.\n\n'
       'Ou entra diretamente: ${shareLink(g.inviteCode)}';
 
   /// Código de convite contido num link, se for um link de convite.

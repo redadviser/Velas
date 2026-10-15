@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/chat_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -11,8 +12,7 @@ import '../../core/widgets/common.dart';
 import '../../core/widgets/data_gate.dart';
 import '../../data/models/models.dart';
 import '../../core/providers.dart';
-import '../../data/models/group_models.dart';
-import '../groups/group_widgets.dart';
+import '../chat/conversations_list.dart';
 import 'gift_widgets.dart';
 
 class GiftsScreen extends ConsumerStatefulWidget {
@@ -24,40 +24,52 @@ class GiftsScreen extends ConsumerStatefulWidget {
 
 class _GiftsScreenState extends ConsumerState<GiftsScreen> {
   bool _showPurchased = false;
-  bool _groupsTab = false;
+  bool _chatsTab = false;
   String? _tabParam;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Permite abrir diretamente a aba de grupos: /gifts?tab=groups
+    // Permite abrir diretamente as conversas: /gifts?tab=chats (ou o antigo tab=groups)
     final tab = GoRouterState.of(context).uri.queryParameters['tab'];
     if (tab != _tabParam) {
       _tabParam = tab;
-      if (tab != null) _groupsTab = tab == 'groups';
+      if (tab != null) _chatsTab = tab == 'chats' || tab == 'groups';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final toPay = (ref.watch(groupsProvider).value ?? const <GiftGroup>[]).where((g) {
-      final me = g.memberFor(user?.id);
-      return g.purchasedAt == null && me != null && g.statusOf(me) == ContributionStatus.pending;
-    }).length;
+    final badge = ref.watch(conversationsBadgeProvider);
+    final requests = ref.watch(incomingFriendRequestsProvider);
+    final chat = ref.watch(chatRepositoryProvider) != null;
 
     final header = [
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-        child: Text('Presentes', style: AppTheme.display(context, size: 30)),
+        padding: EdgeInsets.fromLTRB(20, 16, _chatsTab && chat ? 8 : 20, 12),
+        child: Row(
+          children: [
+            Expanded(child: Text('Presentes', style: AppTheme.display(context, size: 30))),
+            if (_chatsTab && chat)
+              IconButton(
+                tooltip: 'Amigos',
+                onPressed: () => context.push('/friends'),
+                icon: Badge(
+                  isLabelVisible: requests > 0,
+                  label: Text('$requests'),
+                  child: const Icon(LucideIcons.usersRound, size: 22),
+                ),
+              ),
+          ],
+        ),
       ),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            _Tab(label: 'Ideias', selected: !_groupsTab, onTap: () => setState(() => _groupsTab = false)),
+            _Tab(label: 'Ideias', selected: !_chatsTab, onTap: () => setState(() => _chatsTab = false)),
             const SizedBox(width: 20),
-            _Tab(label: 'Em grupo', badge: toPay, selected: _groupsTab, onTap: () => setState(() => _groupsTab = true)),
+            _Tab(label: 'Conversas', badge: badge, selected: _chatsTab, onTap: () => setState(() => _chatsTab = true)),
           ],
         ),
       ),
@@ -67,16 +79,25 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-gifts',
-        onPressed: () => _groupsTab ? context.push('/groups/new') : pickPersonThenAddGift(context, ref),
+        onPressed: () => _chatsTab ? showNewConversationSheet(context, ref) : pickPersonThenAddGift(context, ref),
         icon: const Icon(LucideIcons.plus, size: 20),
-        label: Text(_groupsTab ? 'Novo grupo' : 'Nova ideia'),
+        label: Text(_chatsTab ? 'Nova' : 'Nova ideia'),
       ),
       body: SafeArea(
         bottom: false,
-        child: _groupsTab
+        child: _chatsTab
             ? RefreshIndicator(
-                onRefresh: () => ref.read(groupsProvider.notifier).refresh(),
-                child: ListView(padding: const EdgeInsets.only(bottom: 100), children: [...header, const GroupsList()]),
+                onRefresh: () async {
+                  await Future.wait([
+                    ref.read(groupsProvider.notifier).refresh(),
+                    if (chat) ref.read(conversationsProvider.notifier).refresh(),
+                    if (chat) ref.read(friendsProvider.notifier).refresh(),
+                  ]);
+                },
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 100),
+                  children: [...header, const ConversationsList()],
+                ),
               )
             : DataGate(
                 builder: (context, data) {

@@ -658,6 +658,53 @@ describe('amigos e conversas', () => {
   });
 });
 
+describe('fotografia de perfil', () => {
+  it('guarda, mostra aos amigos e nas conversas, substitui e remove', async () => {
+    const ines = await signup('Inês', 'ines', 'ines@ex.pt');
+    const joao = await signup('João', 'joao', 'joao@ex.pt');
+    expect((await call('GET', '/me', { token: ines.access_token })).body.photo_url).toBeNull();
+
+    const up = await call('PUT', '/me/photo', { token: ines.access_token, raw: jpeg });
+    expect(up.status).toBe(200);
+    const first = new URL(up.body.photo_url);
+    expect(first.pathname).toMatch(new RegExp(`^/files/${ines.user.id}/avatar-\\d+\\.jpg$`));
+    expect((await call('GET', first.pathname + first.search)).status).toBe(200);
+    expect((await call('GET', '/me', { token: ines.access_token })).body.photo_url).toBe(up.body.photo_url);
+    expect((await call('PUT', '/me/photo', { token: ines.access_token, raw: Buffer.from('não sou imagem') })).status).toBe(415);
+
+    // Aparece a quem a procura, aos amigos e na conversa privada.
+    expect((await call('POST', '/users/find', { token: joao.access_token, body: { identifier: '@ines' } })).body.user.photo_url).toBe(up.body.photo_url);
+    await call('POST', '/friends/requests', { token: joao.access_token, body: { user_id: ines.user.id } });
+    await call('POST', '/friends/requests', { token: ines.access_token, body: { user_id: joao.user.id } });
+    expect((await call('GET', '/friends', { token: joao.access_token })).body.friends[0].photo_url).toBe(up.body.photo_url);
+    const conv = await call('POST', '/conversations/direct', { token: joao.access_token, body: { user_id: ines.user.id } });
+    expect(conv.body.other_user.photo_url).toBe(up.body.photo_url);
+    const sent = await call('POST', `/conversations/${conv.body.id}/messages`, { token: ines.access_token, body: { id: uuid(), kind: 'text', body: 'Olá!' } });
+    expect(sent.body.sender_photo_url).toBe(up.body.photo_url);
+    // E aos outros membros de um grupo.
+    const groupId = uuid();
+    await call('PUT', `/groups/${groupId}`, {
+      token: ines.access_token,
+      body: { group: { title: 'Prenda', celebrant_name: 'Rui', target_amount: 20 }, new_members: [{ id: uuid(), user_id: ines.user.id, display_name: 'Inês' }] },
+    });
+    const group = (await call('GET', '/groups', { token: ines.access_token })).body.find((g: { id: string }) => g.id === groupId);
+    expect(group.group_members[0].photo_url).toBe(up.body.photo_url);
+    expect(group.group_members[0].photo_path).toBeUndefined();
+
+    // Uma nova substitui (e apaga) a anterior.
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    await new Promise((r) => setTimeout(r, 5));
+    const second = await call('PUT', '/me/photo', { token: ines.access_token, raw: png });
+    expect(second.body.photo_url).toMatch(/avatar-\d+\.png/);
+    expect((await call('GET', first.pathname + first.search)).status).toBe(404);
+
+    const removed = await call('DELETE', '/me/photo', { token: ines.access_token });
+    expect(removed.body.photo_url).toBeNull();
+    const secondUrl = new URL(second.body.photo_url);
+    expect((await call('GET', secondUrl.pathname + secondUrl.search)).status).toBe(404);
+  });
+});
+
 describe('documentação', () => {
   it('serve o Swagger UI e a especificação OpenAPI gerada a partir dos schemas', async () => {
     expect((await app.inject({ method: 'GET', url: '/docs/' })).statusCode).toBe(200);

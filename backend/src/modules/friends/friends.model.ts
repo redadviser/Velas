@@ -9,6 +9,7 @@ export interface FriendUser {
   user_id: string;
   display_name: string;
   username: string | null;
+  photo_url: string | null;
 }
 
 export interface Friend extends FriendUser {

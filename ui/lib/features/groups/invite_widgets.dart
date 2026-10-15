@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/errors.dart';
 import '../../core/utils/identity.dart';
 import '../../core/widgets/common.dart';
+import '../../data/models/chat_models.dart';
 import '../../data/models/group_models.dart';
 import '../chat/chat_widgets.dart';
 import 'invite_links.dart';
@@ -150,13 +151,8 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
             padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: context.palette.accent,
-                  child: Text(
-                    found.name.isEmpty ? '?' : found.name[0].toUpperCase(),
-                    style: TextStyle(color: context.palette.accentForeground, fontWeight: FontWeight.w700),
-                  ),
+                UserAvatar(
+                  user: ChatUser(userId: found.userId, name: found.name, photoUrl: found.photoUrl),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

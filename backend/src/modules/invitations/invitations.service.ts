@@ -1,4 +1,5 @@
 import { tx, type Db } from '../../core/database.js';
+import type { PhotoStorage } from '../../core/storage.js';
 import type { FoundUser, GroupPreview, InvitationPreview, InviteResult } from './invitations.model.js';
 
 /**
@@ -6,11 +7,22 @@ import type { FoundUser, GroupPreview, InvitationPreview, InviteResult } from '.
  * link com código. A lógica está nas funções SQL de migrations/002_gift_groups.sql.
  */
 export class InvitationsService {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    private readonly storage: PhotoStorage,
+  ) {}
 
+  /** Com a fotografia, para confirmar que é a pessoa certa. */
   async findUser(userId: string, identifier: string): Promise<FoundUser | null> {
-    const { rows } = await tx(this.db, userId, (c) => c.query<FoundUser>('select * from find_user($1)', [identifier]));
-    return rows[0] ?? null;
+    const { rows } = await tx(this.db, userId, (c) =>
+      c.query<FoundUser & { photo_path: string | null }>(
+        'select f.*, p.photo_path from find_user($1) f join profiles p on p.id = f.user_id',
+        [identifier],
+      ),
+    );
+    if (!rows[0]) return null;
+    const { photo_path, ...user } = rows[0];
+    return { ...user, photo_url: this.storage.urlOf(photo_path) };
   }
 
   /** Só o administrador convida. */

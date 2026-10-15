@@ -20,6 +20,7 @@ export interface FoundUser {
   user_id: string;
   display_name: string;
   username: string | null;
+  photo_url?: string | null;
 }
 
 export type InviteResult = 'invited' | 'already_invited' | 'already_member' | 'group_closed' | 'not_found';

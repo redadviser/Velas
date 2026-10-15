@@ -11,8 +11,8 @@ import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/group_models.dart';
 import '../auth/auth_widgets.dart';
+import '../chat/chat_widgets.dart';
 import 'invite_links.dart';
-import 'invite_widgets.dart';
 
 /// Mensagem para lembrar quem ainda não pagou.
 String reminderText(GiftGroup g, List<GroupMember> pending) {
@@ -75,14 +75,17 @@ class MemberRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: swatch(index).withValues(alpha: 0.16),
-              child: Text(
-                member.name.isEmpty ? '?' : member.name[0].toUpperCase(),
-                style: TextStyle(color: swatch(index), fontWeight: FontWeight.w700),
+            if (member.photoUrl != null)
+              ClipOval(child: SizedBox.square(dimension: 36, child: ChatImage(url: member.photoUrl)))
+            else
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: swatch(index).withValues(alpha: 0.16),
+                child: Text(
+                  member.name.isEmpty ? '?' : member.name[0].toUpperCase(),
+                  style: TextStyle(color: swatch(index), fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -203,92 +206,6 @@ class GroupCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Lista de grupos (separador "Em grupo" dos Presentes).
-class GroupsList extends ConsumerWidget {
-  const GroupsList({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(groupsProvider);
-    final user = ref.watch(currentUserProvider);
-    final supportsInvites = ref.watch(groupRepositoryProvider)?.supportsInvites ?? false;
-
-    if (async.hasError && !async.hasValue) {
-      return ErrorRetry(error: async.error!, onRetry: () => ref.invalidate(groupsProvider));
-    }
-    final groups = async.value;
-    if (groups == null) {
-      return const Padding(
-        padding: EdgeInsets.all(40),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
-      );
-    }
-
-    final active = groups.where((g) => g.purchasedAt == null).toList();
-    final done = groups.where((g) => g.purchasedAt != null).toList();
-
-    final inbox = InvitationsInbox(onAccepted: (id) => context.push('/groups/$id'));
-
-    if (groups.isEmpty) {
-      return Column(
-        children: [
-          inbox,
-          EmptyState(
-            icon: LucideIcons.usersRound,
-            title: 'Prendas em grupo',
-            message:
-                'Junta amigos ou família, combinem o valor de cada um e paguem diretamente a quem compra — por MB WAY, transferência ou em mão.',
-            action: Column(
-              children: [
-                FilledButton.icon(
-                  onPressed: () => context.push('/groups/new'),
-                  icon: const Icon(LucideIcons.plus, size: 18),
-                  label: const Text('Criar grupo'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
-                ),
-                if (supportsInvites) ...[
-                  const SizedBox(height: 8),
-                  TextButton(onPressed: () => showJoinGroupSheet(context, ref), child: const Text('Tenho um código')),
-                ],
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        inbox,
-        if (supportsInvites)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: OutlinedButton.icon(
-              onPressed: () => showJoinGroupSheet(context, ref),
-              icon: const Icon(LucideIcons.ticket, size: 18),
-              label: const Text('Entrar com código'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-            ),
-          ),
-        for (final g in active)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: GroupCard(group: g, userId: user?.id),
-          ),
-        if (done.isNotEmpty) ...[
-          const SectionTitle('Concluídos'),
-          for (final g in done)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: GroupCard(group: g, userId: user?.id),
-            ),
-        ],
-      ],
     );
   }
 }

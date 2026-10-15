@@ -159,10 +159,21 @@ class ErrorRetry extends StatelessWidget {
 
 /// Pequena etiqueta arredondada.
 class Pill extends StatelessWidget {
-  const Pill({super.key, required this.label, this.icon, this.background, this.foreground, this.dense = false});
+  const Pill({
+    super.key,
+    required this.label,
+    this.icon,
+    this.leading,
+    this.background,
+    this.foreground,
+    this.dense = false,
+  });
 
   final String label;
   final IconData? icon;
+
+  /// Em vez de [icon] (ex.: um logótipo).
+  final Widget? leading;
   final Color? background;
   final Color? foreground;
   final bool dense;
@@ -176,7 +187,10 @@ class Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[Icon(icon, size: dense ? 12 : 14, color: fg), const SizedBox(width: 4)],
+          if (leading != null)
+            ...[leading!, const SizedBox(width: 5)]
+          else if (icon != null)
+            ...[Icon(icon, size: dense ? 12 : 14, color: fg), const SizedBox(width: 4)],
           Text(
             label,
             style: context.text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: dense ? 11 : 12),

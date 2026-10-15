@@ -16,6 +16,8 @@ export interface Profile {
   payment_methods: Record<string, unknown>;
   has_password: boolean;
   google_linked: boolean;
+  /** URL assinado da fotografia de perfil. */
+  photo_url: string | null;
 }
 
 /** Dados para criar uma conta (registo ou primeira entrada com Google). */

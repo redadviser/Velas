@@ -675,7 +675,7 @@ class _BuyerCard extends StatelessWidget {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: [for (final m in methods) Pill(icon: paymentIcon(m), label: m.label, dense: true)],
+              children: [for (final m in methods) Pill(leading: PaymentLogo(m, size: 14), label: m.label, dense: true)],
             ),
           ],
           if (missingPayee && onAddPayment != null) ...[

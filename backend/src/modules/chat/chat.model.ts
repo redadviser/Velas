@@ -54,6 +54,7 @@ export interface MessageJson {
   conversation_id: string;
   sender_id: string | null;
   sender_name: string | null;
+  sender_photo_url: string | null;
   kind: 'text' | 'image' | 'gif' | 'sticker';
   body: string;
   /** URL assinado (imagens da API) ou do GIPHY. */
@@ -73,7 +74,7 @@ export interface ConversationJson {
   /** Título do grupo ou nome da outra pessoa. */
   title: string;
   celebrant_name: string | null;
-  other_user: { user_id: string; display_name: string; username: string | null } | null;
+  other_user: { user_id: string; display_name: string; username: string | null; photo_url: string | null } | null;
   last_message: Pick<MessageJson, 'id' | 'sender_id' | 'sender_name' | 'kind' | 'body' | 'created_at' | 'deleted'> | null;
   last_message_at: string | null;
   unread_count: number;
@@ -84,6 +85,7 @@ export interface Participant {
   user_id: string;
   display_name: string;
   username: string | null;
+  photo_url: string | null;
   last_read_at: string | null;
 }
 

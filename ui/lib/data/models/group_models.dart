@@ -33,6 +33,7 @@ class GroupMember {
     this.confirmedAt,
     this.payment = PaymentDetails.empty,
     required this.createdAt,
+    this.photoUrl,
   });
 
   final String id;
@@ -54,6 +55,9 @@ class GroupMember {
   /// Dados de pagamento introduzidos à mão (participantes sem conta).
   final PaymentDetails payment;
   final DateTime createdAt;
+
+  /// Fotografia de perfil (só membros com conta, vinda do servidor).
+  final String? photoUrl;
 
   bool get hasAccount => userId != null;
 
@@ -82,6 +86,7 @@ class GroupMember {
     confirmedAt: confirmedAt != null ? confirmedAt() : this.confirmedAt,
     payment: payment ?? this.payment,
     createdAt: createdAt,
+    photoUrl: photoUrl,
   );
 
   Map<String, dynamic> toJson() => {
@@ -110,22 +115,25 @@ class GroupMember {
     confirmedAt: _dt(j['confirmed_at']),
     payment: PaymentDetails.fromJson((j['payment_methods'] as Map?)?.cast<String, dynamic>()),
     createdAt: _dt(j['created_at']) ?? DateTime.now(),
+    photoUrl: j['photo_url'] as String?,
   );
 }
 
 /// Conta encontrada ao procurar por email, telemóvel ou username.
 @immutable
 class FoundUser {
-  const FoundUser({required this.userId, required this.name, required this.username});
+  const FoundUser({required this.userId, required this.name, required this.username, this.photoUrl});
 
   final String userId;
   final String name;
   final String username;
+  final String? photoUrl;
 
   factory FoundUser.fromJson(Map<String, dynamic> j) => FoundUser(
     userId: j['user_id'] as String,
     name: j['display_name'] as String? ?? '',
     username: j['username'] as String? ?? '',
+    photoUrl: j['photo_url'] as String?,
   );
 }
 

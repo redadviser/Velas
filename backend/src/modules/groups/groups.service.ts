@@ -8,7 +8,9 @@ import type { GroupInput, GroupJson, MemberInfo, NewMemberInput, PaymentMethod }
 const groupsQuery = `
   select g.*,
     (select c.id from conversations c where c.group_id = g.id) as conversation_id,
-    coalesce((select json_agg(m order by m.created_at) from group_members m where m.group_id = g.id), '[]') as group_members,
+    coalesce((select json_agg(to_jsonb(m) || jsonb_build_object('photo_path', pp.photo_path) order by m.created_at)
+              from group_members m left join profiles pp on pp.id = m.user_id
+              where m.group_id = g.id), '[]') as group_members,
     coalesce((select json_agg(i order by i.created_at) from group_invitations i where i.group_id = g.id), '[]') as group_invitations
   from gift_groups g`;
 
@@ -33,10 +35,21 @@ export class GroupsService {
     if (!res.rowCount) throw notFound();
   }
 
+  /** A fotografia de cada membro com conta, como URL assinado. */
+  private withPhotos(g: GroupJson): GroupJson {
+    return {
+      ...g,
+      group_members: g.group_members.map(({ photo_path, ...m }) => ({
+        ...m,
+        photo_url: this.storage.urlOf(photo_path as string | null),
+      })),
+    };
+  }
+
   list(userId: string): Promise<GroupJson[]> {
     return this.as(userId, async (c) => {
       const { rows } = await c.query<GroupJson>(`${groupsQuery} where is_group_member(g.id) order by g.created_at desc`);
-      return rows;
+      return rows.map((g) => this.withPhotos(g));
     });
   }
 
@@ -87,7 +100,7 @@ export class GroupsService {
       await c.query('update gift_groups set buyer_member_id = $2 where id = $1', [g.id, g.buyer_member_id ?? null]);
 
       const { rows } = await c.query<GroupJson>(`${groupsQuery} where g.id = $1`, [g.id]);
-      return rows[0]!;
+      return this.withPhotos(rows[0]!);
     });
   }
 

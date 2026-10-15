@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
+import { HttpError } from '../../core/errors.js';
 import { doc } from '../../core/openapi.js';
 import { passwordSchema } from '../../core/validation.js';
 import { profilePatchSchema } from './users.model.js';
@@ -16,6 +17,25 @@ export async function usersRoutes(app: FastifyInstance, users: UsersService) {
 
   app.patch('/me', { schema: doc({ tag, summary: 'Alterar o perfil (só os campos enviados)', body: profilePatchSchema }) }, (req) =>
     users.update(req.uid, profilePatchSchema.parse(req.body)),
+  );
+
+  app.put(
+    '/me/photo',
+    {
+      schema: {
+        ...doc({ tag, summary: 'Enviar a fotografia de perfil (bytes da imagem no corpo, até 2 MB)' }),
+        consumes: ['image/jpeg', 'image/png', 'image/webp'],
+        body: { type: 'string', format: 'binary' },
+      },
+    },
+    (req) => {
+      if (!Buffer.isBuffer(req.body)) throw new HttpError(415, 'unsupported_media_type');
+      return users.setPhoto(req.uid, req.body);
+    },
+  );
+
+  app.delete('/me/photo', { schema: doc({ tag, summary: 'Remover a fotografia de perfil' }) }, (req) =>
+    users.removePhoto(req.uid),
   );
 
   app.put('/me/password', { schema: doc({ tag, summary: 'Definir uma nova palavra-passe', body: passwordBody }) }, async (req, reply) => {

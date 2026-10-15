@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -26,6 +27,10 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = userColor(context, user.userId);
+    final photo = user.photoUrl;
+    if (photo != null) {
+      return ClipOval(child: SizedBox.square(dimension: size, child: ChatImage(url: photo)));
+    }
     return Container(
       width: size,
       height: size,
@@ -100,6 +105,10 @@ class ChatImage extends StatelessWidget {
       return Image.memory(bytes!, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => placeholder);
     }
     if (url == null) return placeholder;
+    // Modo local: caminho de um ficheiro no dispositivo.
+    if (!url!.startsWith('http')) {
+      return Image.file(File(url!), fit: fit, errorBuilder: (_, _, _) => placeholder);
+    }
     return CachedNetworkImage(
       imageUrl: url!,
       // A assinatura do URL muda todos os dias; a cache é pelo ficheiro.

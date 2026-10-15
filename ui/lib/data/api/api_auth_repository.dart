@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -158,6 +159,13 @@ class ApiAuthRepository implements AuthRepository {
   @override
   Future<void> updateProfile(UserProfile profile) async {
     final json = ((await _api.patch('/me', profile.toPrefsJson())) as Map).cast<String, dynamic>();
+    _set(_profile(json), json);
+  }
+
+  @override
+  Future<void> updatePhoto(Uint8List? bytes) async {
+    final res = bytes == null ? await _api.delete('/me/photo') : await _api.putBytes('/me/photo', bytes, 'image/jpeg');
+    final json = (res as Map).cast<String, dynamic>();
     _set(_profile(json), json);
   }
 

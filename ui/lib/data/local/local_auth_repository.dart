@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -24,6 +27,11 @@ class LocalAuthRepository implements AuthRepository {
   final SharedPreferences _prefs;
   final _changes = StreamController<UserProfile?>.broadcast();
   UserProfile? _current;
+
+  /// Pasta dos documentos da app (a fotografia de perfil guarda-se lá, com caminho relativo).
+  String? _docsPath;
+
+  Future<String> _docs() async => _docsPath ??= (await getApplicationDocumentsDirectory()).path;
 
   @override
   bool get isLocal => true;
@@ -65,11 +73,14 @@ class LocalAuthRepository implements AuthRepository {
     _changes.add(p);
   }
 
-  UserProfile _profileOf(String email, Map<String, dynamic> record) => UserProfile.fromJson(
-    (record['profile'] as Map).cast<String, dynamic>(),
-    id: record['id'] as String,
-    email: email,
-  );
+  UserProfile _profileOf(String email, Map<String, dynamic> record) {
+    final photo = record['photo'] as String?;
+    return UserProfile.fromJson(
+      (record['profile'] as Map).cast<String, dynamic>(),
+      id: record['id'] as String,
+      email: email,
+    ).copyWith(photoUrl: () => photo == null || _docsPath == null ? null : '$_docsPath/$photo');
+  }
 
   static String _hash(String password, String salt) {
     List<int> digest = utf8.encode('$salt:$password');
@@ -86,6 +97,11 @@ class LocalAuthRepository implements AuthRepository {
 
   @override
   Future<void> init() async {
+    try {
+      await _docs();
+    } catch (_) {
+      // Sem acesso à pasta (ex.: testes): sem fotografia de perfil.
+    }
     final email = _prefs.getString(_sessionKey);
     final record = email == null ? null : _users[email];
     if (record != null) _current = _profileOf(email!, (record as Map).cast<String, dynamic>());
@@ -194,6 +210,27 @@ class LocalAuthRepository implements AuthRepository {
     users[profile.email] = {...record, 'profile': profile.toPrefsJson()};
     await _saveUsers(users);
     _set(profile);
+  }
+
+  @override
+  Future<void> updatePhoto(Uint8List? bytes) async {
+    final p = _current;
+    if (p == null) return;
+    final docs = await _docs();
+    final users = _users;
+    final record = (users[p.email] as Map).cast<String, dynamic>();
+    final old = record['photo'] as String?;
+    if (old != null) await File('$docs/$old').delete().catchError((_) => File(''));
+    String? relative;
+    if (bytes != null) {
+      relative = 'profile/${p.id}-${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File('$docs/$relative');
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes);
+    }
+    users[p.email] = {...record, 'photo': relative};
+    await _saveUsers(users);
+    _set(_profileOf(p.email, (users[p.email] as Map).cast<String, dynamic>()));
   }
 
   @override

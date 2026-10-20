@@ -22,6 +22,7 @@ const uniqueCodes: Record<string, string> = {
   users_email_key: 'email_taken',
   profiles_username_key: 'username_taken',
   profiles_phone_key: 'phone_taken',
+  people_linked_user_key: 'friend_already_linked',
 };
 
 interface PgError {

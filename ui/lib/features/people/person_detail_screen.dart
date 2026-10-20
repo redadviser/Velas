@@ -13,8 +13,11 @@ import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../../data/models/group_models.dart';
+import '../chat/chat_widgets.dart';
+import '../chat/conversations_list.dart';
 import '../gifts/gift_widgets.dart';
 import '../groups/group_widgets.dart';
+import 'linked_friend.dart';
 
 class PersonDetailScreen extends ConsumerWidget {
   const PersonDetailScreen({super.key, required this.personId});
@@ -65,6 +68,7 @@ class PersonDetailScreen extends ConsumerWidget {
         .where((g) => g.personId == person.id)
         .toList();
     final reminders = person.reminderDays ?? user?.defaultReminderDays ?? kDefaultReminderDays;
+    final friend = linkedFriend(ref, person.linkedUserId);
 
     return Scaffold(
       appBar: AppBar(
@@ -116,6 +120,38 @@ class PersonDetailScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          if (friend != null) ...[
+            const SizedBox(height: 16),
+            AppCard(
+              padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+              child: Row(
+                children: [
+                  UserAvatar(user: friend, size: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Na Birthdayly',
+                          style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+                        ),
+                        Text(
+                          friend.username.isEmpty ? friend.name : '@${friend.username}',
+                          style: context.text.bodyLarge,
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => openDirectChat(context, ref, friend.userId),
+                    icon: const Icon(LucideIcons.messageCircle, size: 16),
+                    label: const Text('Conversar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           AppCard(
             padding: const EdgeInsets.symmetric(vertical: 16),

@@ -1112,6 +1112,29 @@ describe('cartões de parabéns', () => {
     expect((await call('DELETE', `/cards/${cardId}`, { token: rita.access_token })).status).toBe(204);
     expect((await call('GET', `/cards/${token}`)).status).toBe(404);
   });
+
+  it('o aniversário fica ligado ao amigo e a ligação só aceita amigos', async () => {
+    const person = async () =>
+      (await call('GET', '/data', { token: rita.access_token })).body.people.find((p: { id: string }) => p.id === personId);
+    // Tomás guardou o cartão: o aniversário de onde partiu ficou ligado a ele.
+    expect((await person()).linked_user_id).toBe(tomas.user.id);
+
+    const base = { id: personId, name: 'Tomás Reis', birth_day: 3, birth_month: 5, relation: 'Amigo' };
+    // Versões antigas da app não mandam o campo: a ligação mantém-se.
+    expect((await call('PUT', `/people/${personId}`, { token: rita.access_token, body: base })).body.linked_user_id).toBe(tomas.user.id);
+    // Só amigos; e cada amigo só num aniversário.
+    expect((await call('PUT', `/people/${personId}`, { token: rita.access_token, body: { ...base, linked_user_id: vera.user.id } })).status).toBe(403);
+    const other = uuid();
+    const dup = await call('PUT', `/people/${other}`, { token: rita.access_token, body: { ...base, id: other, linked_user_id: tomas.user.id } });
+    expect(dup.body.error).toBe('friend_already_linked');
+    // null desfaz; voltar a ligar funciona.
+    expect((await call('PUT', `/people/${personId}`, { token: rita.access_token, body: { ...base, linked_user_id: null } })).body.linked_user_id).toBeNull();
+    expect((await call('PUT', `/people/${personId}`, { token: rita.access_token, body: { ...base, linked_user_id: tomas.user.id } })).body.linked_user_id).toBe(tomas.user.id);
+
+    // Deixar de ser amigos desfaz a ligação.
+    expect((await call('DELETE', `/friends/${tomas.user.id}`, { token: rita.access_token })).status).toBe(204);
+    expect((await person()).linked_user_id).toBeNull();
+  });
 });
 
 describe('sistema', () => {

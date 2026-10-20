@@ -18,7 +18,7 @@ import '../../data/models/models.dart';
 import '../../data/repositories/cards_repository.dart';
 import '../../services/message_suggestions.dart';
 import '../cards/card_links.dart';
-import '../chat/chat_widgets.dart';
+import '../people/linked_friend.dart';
 
 enum _SendAs { card, wall, text }
 
@@ -94,7 +94,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     }
     final friends = await _friends();
     if (!mounted) return;
-    final match = _matchingFriend(person, friends);
+    // O amigo ligado ao aniversário; sem ligação, o que tiver o mesmo nome.
+    final linked = friends.where((f) => f.userId == person.linkedUserId).firstOrNull;
+    final match = linked ?? matchingFriend(person.name, friends);
     final choice = await _chooseFormat(person, hasFriends: friends.isNotEmpty, match: match);
     if (choice == null || !mounted) return;
     switch (choice) {
@@ -103,7 +105,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       case _SendAs.card:
         await _sendCard(cards, person, body);
       case _SendAs.wall:
-        final friend = match ?? await _pickFriend(friends);
+        final friend = match ?? await pickFriend(context, friends, title: 'No mural de quem?');
         if (friend != null && mounted) await _postToWall(cards, person, friend, body);
     }
   }
@@ -115,15 +117,6 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     } catch (_) {
       return const [];
     }
-  }
-
-  /// O amigo que é esta pessoa, se só houver um com o mesmo nome.
-  static ChatUser? _matchingFriend(Person person, List<ChatUser> friends) {
-    String norm(String s) => s.trim().toLowerCase();
-    final full = friends.where((f) => norm(f.name) == norm(person.name)).toList();
-    if (full.length == 1) return full.first;
-    final first = friends.where((f) => norm(f.firstName) == norm(person.firstName)).toList();
-    return first.length == 1 ? first.first : null;
   }
 
   Future<void> _sendCard(CardsRepository cards, Person person, String body) async {
@@ -148,7 +141,10 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       () => cards.create(personId: person.id, recipientName: person.firstName, body: body, friendId: friend.userId),
       success: 'Publicado no mural de ${friend.firstName} 🎉',
     );
-    if (ok) ref.invalidate(sentCardsProvider(person.id));
+    if (!ok) return;
+    ref.invalidate(sentCardsProvider(person.id));
+    // O servidor liga o aniversário a este amigo (se ainda não estava ligado).
+    if (person.linkedUserId == null) ref.read(dataRepositoryProvider)?.load().catchError((_) {});
   }
 
   /// Com um amigo que é esta pessoa ([match]), o mural é a opção recomendada.
@@ -203,41 +199,6 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
           );
         },
       );
-
-  Future<ChatUser?> _pickFriend(List<ChatUser> friends) => showModalBottomSheet<ChatUser>(
-    context: context,
-    isScrollControlled: true,
-    builder: (ctx) => SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('No mural de quem?', style: AppTheme.display(ctx, size: 22)),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final f in friends)
-                    ListTile(
-                      leading: UserAvatar(user: f, size: 36),
-                      title: Text(f.name),
-                      subtitle: f.username.isEmpty ? null : Text('@${f.username}'),
-                      onTap: () => Navigator.pop(ctx, f),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) {

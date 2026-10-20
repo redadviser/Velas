@@ -209,6 +209,7 @@ class Person {
     this.notes = '',
     this.giftBudget,
     this.reminderDays,
+    this.linkedUserId,
     required this.createdAt,
   });
 
@@ -232,6 +233,9 @@ class Person {
 
   /// `null` significa "usar as preferências do utilizador".
   final List<int>? reminderDays;
+
+  /// Amigo da app que é esta pessoa (para o mural, a conversa, ...).
+  final String? linkedUserId;
   final DateTime createdAt;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
@@ -266,6 +270,7 @@ class Person {
     String? notes,
     double? Function()? giftBudget,
     List<int>? Function()? reminderDays,
+    String? Function()? linkedUserId,
   }) => Person(
     id: id,
     name: name ?? this.name,
@@ -279,6 +284,7 @@ class Person {
     notes: notes ?? this.notes,
     giftBudget: giftBudget != null ? giftBudget() : this.giftBudget,
     reminderDays: reminderDays != null ? reminderDays() : this.reminderDays,
+    linkedUserId: linkedUserId != null ? linkedUserId() : this.linkedUserId,
     createdAt: createdAt,
   );
 
@@ -294,6 +300,7 @@ class Person {
     'notes': notes,
     'gift_budget': giftBudget,
     'reminder_days': reminderDays,
+    'linked_user_id': linkedUserId,
     'created_at': createdAt.toUtc().toIso8601String(),
   };
 
@@ -309,6 +316,7 @@ class Person {
     notes: j['notes'] as String? ?? '',
     giftBudget: _double(j['gift_budget']),
     reminderDays: j['reminder_days'] == null ? null : _intList(j['reminder_days']),
+    linkedUserId: j['linked_user_id'] as String?,
     createdAt: _date(j['created_at']),
   );
 }

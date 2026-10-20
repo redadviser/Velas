@@ -13,6 +13,8 @@ export const personSchema = z.object({
   notes: z.string().max(2000).default(''),
   gift_budget: moneySchema,
   reminder_days: z.array(z.number().int().min(0).max(60)).max(10).nullish(),
+  /** Amigo da app que é esta pessoa (null desfaz a ligação; ausente mantém a atual). */
+  linked_user_id: id.nullish(),
   created_at: timestampSchema,
 });
 export type PersonInput = z.infer<typeof personSchema>;
@@ -33,6 +35,7 @@ export interface PersonRow {
   notes: string;
   gift_budget: number | null;
   reminder_days: number[] | null;
+  linked_user_id: string | null;
   created_at: Date;
   updated_at: Date;
 }

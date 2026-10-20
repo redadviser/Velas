@@ -15,6 +15,7 @@ import '../../data/models/models.dart';
 import '../../services/notification_service.dart';
 import '../auth/auth_widgets.dart';
 import 'birthday_picker.dart';
+import 'linked_friend.dart';
 
 const _relationSuggestions = [
   'Mãe',
@@ -54,6 +55,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
   Person? _original;
   BirthDate? _date;
   String? _categoryId;
+  String? _linkedUserId;
   bool _useDefaultReminders = true;
   Set<int> _reminders = {...kDefaultReminderDays};
   Uint8List? _newPhoto;
@@ -77,6 +79,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
       _budget.text = p.giftBudget == null ? '' : _formatNumber(p.giftBudget!);
       _date = (day: p.day, month: p.month, year: p.year);
       _categoryId = p.categoryId;
+      _linkedUserId = p.linkedUserId;
       _useDefaultReminders = p.reminderDays == null;
       if (p.reminderDays != null) _reminders = {...p.reminderDays!};
     }
@@ -189,6 +192,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
       notes: _notes.text.trim(),
       giftBudget: _parseBudget,
       reminderDays: () => _useDefaultReminders ? null : (_reminders.toList()..sort()),
+      linkedUserId: () => _linkedUserId,
     );
 
     setState(() => _saving = true);
@@ -275,6 +279,12 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
             const SizedBox(height: 20),
             const FieldLabel('Data de aniversário'),
             _DateField(date: _date, error: _dateError, onTap: _pickDate),
+            LinkedFriendField(
+              linkedUserId: _linkedUserId,
+              personName: _name.text,
+              personId: _original?.id,
+              onChanged: (id) => setState(() => _linkedUserId = id),
+            ),
             const SizedBox(height: 20),
             const FieldLabel('Relação'),
             TextFormField(

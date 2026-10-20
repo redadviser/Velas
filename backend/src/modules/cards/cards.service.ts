@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { tx, type Db } from '../../core/database.js';
+import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError } from '../../core/errors.js';
 import type { RealtimeHub } from '../../core/realtime.js';
 import type { PhotoStorage } from '../../core/storage.js';
@@ -44,6 +44,7 @@ export class CardsService {
     );
     if (rows[0]) {
       if (recipientId) {
+        await this.linkPerson(this.db, userId, input.person_id, recipientId);
         await this.deliver({ id: rows[0].id, sender_id: userId, body: rows[0].body }, recipientId);
         this.hub.send([userId, recipientId], { type: 'cards' });
       }
@@ -145,8 +146,14 @@ export class CardsService {
    */
   async claim(userId: string, token: string): Promise<ClaimResult> {
     const card = await tx(this.db, userId, async (c) => {
-      const { rows } = await c.query<{ id: string; sender_id: string; recipient_id: string | null; body: string }>(
-        'select id, sender_id, recipient_id, body from greeting_cards where token = $1 for update',
+      const { rows } = await c.query<{
+        id: string;
+        sender_id: string;
+        recipient_id: string | null;
+        person_id: string | null;
+        body: string;
+      }>(
+        'select id, sender_id, recipient_id, person_id, body from greeting_cards where token = $1 for update',
         [token],
       );
       const card = rows[0];
@@ -167,12 +174,26 @@ export class CardsService {
          do update set status = 'accepted', responded_at = coalesce(friendships.responded_at, now())`,
         [card.sender_id, userId],
       );
+      if (card.person_id) await this.linkPerson(c, card.sender_id, card.person_id, userId);
       return card;
     });
     this.hub.send([userId, card.sender_id], { type: 'friends' });
     const conversationId = await this.deliver(card, userId);
     this.hub.send([userId, card.sender_id], { type: 'cards' });
     return { sender_id: card.sender_id, conversation_id: conversationId };
+  }
+
+  /**
+   * Liga o aniversário de onde partiu o cartão à conta de quem o recebeu, se
+   * ainda não estiver ligado (nem esse amigo ligado a outro aniversário).
+   */
+  private async linkPerson(c: Db | Tx, senderId: string, personId: string, recipientId: string): Promise<void> {
+    await c.query(
+      `update people set linked_user_id = $3
+       where id = $2 and user_id = $1 and linked_user_id is null
+         and not exists (select 1 from people where user_id = $1 and linked_user_id = $3)`,
+      [senderId, personId, recipientId],
+    );
   }
 
   /**

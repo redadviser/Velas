@@ -21,20 +21,23 @@ export class PeopleService {
 
   /** Insere ou atualiza; nunca toca em linhas de outro utilizador. */
   private async upsertIn(c: Tx, userId: string, p: PersonInput): Promise<PersonRow> {
-    // photo_path não vem da app: só muda pelas rotas de fotografia.
+    // photo_path não vem da app: só muda pelas rotas de fotografia. Sem
+    // linked_user_id no pedido (versões antigas da app), a ligação mantém-se.
     const { rows } = await c.query<PersonRow>(
       `insert into people (id, user_id, name, birth_day, birth_month, birth_year, relation, category_id,
-                           notes, gift_budget, reminder_days, created_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()))
+                           notes, gift_budget, reminder_days, created_at, linked_user_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()), $13)
        on conflict (id) do update set
          name = excluded.name, birth_day = excluded.birth_day, birth_month = excluded.birth_month,
          birth_year = excluded.birth_year, relation = excluded.relation, category_id = excluded.category_id,
-         notes = excluded.notes, gift_budget = excluded.gift_budget, reminder_days = excluded.reminder_days
+         notes = excluded.notes, gift_budget = excluded.gift_budget, reminder_days = excluded.reminder_days,
+         linked_user_id = case when $14 then excluded.linked_user_id else people.linked_user_id end
        where people.user_id = excluded.user_id
        returning *`,
       [
         p.id, userId, p.name, p.birth_day, p.birth_month, p.birth_year ?? null, p.relation, p.category_id ?? null,
-        p.notes, p.gift_budget ?? null, p.reminder_days ?? null, p.created_at ?? null,
+        p.notes, p.gift_budget ?? null, p.reminder_days ?? null, p.created_at ?? null, p.linked_user_id ?? null,
+        p.linked_user_id !== undefined,
       ],
     );
     if (!rows[0]) throw notFound();

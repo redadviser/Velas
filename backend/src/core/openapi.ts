@@ -37,6 +37,12 @@ export async function registerDocs(app: FastifyInstance) {
         { name: 'Categorias' },
         { name: 'Ideias de presente' },
         { name: 'Mensagens' },
+        {
+          name: 'Cartões de parabéns',
+          description:
+            'Link (/c/TOKEN) com a mensagem, que se lê com ou sem a app. Ao guardá-lo na app, ' +
+            'quem recebe fica amigo de quem enviou e a mensagem abre a conversa entre os dois.',
+        },
         { name: 'Prendas em grupo' },
         { name: 'Convites' },
         { name: 'Amigos', description: 'Pedidos de amizade e lista de amigos' },

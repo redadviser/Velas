@@ -13,6 +13,7 @@ import '../../core/widgets/data_gate.dart';
 import '../../data/models/group_models.dart';
 import '../../data/models/models.dart';
 import '../../core/utils/text.dart';
+import '../cards/wall_screen.dart';
 import '../chat/chat_widgets.dart';
 import 'home_inbox.dart';
 
@@ -46,6 +47,7 @@ class HomeScreen extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 100),
                 children: [
                   _Header(name: user?.firstName ?? '', date: today, user: user),
+                  const WallBanner(),
                   const HomeInbox(),
                   const _GroupsBanner(),
                   if (data.people.isEmpty)

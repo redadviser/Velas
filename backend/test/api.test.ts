@@ -979,6 +979,141 @@ describe('pagamentos na app (Stripe)', () => {
   });
 });
 
+describe('cartões de parabéns', () => {
+  let rita: Session;
+  let tomas: Session;
+  let vera: Session;
+  const personId = uuid();
+  const cardId = uuid();
+  let token: string;
+
+  beforeAll(async () => {
+    rita = await signup('Rita Lopes', 'rita', 'rita@ex.pt');
+    tomas = await signup('Tomás', 'tomas', 'tomas@ex.pt');
+    vera = await signup('Vera', 'vera', 'vera@ex.pt');
+    await call('PUT', `/people/${personId}`, {
+      token: rita.access_token,
+      body: { id: personId, name: 'Tomás Reis', birth_day: 3, birth_month: 5, relation: 'Amigo' },
+    });
+  });
+
+  it('cria o cartão a partir da mensagem, sem duplicar ao reenviar', async () => {
+    const body = { id: cardId, person_id: personId, recipient_name: 'Tomás', body: 'Parabéns, Tomás!\nQue seja um ano <incrível>.' };
+    const created = await call('POST', '/cards', { token: rita.access_token, body });
+    expect(created.status).toBe(201);
+    token = created.body.token;
+    expect(token).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    expect(created.body).toMatchObject({ person_id: personId, opened_at: null, claimed_at: null });
+
+    const again = await call('POST', '/cards', { token: rita.access_token, body });
+    expect(again.body.token).toBe(token);
+    // Não se cria cartão para a pessoa de outro utilizador (nem reutilizando o id do cartão dele).
+    expect((await call('POST', '/cards', { token: vera.access_token, body })).status).toBe(403);
+    expect((await call('POST', '/cards', { token: vera.access_token, body: { ...body, id: uuid() } })).status).toBe(403);
+  });
+
+  it('a página do link mostra a mensagem a quem não tem a app', async () => {
+    const page = await call('GET', `/c/${token}`);
+    expect(page.status).toBe(200);
+    expect(page.raw.body).toContain('<h1>Parabéns, Tomás! 🎉</h1>');
+    expect(page.raw.body).toContain('<blockquote class="quote">Parabéns, Tomás!\nQue seja um ano &lt;incrível&gt;.</blockquote>');
+    expect(page.raw.body).toContain('Rita Lopes deixou-te uma mensagem');
+    // A pré-visualização no WhatsApp não revela a mensagem.
+    expect(page.raw.body).toContain('<meta property="og:title" content="Rita Lopes deixou-te uma mensagem de parabéns 🎂">');
+    expect(page.raw.body).not.toMatch(/og:description[^>]*incrível/);
+    // Sem a app, a Play Store leva o cartão para a app o abrir depois de instalada.
+    expect(page.raw.body).toContain(`com.eupasoft.velas://app/card/${token}`);
+    expect(page.raw.body).toContain(`referrer=${encodeURIComponent(`card=${token}`)}`);
+    // No iPhone, os botões copiam o link do cartão (a app procura-o na primeira abertura).
+    expect(page.raw.body).toContain(`navigator.clipboard.writeText(location.origin + "/c/${token}")`);
+    // Abrir a página (pré-visualização) não marca como aberto; só o pedido da página ou da app.
+    expect((await call('GET', '/cards/sent', { token: rita.access_token })).body[0].opened_at).toBeNull();
+
+    expect((await call('GET', `/c/${'x'.repeat(22)}`)).status).toBe(404);
+    expect((await call('GET', '/c/curto')).status).toBe(404);
+  });
+
+  it('a app vê o cartão pelo link sem sessão e marca-o como aberto', async () => {
+    const preview = await call('GET', `/cards/${token}`);
+    expect(preview.body).toMatchObject({ sender_id: rita.user.id, sender_name: 'Rita Lopes', recipient_name: 'Tomás', claimed: false });
+    expect((await call('POST', `/cards/${token}/opened`)).status).toBe(204);
+    const sent = (await call('GET', `/cards/sent?person_id=${personId}`, { token: rita.access_token })).body;
+    expect(sent).toHaveLength(1);
+    expect(sent[0].opened_at).not.toBeNull();
+    expect(sent[0].claimed_at).toBeNull();
+    expect((await call('GET', `/cards/${'x'.repeat(22)}`)).body.error).toBe('card_not_found');
+  });
+
+  it('ao guardar o cartão ficam amigos e a mensagem abre a conversa', async () => {
+    expect((await call('POST', `/cards/${token}/claim`, { token: rita.access_token })).body.error).toBe('own_card');
+
+    const claimed = await call('POST', `/cards/${token}/claim`, { token: tomas.access_token });
+    expect(claimed.status).toBe(200);
+    expect(claimed.body.sender_id).toBe(rita.user.id);
+    const friends = (await call('GET', '/friends', { token: tomas.access_token })).body.friends;
+    expect(friends.map((f: { user_id: string }) => f.user_id)).toEqual([rita.user.id]);
+
+    const { messages } = (await call('GET', `/conversations/${claimed.body.conversation_id}/messages`, { token: tomas.access_token })).body;
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ id: cardId, sender_id: rita.user.id, body: 'Parabéns, Tomás!\nQue seja um ano <incrível>.' });
+
+    // Repetir não duplica; outra pessoa já não o pode guardar.
+    const again = await call('POST', `/cards/${token}/claim`, { token: tomas.access_token });
+    expect(again.body.conversation_id).toBe(claimed.body.conversation_id);
+    expect((await call('GET', `/conversations/${claimed.body.conversation_id}/messages`, { token: tomas.access_token })).body.messages).toHaveLength(1);
+    expect((await call('POST', `/cards/${token}/claim`, { token: vera.access_token })).body.error).toBe('card_claimed');
+
+    expect((await call('GET', `/cards/${token}`)).body.claimed).toBe(true);
+    expect((await call('GET', '/cards/sent', { token: rita.access_token })).body[0].claimed_at).not.toBeNull();
+
+    // Quem recebeu responde logo na conversa.
+    const reply = await call('POST', `/conversations/${claimed.body.conversation_id}/messages`, {
+      token: tomas.access_token,
+      body: { id: uuid(), kind: 'text', body: 'Obrigado, Rita!' },
+    });
+    expect(reply.status).toBe(200);
+  });
+
+  it('entre amigos publica-se diretamente no mural, que é privado', async () => {
+    // Rita e Tomás já são amigos (pelo cartão); Vera não é amiga de Tomás.
+    const post = { person_id: personId, recipient_name: 'Tomás', body: 'Mais um abraço de parabéns!', recipient_id: tomas.user.id };
+    const wallId = uuid();
+    const created = await call('POST', '/cards', { token: rita.access_token, body: { ...post, id: wallId } });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ via: 'wall', opened_at: null });
+    expect(created.body.claimed_at).not.toBeNull();
+    const veraPerson = uuid();
+    await call('PUT', `/people/${veraPerson}`, { token: vera.access_token, body: { id: veraPerson, name: 'Tomás', birth_day: 3, birth_month: 5 } });
+    const notFriend = await call('POST', '/cards', { token: vera.access_token, body: { ...post, id: uuid(), person_id: veraPerson } });
+    expect(notFriend.body.error).toBe('not_friends');
+
+    // Também chega à conversa, para responder.
+    const conv = (await call('POST', '/conversations/direct', { token: tomas.access_token, body: { user_id: rita.user.id } })).body.id;
+    const { messages } = (await call('GET', `/conversations/${conv}/messages`, { token: tomas.access_token })).body;
+    expect(messages[0]).toMatchObject({ id: wallId, sender_id: rita.user.id, body: 'Mais um abraço de parabéns!' });
+
+    // O mural tem os dois cartões, o mais recente primeiro; só o próprio o vê.
+    const wall = (await call('GET', '/cards/received', { token: tomas.access_token })).body;
+    expect(wall.map((c: { id: string }) => c.id)).toEqual([wallId, cardId]);
+    expect(wall[0]).toMatchObject({ via: 'wall', seen: false, sender: { user_id: rita.user.id, display_name: 'Rita Lopes' } });
+    expect(wall[1]).toMatchObject({ via: 'link', seen: true }); // guardado pelo próprio a partir do link
+    expect((await call('GET', '/cards/received', { token: vera.access_token })).body).toEqual([]);
+    // Abrir o mural marca como visto (Rita fica a saber).
+    expect((await call('GET', '/cards/sent', { token: rita.access_token })).body.find((c: { id: string }) => c.id === wallId).opened_at).toBeNull();
+    expect((await call('POST', '/cards/received/seen', { token: tomas.access_token })).status).toBe(204);
+    expect((await call('GET', '/cards/received', { token: tomas.access_token })).body[0].seen).toBe(true);
+    const sent = (await call('GET', '/cards/sent', { token: rita.access_token })).body;
+    expect(sent.find((c: { id: string }) => c.id === wallId).opened_at).not.toBeNull();
+  });
+
+  it('quem enviou pode apagar o link', async () => {
+    expect((await call('DELETE', `/cards/${cardId}`, { token: vera.access_token })).status).toBe(204);
+    expect((await call('GET', `/cards/${token}`)).status).toBe(200);
+    expect((await call('DELETE', `/cards/${cardId}`, { token: rita.access_token })).status).toBe(204);
+    expect((await call('GET', `/cards/${token}`)).status).toBe(404);
+  });
+});
+
 describe('sistema', () => {
   it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
     const res = await call('GET', '/health');

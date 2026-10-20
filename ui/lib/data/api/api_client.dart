@@ -91,6 +91,7 @@ class ApiClient {
 
   /// Pedido sem sessão (login, registo, recuperação).
   Future<dynamic> postPublic(String path, Object body) => _send('POST', path, body: body, auth: false);
+  Future<dynamic> getPublic(String path) => _send('GET', path, auth: false);
 
   Future<dynamic> _send(
     String method,

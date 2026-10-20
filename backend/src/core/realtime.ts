@@ -13,7 +13,9 @@ export type RealtimeEvent =
   | { type: 'presence'; user_id: string; online: boolean; last_seen_at: string | null }
   | { type: 'typing'; conversation_id: string; user_id: string; name: string }
   | { type: 'conversations' }
-  | { type: 'friends' };
+  | { type: 'friends' }
+  /** Cartões de parabéns: um enviado foi aberto/guardado, ou chegou um ao mural. */
+  | { type: 'cards' };
 
 /**
  * Ligações WebSocket abertas, por utilizador. Vive na memória do processo:

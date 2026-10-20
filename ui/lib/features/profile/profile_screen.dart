@@ -20,6 +20,7 @@ import '../auth/reset_password_screen.dart';
 import '../../core/utils/text.dart';
 import '../../core/constants.dart';
 import '../../core/i18n/translations.dart';
+import '../../core/cards_providers.dart';
 import '../../core/chat_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -128,6 +129,19 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+          ],
+          if (ref.watch(cardsRepositoryProvider) != null) ...[
+            const SizedBox(height: 16),
+            _Section(
+              children: [
+                _Tile(
+                  icon: LucideIcons.partyPopper,
+                  title: 'O meu mural',
+                  value: '${ref.watch(wallProvider).value?.length ?? 0}',
+                  onTap: () => context.push('/wall'),
+                ),
+              ],
             ),
           ],
           const _Group('Conta'),

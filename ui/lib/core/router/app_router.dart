@@ -11,6 +11,9 @@ import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
 import '../../features/auth/reset_password_screen.dart';
 import '../../features/auth/welcome_screen.dart';
+import '../../features/cards/card_links.dart';
+import '../../features/cards/card_screen.dart';
+import '../../features/cards/wall_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/chat/chat_settings_screen.dart';
 import '../../features/chat/conversation_info_screen.dart';
@@ -29,6 +32,7 @@ import '../../features/profile/categories_screen.dart';
 import '../../features/profile/payment_details_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
+import '../../services/deferred_link.dart';
 import '../../services/notification_service.dart';
 import '../providers.dart';
 import '../utils/errors.dart';
@@ -43,7 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh(auth.changes);
   ref.onDispose(refresh.dispose);
 
-  // Convite aberto sem sessão: retomado depois de entrar ou criar conta.
+  // Convite ou cartão aberto sem sessão: retomado depois de entrar ou criar conta.
   String? pendingInvite;
 
   final router = GoRouter(
@@ -56,6 +60,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final public = _publicRoutes.contains(loc);
       if (!loggedIn && !public) {
         if (loc.startsWith('/join/')) pendingInvite = loc;
+        // O cartão lê-se sem conta; para responder, entra-se e volta-se a ele.
+        if (loc.startsWith('/card/')) {
+          pendingInvite = loc;
+          return null;
+        }
         return '/welcome';
       }
       if (loggedIn && public) {
@@ -71,6 +80,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/join/:code',
         parentNavigatorKey: _rootKey,
         builder: (_, s) => JoinGroupScreen(code: s.pathParameters['code']!),
+      ),
+      GoRoute(
+        path: '/card/:token',
+        parentNavigatorKey: _rootKey,
+        builder: (_, s) => CardScreen(token: s.pathParameters['token']!),
       ),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
@@ -106,6 +120,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      GoRoute(path: '/wall', parentNavigatorKey: _rootKey, builder: (_, _) => const WallScreen()),
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
@@ -159,7 +174,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final recovery = auth.passwordRecovery.listen((_) => router.go('/reset-password'));
   ref.onDispose(recovery.cancel);
 
-  // Links de convite e de recuperação de palavra-passe (com a app fechada ou aberta).
+  // Links de convite, de cartões e de recuperação de palavra-passe (com a app fechada ou aberta).
   Future<void> openLink(Uri? uri) async {
     if (uri == null) return;
     try {
@@ -167,6 +182,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     } catch (e) {
       final context = _rootKey.currentContext;
       if (context != null && context.mounted) showMessage(context, friendlyError(e));
+      return;
+    }
+    final card = CardLinks.tokenFrom(uri);
+    if (card != null) {
+      router.go('/card/$card');
       return;
     }
     final code = InviteLinks.codeFrom(uri);
@@ -187,6 +207,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   links.getInitialLink().then(openLink).catchError((_) {});
   final linkSub = links.uriLinkStream.listen(openLink, onError: (_) {});
   ref.onDispose(linkSub.cancel);
+
+  // Instalada a partir de um cartão: abre-o logo na primeira vez (ver DeferredLink).
+  if (ref.read(cardsRepositoryProvider) != null) {
+    DeferredLink.takeCardToken(ref.read(sharedPrefsProvider)).then((token) {
+      if (token != null) router.go('/card/$token');
+    });
+  }
   return router;
 });
 

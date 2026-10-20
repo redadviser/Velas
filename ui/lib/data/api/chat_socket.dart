@@ -59,6 +59,11 @@ class FriendsChanged extends ChatEvent {
   const FriendsChanged();
 }
 
+/// Cartões de parabéns: um enviado foi aberto/guardado, ou chegou um ao mural.
+class CardsChanged extends ChatEvent {
+  const CardsChanged();
+}
+
 ChatEvent? parseChatEvent(Map<String, dynamic> j) {
   Map<String, dynamic> m() => (j['message'] as Map).cast<String, dynamic>();
   return switch (j['type']) {
@@ -83,6 +88,7 @@ ChatEvent? parseChatEvent(Map<String, dynamic> j) {
     ),
     'conversations' => const ConversationsChanged(),
     'friends' => const FriendsChanged(),
+    'cards' => const CardsChanged(),
     _ => null,
   };
 }

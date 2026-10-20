@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/api/api_cards_repository.dart';
 import '../data/api/api_client.dart';
 import '../data/api/api_data_repository.dart';
 import '../data/api/api_group_repository.dart';
@@ -10,6 +11,7 @@ import '../data/local/local_group_repository.dart';
 import '../data/models/group_models.dart';
 import '../data/models/models.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/cards_repository.dart';
 import '../data/repositories/data_repository.dart';
 import '../data/repositories/group_repository.dart';
 import '../services/notification_service.dart';
@@ -63,6 +65,12 @@ final paymentsRepositoryProvider = Provider<PaymentsRepository?>((ref) {
   final api = ref.watch(apiClientProvider);
   if (userId == null || api == null) return null;
   return ApiPaymentsRepository(api);
+});
+
+/// Cartões de parabéns: só com servidor. Ver um cartão pelo link não precisa de sessão.
+final cardsRepositoryProvider = Provider<CardsRepository?>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return api == null ? null : ApiCardsRepository(api);
 });
 
 final groupRepositoryProvider = Provider<GroupRepository?>((ref) {

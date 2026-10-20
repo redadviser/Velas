@@ -31,7 +31,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="com.eupasoft.velas" android:host="auth-callback"/>
             </intent-filter>
-            <!-- Links de convite: com.eupasoft.velas://app/join/CODIGO -->
+            <!-- Links de convite e de cartões: com.eupasoft.velas://app/join/CODIGO, com.eupasoft.velas://app/card/TOKEN -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

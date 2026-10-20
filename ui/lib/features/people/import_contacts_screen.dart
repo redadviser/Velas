@@ -100,7 +100,10 @@ ContactDate? parseContactDate(String raw) {
 /// data vêm marcados; nos outros basta tocar e escolher o dia (nome e foto
 /// já vêm do contacto).
 class ImportContactsScreen extends ConsumerStatefulWidget {
-  const ImportContactsScreen({super.key});
+  const ImportContactsScreen({super.key, this.welcome = false});
+
+  /// Aberto sozinho na primeira entrada na conta: com boas-vindas e "Depois".
+  final bool welcome;
 
   @override
   ConsumerState<ImportContactsScreen> createState() => _ImportContactsScreenState();
@@ -204,16 +207,35 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final name = ref.watch(currentUserProvider)?.firstName ?? '';
     return Scaffold(
-      appBar: AppBar(title: const Text('Adicionar dos contactos')),
-      body: _stage == _Stage.loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-          : Column(
-              children: [
-                const Padding(padding: EdgeInsets.fromLTRB(20, 4, 20, 4), child: BirthdayRequestCard()),
-                Expanded(child: _content(context)),
-              ],
+      appBar: AppBar(
+        title: const Text('Adicionar dos contactos'),
+        actions: [
+          if (widget.welcome) TextButton(onPressed: () => context.pop(), child: const Text('Depois')),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.welcome)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                '${name.isEmpty ? 'Olá' : 'Olá, $name'}! Começa pelos aniversários de quem importa: '
+                'escolhe dos teus contactos ou pede a data por link. Nós lembramos-te a tempo.',
+                style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
+              ),
             ),
+          const Padding(padding: EdgeInsets.fromLTRB(20, 4, 20, 4), child: BirthdayRequestCard()),
+          Expanded(
+            child: _stage == _Stage.loading
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
+                : _content(context),
+          ),
+        ],
+      ),
     );
   }
 

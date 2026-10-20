@@ -27,6 +27,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/messages/message_screen.dart';
 import '../../features/people/people_screen.dart';
 import '../../features/people/import_contacts_screen.dart';
+import '../../features/people/onboarding.dart';
 import '../../features/people/person_detail_screen.dart';
 import '../../features/people/person_form_screen.dart';
 import '../../features/profile/categories_screen.dart';
@@ -126,7 +127,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
-      GoRoute(path: '/people/import', parentNavigatorKey: _rootKey, builder: (_, _) => const ImportContactsScreen()),
+      GoRoute(
+        path: '/people/import',
+        parentNavigatorKey: _rootKey,
+        builder: (_, s) => ImportContactsScreen(welcome: s.uri.queryParameters['welcome'] == '1'),
+      ),
       GoRoute(
         path: '/person/:id',
         parentNavigatorKey: _rootKey,
@@ -206,6 +211,29 @@ final routerProvider = Provider<GoRouter>((ref) {
   final taps = NotificationService.instance.taps.listen(openPayload);
   ref.onDispose(taps.cancel);
   Future.microtask(() => openPayload(NotificationService.instance.takeLaunchPayload()));
+
+  // Primeira entrada numa conta sem aniversários: abre logo "Adicionar dos
+  // contactos" (uma vez por conta neste telemóvel; ver onboardingFor).
+  void maybeOnboard() {
+    final user = auth.current;
+    if (user == null) return;
+    final prefs = ref.read(sharedPrefsProvider);
+    final key = onboardingKey(user.id);
+    final decision = onboardingFor(
+      seen: prefs.getBool(key) ?? false,
+      data: ref.read(appDataProvider).value,
+      location: router.routerDelegate.currentConfiguration.uri.path,
+    );
+    if (decision == Onboarding.wait) return;
+    prefs.setBool(key, true);
+    if (decision == Onboarding.open) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => router.push('/people/import?welcome=1'));
+    }
+  }
+
+  ref.listen(appDataProvider, (_, _) => maybeOnboard());
+  router.routerDelegate.addListener(maybeOnboard);
+  ref.onDispose(() => router.routerDelegate.removeListener(maybeOnboard));
 
   final links = AppLinks();
   links.getInitialLink().then(openLink).catchError((_) {});

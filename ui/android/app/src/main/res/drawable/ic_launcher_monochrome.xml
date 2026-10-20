@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone temático (Android 13+): a silhueta do "b-vela", que o sistema pinta. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.72"
+        android:scaleY="0.72"
+        android:translateX="17.64"
+        android:translateY="18.72">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M33,11C38.5,18 40,22 40,25.5A7,7 0,0 1,26 25.5C26,22 27.5,18 33,11Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M32,34a1,1 0,0 1,2 0v2a1,1 0,0 1,-2 0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M31,37h4a4,4 0,0 1,4 4v40a4,4 0,0 1,-4 4h-4a4,4 0,0 1,-4 -4v-40a4,4 0,0 1,4 -4z" />
+        <path
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="12"
+            android:pathData="M54,51a15,15 0,1 1,0 30a15,15 0,1 1,0 -30z" />
+    </group>
+</vector>

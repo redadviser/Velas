@@ -48,6 +48,12 @@ async function main() {
   } catch {
     app.log.error(`UPLOAD_DIR (${config.uploadDir}) não é gravável: o envio de fotografias vai falhar.`);
   }
+  if (process.env.NODE_ENV === 'production' && !(await deps.storage.onVolume())) {
+    app.log.error(
+      `UPLOAD_DIR (${deps.storage.dir}) não está num volume persistente: as imagens perdem-se no próximo deploy. ` +
+        'No CapRover, o "Persistent Directory" tem de ter este mesmo caminho (por omissão /data/uploads).',
+    );
+  }
   if (config.googleClientIds.length === 0) app.log.warn('GOOGLE_CLIENT_IDS vazio: o login com Google está desativado.');
 
   await app.listen({ port: config.port, host: config.host });

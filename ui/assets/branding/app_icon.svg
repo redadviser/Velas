@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <!-- Ícone da Birthdayly: o "b-vela". Fonte de tool/generate_app_icon.dart e dos vetores Android. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F05560"/>
+      <stop offset=".55" stop-color="#E662A8"/>
+      <stop offset="1" stop-color="#AB8BE3"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" fill="url(#g)"/>
+  <path d="M33 11 C38.5 18 40 22 40 25.5 A7 7 0 0 1 26 25.5 C26 22 27.5 18 33 11Z" fill="#FFF3D6"/>
+  <path d="M33 18.5 C35.6 22 36.3 24 36.3 25.6 A3.3 3.3 0 0 1 29.7 25.6 C29.7 24 30.4 22 33 18.5Z" fill="#F4A25C"/>
+  <rect x="32" y="33" width="2" height="4" rx="1" fill="#FFFFFF"/>
+  <rect x="27" y="37" width="12" height="48" rx="4" fill="#FFFFFF"/>
+  <circle cx="54" cy="66" r="15" fill="none" stroke="#FFFFFF" stroke-width="12"/>
+</svg>

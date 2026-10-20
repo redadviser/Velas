@@ -1194,7 +1194,13 @@ describe('pedir aniversários por link', () => {
 describe('sistema', () => {
   it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
     const res = await call('GET', '/health');
-    expect(res.body).toEqual({ ok: true, schema: expect.stringMatching(/^\d{3}_.+\.sql$/), storage: true });
+    expect(res.body).toEqual({
+      ok: true,
+      schema: expect.stringMatching(/^\d{3}_.+\.sql$/),
+      storage: true,
+      storage_persistent: expect.any(Boolean),
+      upload_dir: uploadDir,
+    });
   });
 
   it('sem pasta gravável, falha com um erro claro (e não um erro interno)', async () => {

@@ -41,7 +41,14 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     async () => {
       const { rows } = await deps.db.query<{ name: string | null }>('select max(name) as name from schema_migrations');
       // storage: false = UPLOAD_DIR não é gravável (fotografias e imagens do chat falham).
-      return { ok: true, schema: rows[0]?.name ?? null, storage: await deps.storage.writable() };
+      // storage_persistent: false = UPLOAD_DIR não está num volume, e cada deploy apaga as imagens.
+      return {
+        ok: true,
+        schema: rows[0]?.name ?? null,
+        storage: await deps.storage.writable(),
+        storage_persistent: await deps.storage.onVolume(),
+        upload_dir: deps.storage.dir,
+      };
     },
   );
 

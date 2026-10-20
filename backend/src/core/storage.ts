@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
-import { access, copyFile, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { HttpError } from './errors.js';
@@ -46,6 +46,25 @@ export class PhotoStorage {
       await writeFile(file, data);
     } catch (e) {
       throw new HttpError(503, 'storage_unavailable', `UPLOAD_DIR (${this.root}): ${(e as Error).message}`);
+    }
+  }
+
+  /** Caminho absoluto da pasta (para o /health e os avisos no arranque). */
+  get dir(): string {
+    return path.resolve(this.root);
+  }
+
+  /**
+   * Para o /health: a pasta está num volume próprio (o "Persistent Directory"
+   * do CapRover) ou no disco do contentor, que cada deploy apaga? Um volume
+   * montado tem um dispositivo diferente do da raiz do sistema.
+   */
+  async onVolume(): Promise<boolean> {
+    try {
+      const [dir, root] = await Promise.all([stat(this.root), stat('/')]);
+      return dir.dev !== root.dev;
+    } catch {
+      return false;
     }
   }
 

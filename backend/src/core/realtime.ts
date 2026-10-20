@@ -15,7 +15,9 @@ export type RealtimeEvent =
   | { type: 'conversations' }
   | { type: 'friends' }
   /** Cartões de parabéns: um enviado foi aberto/guardado, ou chegou um ao mural. */
-  | { type: 'cards' };
+  | { type: 'cards' }
+  /** Os dados do utilizador mudaram fora da app (ex.: alguém deixou o aniversário pelo link). */
+  | { type: 'data' };
 
 /**
  * Ligações WebSocket abertas, por utilizador. Vive na memória do processo:

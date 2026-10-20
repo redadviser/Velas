@@ -64,6 +64,11 @@ class CardsChanged extends ChatEvent {
   const CardsChanged();
 }
 
+/// Os dados mudaram fora da app (ex.: alguém deixou o aniversário pelo link).
+class DataChanged extends ChatEvent {
+  const DataChanged();
+}
+
 ChatEvent? parseChatEvent(Map<String, dynamic> j) {
   Map<String, dynamic> m() => (j['message'] as Map).cast<String, dynamic>();
   return switch (j['type']) {
@@ -89,6 +94,7 @@ ChatEvent? parseChatEvent(Map<String, dynamic> j) {
     'conversations' => const ConversationsChanged(),
     'friends' => const FriendsChanged(),
     'cards' => const CardsChanged(),
+    'data' => const DataChanged(),
     _ => null,
   };
 }

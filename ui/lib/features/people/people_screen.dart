@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/text.dart';
@@ -10,6 +11,7 @@ import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/data_gate.dart';
 import '../../data/models/models.dart';
+import 'birthday_request.dart';
 
 enum _Sort { upcoming, name }
 
@@ -66,6 +68,17 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     child: Row(
                       children: [
                         Expanded(child: Text('Pessoas', style: AppTheme.display(context, size: 30))),
+                        if (ref.watch(apiClientProvider) != null)
+                          IconButton(
+                            tooltip: 'Pedir aniversários por link',
+                            icon: const Icon(LucideIcons.link, size: 20),
+                            onPressed: () => shareBirthdayRequest(context, ref),
+                          ),
+                        IconButton(
+                          tooltip: 'Adicionar dos contactos',
+                          icon: const Icon(LucideIcons.contactRound, size: 20),
+                          onPressed: () => context.push('/people/import'),
+                        ),
                         PopupMenuButton<_Sort>(
                           tooltip: 'Ordenar',
                           icon: const Icon(LucideIcons.arrowUpDown, size: 20),
@@ -133,11 +146,22 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       icon: LucideIcons.usersRound,
                       title: 'Ainda não há ninguém',
                       message: 'Adiciona familiares, amigos e colegas para nunca falhares um aniversário.',
-                      action: FilledButton.icon(
-                        onPressed: () => context.push('/person/new'),
-                        icon: const Icon(LucideIcons.userPlus, size: 18),
-                        label: const Text('Adicionar pessoa'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
+                      action: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: () => context.push('/people/import'),
+                            icon: const Icon(LucideIcons.contactRound, size: 18),
+                            label: const Text('Adicionar dos contactos'),
+                            style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: () => context.push('/person/new'),
+                            icon: const Icon(LucideIcons.userPlus, size: 18),
+                            label: const Text('Adicionar pessoa'),
+                          ),
+                        ],
                       ),
                     ),
                   )

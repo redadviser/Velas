@@ -8,6 +8,7 @@ import { doc, documentBearerAuth, registerDocs } from './core/openapi.js';
 import { realtimeRoutes } from './core/realtime.js';
 import { PhotoStorage } from './core/storage.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { birthdayRequestsPublicRoutes, birthdayRequestsRoutes } from './modules/birthday-requests/birthday-requests.routes.js';
 import { cardPageRoutes } from './modules/cards/card-page.routes.js';
 import { cardsPublicRoutes, cardsRoutes } from './modules/cards/cards.routes.js';
 import { categoriesRoutes } from './modules/categories/categories.routes.js';
@@ -50,6 +51,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await invitePageRoutes(app, deps.config);
   await cardPageRoutes(app, services.cards, deps.config);
   await cardsPublicRoutes(app, services.cards);
+  await birthdayRequestsPublicRoutes(app, services.birthdayRequests, deps.config);
   await paymentsPublicRoutes(app, services.payments, deps.config);
   // Tempo real: a autenticação é a primeira mensagem da ligação.
   await realtimeRoutes(app, services.hub, deps.tokens, {
@@ -75,6 +77,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await giftsRoutes(scope, services.gifts);
     await messagesRoutes(scope, services.messages);
     await cardsRoutes(scope, services.cards);
+    await birthdayRequestsRoutes(scope, services.birthdayRequests);
     await groupsRoutes(scope, services.groups);
     await invitationsRoutes(scope, services.invitations);
     await friendsRoutes(scope, services.friends);

@@ -12,6 +12,7 @@ import '../core/constants.dart';
 import '../core/i18n/translations.dart';
 import '../core/utils/birthday_utils.dart';
 import '../data/models/models.dart';
+import 'reminder_copy.dart';
 
 /// Agenda os lembretes no sistema operativo, por isso chegam mesmo com a
 /// app fechada (RNF08). Sempre que os dados ou as preferências mudam, a
@@ -27,16 +28,23 @@ class NotificationService {
   /// O iOS só guarda 64 notificações pendentes; deixamos margem.
   static const _maxScheduled = 60;
 
-  static const _channel = AndroidNotificationDetails(
+  static AndroidNotificationDetails _channel({bool groupAction = false}) => AndroidNotificationDetails(
     'birthdays',
     'Aniversários',
     channelDescription: 'Lembretes de aniversários próximos',
     importance: Importance.high,
     priority: Priority.high,
-    color: Color(0xFFF05560),
+    color: const Color(0xFFF05560),
+    actions: groupAction
+        ? const [AndroidNotificationAction(ReminderCopy.groupAction, 'Prenda em grupo', showsUserInterface: true)]
+        : null,
   );
 
-  /// Notificações tocadas: o `payload` (ex.: `chat:<id da conversa>`).
+  /// Categoria do iOS com o botão "Prenda em grupo" (registada no arranque).
+  static const _groupCategory = 'birthday_group';
+
+  /// Notificações tocadas: o destino (ex.: `chat:<id>`, `person:<id>`; ver
+  /// [ReminderCopy.route]).
   final _taps = StreamController<String>.broadcast();
   Stream<String> get taps => _taps.stream;
 
@@ -59,21 +67,35 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('Europe/Lisbon'));
     }
     await _plugin.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      settings: InitializationSettings(
+        android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
           requestSoundPermission: false,
+          notificationCategories: [
+            DarwinNotificationCategory(
+              _groupCategory,
+              actions: [
+                DarwinNotificationAction.plain(
+                  ReminderCopy.groupAction,
+                  'Prenda em grupo',
+                  options: {DarwinNotificationActionOption.foreground},
+                ),
+              ],
+            ),
+          ],
         ),
       ),
       onDidReceiveNotificationResponse: (r) {
-        if (r.payload != null) _taps.add(r.payload!);
+        final target = ReminderCopy.target(r.payload, r.actionId);
+        if (target != null) _taps.add(target);
       },
     );
     try {
       final launch = await _plugin.getNotificationAppLaunchDetails();
-      final payload = (launch?.didNotificationLaunchApp ?? false) ? launch!.notificationResponse?.payload : null;
+      final response = (launch?.didNotificationLaunchApp ?? false) ? launch!.notificationResponse : null;
+      final payload = ReminderCopy.target(response?.payload, response?.actionId);
       // Se o router já está à escuta, entrega já; senão fica para takeLaunchPayload().
       if (payload != null && _taps.hasListener) {
         _taps.add(payload);
@@ -133,11 +155,12 @@ class NotificationService {
     await _plugin.cancelAll();
   }
 
-  Future<void> reschedule(List<Person> people, UserProfile profile) async {
+  Future<void> reschedule(AppData data, UserProfile profile) async {
     await init();
     if (!_ready) return;
+    final people = data.people;
 
-    final signature = _signature(people, profile);
+    final signature = _signature(data, profile);
     if (signature == _lastSignature) return;
     _lastSignature = signature;
 
@@ -163,14 +186,24 @@ class NotificationService {
 
     for (final (i, p) in pending.take(_maxScheduled).indexed) {
       final age = p.person.year == null ? null : p.occurrence.year - p.person.year!;
-      final (title, body) = _copy(p.person, p.daysBefore, age, p.occurrence);
+      final r = ReminderCopy.build(
+        p.person,
+        daysBefore: p.daysBefore,
+        date: p.occurrence,
+        age: age,
+        hasMessage: data.messageFor(p.person.id) != null,
+        ideas: data.giftsFor(p.person.id).where((g) => !g.purchased).length,
+      );
       await _plugin.zonedSchedule(
         id: i,
-        title: title,
-        body: body,
+        title: r.title,
+        body: r.body,
         scheduledDate: p.when,
-        payload: p.person.id,
-        notificationDetails: const NotificationDetails(android: _channel, iOS: DarwinNotificationDetails()),
+        payload: r.payload,
+        notificationDetails: NotificationDetails(
+          android: _channel(groupAction: r.groupAction),
+          iOS: DarwinNotificationDetails(categoryIdentifier: r.groupAction ? _groupCategory : null),
+        ),
         // Lembretes de aniversário não exigem precisão ao segundo, o que evita
         // pedir a permissão de alarmes exatos no Android.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -178,24 +211,15 @@ class NotificationService {
     }
   }
 
-  (String, String) _copy(Person p, int daysBefore, int? age, DateTime date) {
-    final ageText = age == null ? '' : ' Faz $age anos.';
-    return switch (daysBefore) {
-      0 => ('🎂 Hoje é o aniversário de ${p.firstName}', 'Não te esqueças de lhe dar os parabéns!$ageText'),
-      1 => ('${p.name} faz anos amanhã', '${Fmt.dayMonth(date)}.$ageText Já tens a mensagem pronta?'),
-      _ => (
-        '${p.name} faz anos daqui a ${reminderShortLabel(daysBefore)}',
-        '${Fmt.weekdayDayMonth(date)}.$ageText Ainda vais a tempo de tratar do presente.',
-      ),
-    };
-  }
-
-  String _signature(List<Person> people, UserProfile profile) {
+  /// Muda quando muda alguma coisa que o texto dos lembretes usa (mensagem
+  /// pronta, ideias por comprar).
+  String _signature(AppData data, UserProfile profile) {
     final b = StringBuffer()
       ..write('${profile.notificationsEnabled}|${profile.reminderHour}:${profile.reminderMinute}|')
       ..write('${profile.defaultReminderDays}|${BirthdayUtils.today()}|');
-    for (final p in people) {
-      b.write('${p.id}:${p.name}:${p.day}/${p.month}/${p.year}:${p.reminderDays};');
+    for (final p in data.people) {
+      final ideas = data.giftsFor(p.id).where((g) => !g.purchased).length;
+      b.write('${p.id}:${p.name}:${p.day}/${p.month}/${p.year}:${p.reminderDays}:${data.messageFor(p.id) != null}:$ideas;');
     }
     return b.toString();
   }

@@ -55,11 +55,22 @@ class HomeScreen extends ConsumerWidget {
                       icon: LucideIcons.cake,
                       title: 'Começa por quem importa',
                       message: 'Adiciona os aniversários da família e dos amigos. Nós tratamos de te lembrar a tempo.',
-                      action: FilledButton.icon(
-                        onPressed: () => context.push('/person/new'),
-                        icon: const Icon(LucideIcons.userPlus, size: 18),
-                        label: const Text('Adicionar aniversário'),
-                        style: FilledButton.styleFrom(minimumSize: const Size(260, 52)),
+                      action: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: () => context.push('/people/import'),
+                            icon: const Icon(LucideIcons.contactRound, size: 18),
+                            label: const Text('Adicionar dos contactos'),
+                            style: FilledButton.styleFrom(minimumSize: const Size(260, 52)),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: () => context.push('/person/new'),
+                            icon: const Icon(LucideIcons.userPlus, size: 18),
+                            label: const Text('Adicionar à mão'),
+                          ),
+                        ],
                       ),
                     )
                   else ...[

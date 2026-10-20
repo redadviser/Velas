@@ -26,6 +26,7 @@ import '../../features/groups/join_group_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/messages/message_screen.dart';
 import '../../features/people/people_screen.dart';
+import '../../features/people/import_contacts_screen.dart';
 import '../../features/people/person_detail_screen.dart';
 import '../../features/people/person_form_screen.dart';
 import '../../features/profile/categories_screen.dart';
@@ -34,6 +35,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../services/deferred_link.dart';
 import '../../services/notification_service.dart';
+import '../../services/reminder_copy.dart';
 import '../providers.dart';
 import '../utils/errors.dart';
 import '../widgets/common.dart';
@@ -124,6 +126,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
+      GoRoute(path: '/people/import', parentNavigatorKey: _rootKey, builder: (_, _) => const ImportContactsScreen()),
       GoRoute(
         path: '/person/:id',
         parentNavigatorKey: _rootKey,
@@ -193,10 +196,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     if (code != null) router.go('/join/${code.toUpperCase()}');
   }
 
-  // Tocar numa notificação de mensagem abre a conversa.
+  // Tocar numa notificação abre a conversa, a pessoa, a mensagem ou a prenda em grupo.
   void openPayload(String? payload) {
-    if (payload == null || !payload.startsWith('chat:') || auth.current == null) return;
-    router.push('/chats/${payload.substring(5)}');
+    if (payload == null || auth.current == null) return;
+    final route = ReminderCopy.route(payload);
+    if (route != null) router.push(route);
   }
 
   final taps = NotificationService.instance.taps.listen(openPayload);

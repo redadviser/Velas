@@ -43,6 +43,10 @@ export async function registerDocs(app: FastifyInstance) {
             'Link (/c/TOKEN) com a mensagem, que se lê com ou sem a app. Ao guardá-lo na app, ' +
             'quem recebe fica amigo de quem enviou e a mensagem abre a conversa entre os dois.',
         },
+        {
+          name: 'Pedidos de aniversário',
+          description: 'Link (/b/TOKEN) onde qualquer pessoa deixa o seu aniversário, que entra na lista de quem pediu.',
+        },
         { name: 'Prendas em grupo' },
         { name: 'Convites' },
         { name: 'Amigos', description: 'Pedidos de amizade e lista de amigos' },

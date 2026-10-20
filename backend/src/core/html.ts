@@ -63,6 +63,9 @@ p{margin:0 0 12px;color:var(--muted)}
 .small{font-size:14px;margin-top:20px}
 .quote{margin:20px 0 8px;padding:20px;border-radius:18px;background:var(--accent);color:var(--fg);text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;font:400 18px/1.55 Georgia,"Times New Roman",serif}
 .from{text-align:right;font-style:italic}
+.field{display:block;width:100%;margin-top:12px;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font:inherit;font-size:16px}
+.fields{display:flex;gap:12px}.fields .field{flex:1}
+[hidden]{display:none!important}
 </style></head><body><main>
 ${mark}
 ${body}

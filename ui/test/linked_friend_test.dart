@@ -2,14 +2,17 @@ import 'package:aniversarios/core/chat_providers.dart';
 import 'package:aniversarios/core/i18n/translations.dart';
 import 'package:aniversarios/core/providers.dart';
 import 'package:aniversarios/core/theme/app_colors.dart';
+import 'package:aniversarios/core/theme/app_theme.dart';
 import 'package:aniversarios/data/models/chat_models.dart';
 import 'package:aniversarios/data/models/models.dart';
 import 'package:aniversarios/data/repositories/chat_repository.dart';
 import 'package:aniversarios/features/people/linked_friend.dart';
+import 'package:aniversarios/features/people/person_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 const me = UserProfile(id: 'me', email: 'eu@ex.pt', name: 'Eu');
 const ana = ChatUser(userId: 'ana', name: 'Ana Silva', username: 'ana.silva');
@@ -31,6 +34,7 @@ class FakeChat implements ChatRepository {
 void main() {
   setUpAll(() async {
     GoogleFonts.config.allowRuntimeFetching = false;
+    await initializeDateFormatting('pt_PT');
     await Translations.load(const Locale('pt'));
   });
 
@@ -97,5 +101,24 @@ void main() {
     expect(find.text('@ana.silva'), findsOneWidget);
     await tester.tap(find.byTooltip('Desligar'));
     expect(changes, [null]);
+  });
+
+  testWidgets('o detalhe mostra o amigo ligado com o tema da app (sem erro de layout)', (tester) async {
+    final person = Person(id: 'p1', name: 'Ana Silva', day: 3, month: 5, linkedUserId: 'ana', createdAt: DateTime(2026));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWithValue(me),
+          chatRepositoryProvider.overrideWithValue(FakeChat([ana])),
+          chatEventsProvider.overrideWithValue(const Stream.empty()),
+          dataProvider.overrideWithValue(AppData.empty.copyWith(people: [person])),
+        ],
+        child: MaterialApp(theme: AppTheme.light(), home: const PersonDetailScreen(personId: 'p1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('@ana.silva'), findsOneWidget);
+    expect(find.text('Conversar'), findsOneWidget);
   });
 }

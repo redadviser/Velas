@@ -1137,6 +1137,60 @@ describe('cartões de parabéns', () => {
   });
 });
 
+describe('pedir aniversários por link', () => {
+  let ze: Session;
+  let token: string;
+
+  beforeAll(async () => {
+    ze = await signup('José Matos', 'zematos', 'ze@ex.pt');
+  });
+
+  it('cada utilizador tem um link, que se mantém até ser trocado', async () => {
+    const first = await call('GET', '/birthday-request', { token: ze.access_token });
+    token = first.body.token;
+    expect(token).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    expect(first.body.answers).toBe(0);
+    expect((await call('GET', '/birthday-request', { token: ze.access_token })).body.token).toBe(token);
+    expect((await call('GET', '/birthday-request')).status).toBe(401);
+  });
+
+  it('a página pede o nome e a data, sem precisar de conta', async () => {
+    const page = await call('GET', `/b/${token}`);
+    expect(page.status).toBe(200);
+    expect(page.raw.body).toContain('José Matos está a juntar os aniversários de quem gosta');
+    expect(page.raw.body).toContain('<meta property="og:title" content="José Matos quer saber quando fazes anos 🎂">');
+    expect(page.raw.body).toContain(`/birthday-requests/${token}/answers`);
+    expect(page.raw.body).toContain('Só José vê a tua data.');
+    expect((await call('GET', `/b/${'x'.repeat(22)}`)).status).toBe(404);
+  });
+
+  it('a resposta entra na lista de quem pediu, sem repetir', async () => {
+    const answer = (body: object) => call('POST', `/birthday-requests/${token}/answers`, { body });
+    expect((await answer({ name: ' Rosa Matos ', day: 14, month: 2, year: 1958 })).status).toBe(201);
+    expect((await answer({ name: 'rosa matos', day: '14', month: '2' })).status).toBe(201); // repetida: não duplica
+    expect((await answer({ name: 'Tó', day: 29, month: 2 })).status).toBe(201);
+    // Datas impossíveis e anos fora do intervalo são recusados.
+    expect((await answer({ name: 'X', day: 31, month: 4 })).status).toBe(400);
+    expect((await answer({ name: 'X', day: 1, month: 1, year: 1850 })).status).toBe(400);
+    expect((await call('POST', `/birthday-requests/${'x'.repeat(22)}/answers`, { body: { name: 'X', day: 1, month: 1 } })).body.error).toBe('request_not_found');
+
+    const people = (await call('GET', '/data', { token: ze.access_token })).body.people;
+    expect(people.map((p: { name: string; birth_day: number; birth_month: number; birth_year: number | null }) => [p.name, p.birth_day, p.birth_month, p.birth_year])).toEqual([
+      ['Rosa Matos', 14, 2, 1958],
+      ['Tó', 29, 2, null],
+    ]);
+    expect((await call('GET', '/birthday-request', { token: ze.access_token })).body.answers).toBe(2);
+  });
+
+  it('trocar de link desliga o antigo', async () => {
+    const fresh = await call('POST', '/birthday-request/reset', { token: ze.access_token });
+    expect(fresh.body.token).not.toBe(token);
+    expect(fresh.body.answers).toBe(2);
+    expect((await call('GET', `/b/${token}`)).status).toBe(404);
+    expect((await call('GET', `/b/${fresh.body.token}`)).status).toBe(200);
+  });
+});
+
 describe('sistema', () => {
   it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
     const res = await call('GET', '/health');

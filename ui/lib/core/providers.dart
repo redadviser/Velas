@@ -136,7 +136,7 @@ final notificationSyncProvider = Provider<void>((ref) {
   if (user == null) {
     NotificationService.instance.cancelAll();
   } else if (data != null && data.loaded) {
-    NotificationService.instance.reschedule(data.people, user);
+    NotificationService.instance.reschedule(data, user);
   }
 });
 

@@ -144,6 +144,8 @@ class PersonDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   OutlinedButton.icon(
+                    // O tema dá largura infinita aos botões; numa Row tem de ter tamanho próprio.
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(88, 40)),
                     onPressed: () => openDirectChat(context, ref, friend.userId),
                     icon: const Icon(LucideIcons.messageCircle, size: 16),
                     label: const Text('Conversar'),

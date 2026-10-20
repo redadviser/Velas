@@ -6,6 +6,7 @@ import type { PhotoStorage } from './core/storage.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { GoogleVerifier } from './modules/auth/google.js';
 import type { AccessTokens } from './modules/auth/tokens.js';
+import { BirthdayRequestsService } from './modules/birthday-requests/birthday-requests.service.js';
 import { CardsService } from './modules/cards/cards.service.js';
 import { CategoriesService } from './modules/categories/categories.service.js';
 import { ChatService } from './modules/chat/chat.service.js';
@@ -69,6 +70,7 @@ export function createServices(deps: Deps) {
     friends: new FriendsService(db, hub, storage),
     chat,
     cards: new CardsService(db, storage, chat, hub),
+    birthdayRequests: new BirthdayRequestsService(db, hub),
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
     payments,

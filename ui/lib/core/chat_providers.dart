@@ -42,6 +42,15 @@ final chatEventsProvider = Provider<Stream<ChatEvent>>(
   (ref) => ref.watch(chatSocketProvider)?.events ?? const Stream.empty(),
 );
 
+/// Volta a carregar os dados quando mudam fora da app (ex.: um aniversário
+/// deixado pelo link de pedido). Vigiado pela app enquanto houver sessão.
+final dataSyncProvider = Provider<void>((ref) {
+  final sub = ref.watch(chatEventsProvider).listen((e) {
+    if (e is DataChanged) ref.read(dataRepositoryProvider)?.load().catchError((_) {});
+  });
+  ref.onDispose(sub.cancel);
+});
+
 Stream<ChatEvent> _events(Ref ref) => ref.watch(chatEventsProvider);
 
 // ---------------------------------------------------------------------------

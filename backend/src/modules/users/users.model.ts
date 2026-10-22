@@ -25,6 +25,12 @@ export interface Profile {
   message_previews: boolean;
   /** Número MB WAY guardado para pagar dentro da app (privado). */
   mbway_pay_phone: string | null;
+  /** Birthdayly+: ativo agora, até quando, e se ainda pode experimentar 30 dias grátis. */
+  plus: boolean;
+  plus_until: string | null;
+  plus_trial_available: boolean;
+  /** Resumo semanal dos aniversários (Birthdayly+). */
+  weekly_digest: boolean;
 }
 
 /** Dados para criar uma conta (registo ou primeira entrada com Google). */
@@ -62,6 +68,7 @@ export const profilePatchSchema = z
     message_notifications: z.boolean(),
     message_previews: z.boolean(),
     mbway_pay_phone: phoneSchema.nullable(),
+    weekly_digest: z.boolean(),
   })
   .partial();
 

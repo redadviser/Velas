@@ -28,6 +28,9 @@ class NotificationService {
   /// O iOS só guarda 64 notificações pendentes; deixamos margem.
   static const _maxScheduled = 60;
 
+  /// Semanas de resumo agendadas à frente (Birthdayly+), com os ids 900 em diante.
+  static const _digestWeeks = 4;
+
   static AndroidNotificationDetails _channel({bool groupAction = false}) => AndroidNotificationDetails(
     'birthdays',
     'Aniversários',
@@ -169,22 +172,28 @@ class NotificationService {
     if (!profile.notificationsEnabled) return;
 
     final now = tz.TZDateTime.now(tz.local);
+    final digest = profile.isPlus && profile.weeklyDigest;
     final pending = <_Pending>[];
     for (final person in people) {
       final offsets = person.reminderDays ?? profile.defaultReminderDays;
+      // Hora própria da pessoa (Birthdayly+); senão a do perfil.
+      final custom = profile.isPlus && person.reminderHour != null && person.reminderMinute != null;
+      final hour = custom ? person.reminderHour! : profile.reminderHour;
+      final minute = custom ? person.reminderMinute! : profile.reminderMinute;
       final next = person.nextBirthday();
       // Considera também o ano seguinte para lembretes que já passaram.
       for (final occurrence in [next, BirthdayUtils.occurrenceIn(next.year + 1, person.day, person.month)]) {
         for (final days in offsets) {
           final d = BirthdayUtils.addDays(occurrence, -days);
-          final when = tz.TZDateTime(tz.local, d.year, d.month, d.day, profile.reminderHour, profile.reminderMinute);
+          final when = tz.TZDateTime(tz.local, d.year, d.month, d.day, hour, minute);
           if (when.isAfter(now)) pending.add(_Pending(person, days, when, occurrence));
         }
       }
     }
     pending.sort((a, b) => a.when.compareTo(b.when));
 
-    for (final (i, p) in pending.take(_maxScheduled).indexed) {
+    // O resumo semanal ocupa 4 dos lugares (o iOS só guarda 64 notificações).
+    for (final (i, p) in pending.take(digest ? _maxScheduled - _digestWeeks : _maxScheduled).indexed) {
       final age = p.person.year == null ? null : p.occurrence.year - p.person.year!;
       final r = ReminderCopy.build(
         p.person,
@@ -209,6 +218,27 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     }
+
+    if (digest) {
+      // As próximas segundas-feiras, à hora dos lembretes.
+      final today = DateTime(now.year, now.month, now.day);
+      var monday = today.add(Duration(days: (DateTime.monday - today.weekday) % 7));
+      for (var w = 0; w < _digestWeeks; w++, monday = monday.add(const Duration(days: 7))) {
+        final when = tz.TZDateTime(tz.local, monday.year, monday.month, monday.day, profile.reminderHour, profile.reminderMinute);
+        if (!when.isAfter(now)) continue;
+        final d = ReminderCopy.weeklyDigest(people, monday);
+        if (d == null) continue;
+        await _plugin.zonedSchedule(
+          id: 900 + w,
+          title: d.title,
+          body: d.body,
+          scheduledDate: when,
+          payload: d.payload,
+          notificationDetails: NotificationDetails(android: _channel(), iOS: const DarwinNotificationDetails()),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
+    }
   }
 
   /// Muda quando muda alguma coisa que o texto dos lembretes usa (mensagem
@@ -216,10 +246,14 @@ class NotificationService {
   String _signature(AppData data, UserProfile profile) {
     final b = StringBuffer()
       ..write('${profile.notificationsEnabled}|${profile.reminderHour}:${profile.reminderMinute}|')
-      ..write('${profile.defaultReminderDays}|${BirthdayUtils.today()}|');
+      ..write('${profile.defaultReminderDays}|${BirthdayUtils.today()}|')
+      ..write('${profile.isPlus}|${profile.weeklyDigest}|');
     for (final p in data.people) {
       final ideas = data.giftsFor(p.id).where((g) => !g.purchased).length;
-      b.write('${p.id}:${p.name}:${p.day}/${p.month}/${p.year}:${p.reminderDays}:${data.messageFor(p.id) != null}:$ideas;');
+      b.write(
+        '${p.id}:${p.name}:${p.day}/${p.month}/${p.year}:${p.reminderDays}:${p.reminderHour}:${p.reminderMinute}:'
+        '${data.messageFor(p.id) != null}:$ideas;',
+      );
     }
     return b.toString();
   }

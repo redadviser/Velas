@@ -1,5 +1,23 @@
 import 'chat_models.dart';
 
+/// Cartão especial (Birthdayly+): uma fotografia, um vídeo ou um áudio.
+enum CardMediaKind {
+  image,
+  video,
+  audio;
+
+  static CardMediaKind? parse(Object? v) => values.where((k) => k.name == v).firstOrNull;
+}
+
+/// A fotografia, o vídeo ou o áudio de um cartão.
+typedef CardMedia = ({CardMediaKind kind, String url});
+
+CardMedia? _media(Map<String, dynamic> j) {
+  final kind = CardMediaKind.parse(j['media_kind']);
+  final url = j['media_url'] as String?;
+  return kind == null || url == null ? null : (kind: kind, url: url);
+}
+
 /// Cartão de parabéns visto por quem tem o link (com ou sem conta).
 class GreetingCard {
   const GreetingCard({
@@ -11,9 +29,11 @@ class GreetingCard {
     required this.createdAt,
     this.senderPhotoUrl,
     this.claimed = false,
+    this.media,
   });
 
   final String token;
+  final CardMedia? media;
   final String senderId;
   final String senderName;
   final String? senderPhotoUrl;
@@ -35,6 +55,7 @@ class GreetingCard {
     body: j['body'] as String? ?? '',
     createdAt: DateTime.parse(j['created_at'] as String),
     claimed: j['claimed'] as bool? ?? false,
+    media: _media(j),
   );
 }
 
@@ -49,7 +70,10 @@ class SentCard {
     this.onWall = false,
     this.openedAt,
     this.claimedAt,
+    this.media,
   });
+
+  final CardMedia? media;
 
   final String id;
   final String token;
@@ -68,6 +92,7 @@ class SentCard {
     recipientName: j['recipient_name'] as String? ?? '',
     body: j['body'] as String? ?? '',
     onWall: j['via'] == 'wall',
+    media: _media(j),
     createdAt: DateTime.parse(j['created_at'] as String),
     openedAt: _date(j['opened_at']),
     claimedAt: _date(j['claimed_at']),
@@ -84,7 +109,10 @@ class ReceivedCard {
     required this.body,
     required this.receivedAt,
     this.seen = true,
+    this.media,
   });
+
+  final CardMedia? media;
 
   final String id;
   final ChatUser sender;
@@ -109,6 +137,7 @@ class ReceivedCard {
       body: j['body'] as String? ?? '',
       receivedAt: DateTime.parse(j['received_at'] as String).toLocal(),
       seen: j['seen'] as bool? ?? true,
+      media: _media(j),
     );
   }
 }

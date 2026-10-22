@@ -17,7 +17,10 @@ import '../../data/models/chat_models.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/cards_repository.dart';
 import '../../services/message_suggestions.dart';
+import '../../data/models/card_models.dart';
 import '../cards/card_links.dart';
+import '../cards/card_media.dart';
+import '../profile/plus.dart';
 import '../people/linked_friend.dart';
 
 enum _SendAs { card, wall, text }
@@ -40,6 +43,28 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   BirthdayMessage? _existing;
   MessageTone _tone = MessageTone.warm;
   bool _saving = false;
+
+  /// Cartão especial (Birthdayly+): a fotografia, o vídeo ou o áudio escolhido,
+  /// e a chave dele no servidor depois de carregado (para não carregar duas vezes).
+  PickedCardMedia? _media;
+  String? _uploadedKey;
+
+  Future<void> _attach(CardMediaKind kind) async {
+    if (!await requirePlus(context, ref, feature: 'Juntar uma fotografia, um vídeo ou um áudio')) return;
+    if (!mounted) return;
+    final picked = await pickCardMedia(context, kind);
+    if (picked == null || !mounted) return;
+    setState(() {
+      _media = picked;
+      _uploadedKey = null;
+    });
+  }
+
+  Future<String?> _mediaKey(CardsRepository cards) async {
+    final m = _media;
+    if (m == null) return null;
+    return _uploadedKey ??= await cards.uploadMedia(m.bytes);
+  }
 
   @override
   void initState() {
@@ -120,10 +145,17 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   }
 
   Future<void> _sendCard(CardsRepository cards, Person person, String body) async {
-    // A mesma mensagem reenviada usa o mesmo cartão (não cria outro link).
-    var card = ref.read(sentCardsProvider(person.id)).value?.where((c) => c.body == body && !c.onWall).firstOrNull;
+    // A mesma mensagem reenviada (sem fotografia, vídeo ou áudio) usa o mesmo cartão.
+    var card = _media != null
+        ? null
+        : ref.read(sentCardsProvider(person.id)).value?.where((c) => c.body == body && !c.onWall && c.media == null).firstOrNull;
     final ok = await runGuarded(context, () async {
-      card ??= await cards.create(personId: person.id, recipientName: person.firstName, body: body);
+      card ??= await cards.create(
+        personId: person.id,
+        recipientName: person.firstName,
+        body: body,
+        mediaKey: await _mediaKey(cards),
+      );
     });
     if (!ok || card == null) return;
     ref.invalidate(sentCardsProvider(person.id));
@@ -131,14 +163,21 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   }
 
   Future<void> _postToWall(CardsRepository cards, Person person, ChatUser friend, String body) async {
-    final already = ref.read(sentCardsProvider(person.id)).value?.any((c) => c.body == body && c.onWall) ?? false;
+    final already =
+        _media == null && (ref.read(sentCardsProvider(person.id)).value?.any((c) => c.body == body && c.onWall) ?? false);
     if (already) {
       showMessage(context, 'Esta mensagem já está no mural de ${friend.firstName}.');
       return;
     }
     final ok = await runGuarded(
       context,
-      () => cards.create(personId: person.id, recipientName: person.firstName, body: body, friendId: friend.userId),
+      () async => cards.create(
+        personId: person.id,
+        recipientName: person.firstName,
+        body: body,
+        friendId: friend.userId,
+        mediaKey: await _mediaKey(cards),
+      ),
       success: 'Publicado no mural de ${friend.firstName} 🎉',
     );
     if (!ok) return;
@@ -266,6 +305,55 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                 ),
               ),
             ),
+            if (ref.watch(cardsRepositoryProvider) != null) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text('Juntar ao cartão', style: context.text.titleSmall),
+                  const SizedBox(width: 8),
+                  const PlusBadge(),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (_media == null)
+                Row(
+                  children: [
+                    for (final (kind, icon, label) in [
+                      (CardMediaKind.image, LucideIcons.image, 'Foto'),
+                      (CardMediaKind.video, LucideIcons.video, 'Vídeo'),
+                      (CardMediaKind.audio, LucideIcons.mic, 'Áudio'),
+                    ]) ...[
+                      if (kind != CardMediaKind.image) const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+                          onPressed: () => _attach(kind),
+                          icon: Icon(icon, size: 18),
+                          label: Text(label),
+                        ),
+                      ),
+                    ],
+                  ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CardMediaView(key: ValueKey(_media!.path), media: (kind: _media!.kind, url: _media!.path ?? '')),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => setState(() {
+                          _media = null;
+                          _uploadedKey = null;
+                        }),
+                        icon: const Icon(LucideIcons.x, size: 16),
+                        label: const Text('Tirar'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [

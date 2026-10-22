@@ -16,6 +16,7 @@ import '../../core/utils/identity.dart';
 import '../../services/notification_service.dart';
 import '../chat/chat_widgets.dart';
 import 'identity_sheets.dart';
+import 'plus.dart';
 import '../auth/reset_password_screen.dart';
 import '../../core/utils/text.dart';
 import '../../core/constants.dart';
@@ -141,6 +142,12 @@ class ProfileScreen extends ConsumerWidget {
                   value: '${ref.watch(wallProvider).value?.length ?? 0}',
                   onTap: () => context.push('/wall'),
                 ),
+                _Tile(
+                  icon: LucideIcons.sparkles,
+                  title: 'Plano',
+                  value: user.isPlus ? 'Birthdayly+' : 'Grátis',
+                  onTap: () => context.push('/profile/plans'),
+                ),
               ],
             ),
           ],
@@ -202,6 +209,17 @@ class ProfileScreen extends ConsumerWidget {
                 value: time,
                 onTap: () => _pickTime(context, ref, user),
               ),
+              SwitchListTile(
+                secondary: const Icon(LucideIcons.calendarRange, size: 20),
+                title: const Row(children: [Text('Resumo semanal'), SizedBox(width: 8), PlusBadge()]),
+                subtitle: const Text('À segunda-feira, os aniversários da semana'),
+                value: user.weeklyDigest && user.isPlus,
+                onChanged: (v) async {
+                  if (v && !await requirePlus(context, ref, feature: 'O resumo semanal')) return;
+                  final current = ref.read(currentUserProvider) ?? user;
+                  if (context.mounted) await _update(context, ref, current.copyWith(weeklyDigest: v));
+                },
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Column(
@@ -237,6 +255,12 @@ class ProfileScreen extends ConsumerWidget {
           const _Group('Preferências'),
           _Section(
             children: [
+              _Tile(
+                icon: LucideIcons.palette,
+                title: 'Tema',
+                value: user.isPlus ? ref.watch(themeAccentProvider).label : 'Coral',
+                onTap: () => _pickAccent(context, ref),
+              ),
               _Tile(
                 icon: LucideIcons.tag,
                 title: 'Categorias',
@@ -552,6 +576,41 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
 }
 
 /// Idioma da app: o do telemóvel ou um escolhido.
+/// Tema de cor da app (Birthdayly+).
+Future<void> _pickAccent(BuildContext context, WidgetRef ref) async {
+  if (!await requirePlus(context, ref, feature: 'Mudar o tema')) return;
+  if (!context.mounted) return;
+  final current = ref.read(themeAccentProvider);
+  final picked = await showModalBottomSheet<AppAccent>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text('Tema', style: AppTheme.display(ctx, size: 22)),
+          ),
+          for (final a in AppAccent.values)
+            ListTile(
+              leading: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(gradient: a.brand, shape: BoxShape.circle),
+              ),
+              title: Text(a.label),
+              trailing: a == current ? Icon(LucideIcons.check, color: ctx.colors.primary) : null,
+              onTap: () => Navigator.pop(ctx, a),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  if (picked != null) ref.read(themeAccentProvider.notifier).set(picked);
+}
+
 Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
   final current = ref.read(localeProvider);
   final picked = await showModalBottomSheet<(Locale?,)>(

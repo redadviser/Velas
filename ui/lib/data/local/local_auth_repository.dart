@@ -79,7 +79,11 @@ class LocalAuthRepository implements AuthRepository {
       (record['profile'] as Map).cast<String, dynamic>(),
       id: record['id'] as String,
       email: email,
-    ).copyWith(photoUrl: () => photo == null || _docsPath == null ? null : '$_docsPath/$photo');
+    ).copyWith(
+      photoUrl: () => photo == null || _docsPath == null ? null : '$_docsPath/$photo',
+      plusUntil: () => record['plus_until'] == null ? null : DateTime.parse(record['plus_until'] as String),
+      plusTrialAvailable: record['plus_trial_used'] != true,
+    );
   }
 
   static String _hash(String password, String salt) {
@@ -229,6 +233,20 @@ class LocalAuthRepository implements AuthRepository {
       await file.writeAsBytes(bytes);
     }
     users[p.email] = {...record, 'photo': relative};
+    await _saveUsers(users);
+    _set(_profileOf(p.email, (users[p.email] as Map).cast<String, dynamic>()));
+  }
+
+  /// No modo local o período experimental fica guardado no próprio dispositivo.
+  @override
+  Future<void> startPlusTrial() async {
+    final p = _current;
+    if (p == null) return;
+    final users = _users;
+    final record = (users[p.email] as Map).cast<String, dynamic>();
+    if (record['plus_trial_used'] == true) throw const AppException('Já usaste o período experimental do Birthdayly+.');
+    final until = DateTime.now().add(const Duration(days: 30));
+    users[p.email] = {...record, 'plus_until': until.toIso8601String(), 'plus_trial_used': true};
     await _saveUsers(users);
     _set(_profileOf(p.email, (users[p.email] as Map).cast<String, dynamic>()));
   }

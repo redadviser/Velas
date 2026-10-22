@@ -11,6 +11,8 @@ export const createCardSchema = z.object({
   body: z.string().trim().min(1).max(1000),
   /** Um amigo: o cartão vai diretamente para o mural dele, sem link. */
   recipient_id: id.optional(),
+  /** Cartão especial (Birthdayly+): o media_key devolvido por POST /cards/media. */
+  media_key: z.string().max(120).optional(),
 });
 export type CreateCardInput = z.infer<typeof createCardSchema>;
 
@@ -30,6 +32,9 @@ export interface SentCard {
   created_at: string;
   opened_at: string | null;
   claimed_at: string | null;
+  /** Cartão especial: fotografia, vídeo ou áudio (URL assinado). */
+  media_kind: 'image' | 'video' | 'audio' | null;
+  media_url: string | null;
 }
 
 /** Cartão no mural de quem o recebeu. */
@@ -42,6 +47,8 @@ export interface ReceivedCard {
   received_at: string;
   /** Já foi visto por quem o recebeu (os novos aparecem em destaque na app). */
   seen: boolean;
+  media_kind: 'image' | 'video' | 'audio' | null;
+  media_url: string | null;
   sender: { user_id: string; display_name: string; username: string | null; photo_url: string | null };
 }
 
@@ -54,6 +61,8 @@ export interface CardPreview {
   recipient_name: string;
   body: string;
   created_at: string;
+  media_kind: 'image' | 'video' | 'audio' | null;
+  media_url: string | null;
   claimed: boolean;
 }
 
@@ -61,4 +70,18 @@ export interface ClaimResult {
   sender_id: string;
   /** Conversa privada com quem enviou, já com a mensagem do cartão. */
   conversation_id: string;
+}
+
+export const wallPhotoQuery = z.object({
+  year: z.coerce.number().int().min(1900).max(2100),
+  caption: z.string().max(200).default(''),
+});
+
+/** Fotografia no mural do próprio (Birthdayly+), num álbum por ano. */
+export interface WallPhoto {
+  id: string;
+  year: number;
+  caption: string;
+  url: string;
+  created_at: string;
 }

@@ -169,7 +169,7 @@ class _TodayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(gradient: AppColors.brandGradient, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(gradient: context.palette.brand, borderRadius: BorderRadius.circular(24)),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

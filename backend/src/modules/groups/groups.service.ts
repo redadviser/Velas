@@ -180,7 +180,7 @@ export class GroupsService {
 
   /** Dados de pagamento de quem compra (só para membros). */
   /** Pagamentos na app ligados (Stripe) e a comissão por método. */
-  inApp?: { enabled: boolean; fees: Record<string, { percent: number; fixed: number }> };
+  inApp?: { enabled: boolean; fees: Record<string, { percent: number; fixed: number }>; serviceFee: number };
 
   async payee(userId: string, groupId: string): Promise<Record<string, unknown>> {
     const { rows } = await this.as(userId, (c) =>
@@ -193,7 +193,9 @@ export class GroupsService {
     const payee = rows[0]?.payee ?? {};
     // in_app: quem compra ligou a conta Stripe, por isso dá para pagar dentro da app.
     const inApp = Boolean(this.inApp?.enabled && rows[0]?.ready);
-    return inApp ? { ...payee, in_app: true, in_app_fees: this.inApp!.fees } : payee;
+    return inApp
+      ? { ...payee, in_app: true, in_app_fees: this.inApp!.fees, in_app_service_fee: this.inApp!.serviceFee }
+      : payee;
   }
 
   // Membros -----------------------------------------------------------------

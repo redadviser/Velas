@@ -166,7 +166,7 @@ class GroupAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: purchased ? null : AppColors.brandGradient,
+        gradient: purchased ? null : context.palette.brand,
         color: purchased ? context.palette.muted : null,
         shape: BoxShape.circle,
       ),
@@ -287,4 +287,56 @@ Future<PickedImage?> pickChatImage(ImageSource source, {double maxSide = 1600}) 
     // Sem dimensões a mensagem usa uma proporção quadrada.
   }
   return (bytes: bytes, width: width, height: height);
+}
+
+/// Fotografia (de perfil ou do grupo) em ecrã inteiro, com zoom. Tocar
+/// na fotografia pequena abre-a; [heroTag] anima a passagem entre as duas.
+Future<void> openPhotoViewer(BuildContext context, {required String url, required String title, Object? heroTag}) {
+  return Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: Text(title, style: const TextStyle(color: Colors.white)),
+        ),
+        body: InteractiveViewer(
+          maxScale: 5,
+          child: Center(
+            child: Hero(
+              tag: heroTag ?? url,
+              child: ChatImage(url: url, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Envolve um avatar: se houver fotografia, tocar abre-a em ecrã inteiro.
+class ZoomablePhoto extends StatelessWidget {
+  const ZoomablePhoto({super.key, required this.url, required this.title, required this.child});
+
+  final String? url;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final photo = url;
+    if (photo == null) return child;
+    // A mesma fotografia vem com outra assinatura todos os dias: a etiqueta é o ficheiro.
+    final tag = 'photo:${Uri.tryParse(photo)?.path ?? photo}';
+    return Semantics(
+      button: true,
+      label: 'Ver fotografia de $title',
+      child: GestureDetector(
+        onTap: () => openPhotoViewer(context, url: photo, title: title, heroTag: tag),
+        child: Hero(tag: tag, child: child),
+      ),
+    );
+  }
 }

@@ -16,6 +16,7 @@ import '../data/repositories/data_repository.dart';
 import '../data/repositories/group_repository.dart';
 import '../services/notification_service.dart';
 import 'i18n/translations.dart';
+import 'theme/app_colors.dart';
 import '../data/api/api_payments_repository.dart';
 import '../data/repositories/payments_repository.dart';
 
@@ -156,6 +157,30 @@ class ThemeModeController extends Notifier<ThemeMode> {
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
+
+/// Tema de cor escolhido (Birthdayly+), guardado neste dispositivo.
+class ThemeAccentController extends Notifier<AppAccent> {
+  static const _key = 'velas.themeAccent';
+
+  @override
+  AppAccent build() {
+    final v = ref.watch(sharedPrefsProvider).getString(_key);
+    return AppAccent.values.firstWhere((a) => a.name == v, orElse: () => AppAccent.coral);
+  }
+
+  void set(AppAccent accent) {
+    state = accent;
+    ref.read(sharedPrefsProvider).setString(_key, accent.name);
+  }
+}
+
+final themeAccentProvider = NotifierProvider<ThemeAccentController, AppAccent>(ThemeAccentController.new);
+
+/// O tema em uso: o escolhido só com o Birthdayly+ ativo; senão, o Coral.
+final effectiveAccentProvider = Provider<AppAccent>((ref) {
+  final plus = ref.watch(currentUserProvider.select((u) => u?.isPlus ?? false));
+  return plus ? ref.watch(themeAccentProvider) : AppAccent.coral;
+});
 
 /// Língua escolhida no perfil (`null` = a do telemóvel).
 class LocaleController extends Notifier<Locale?> {

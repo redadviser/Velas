@@ -38,6 +38,13 @@ void main() {
   test('a comissão é somada como no servidor', () {
     expect(payee.withFee(PaymentMethod.card, 13.33), (fee: 0.46, total: 13.79));
     expect(payee.withFee(PaymentMethod.cash, 13.33), (fee: 0.0, total: 13.33));
+    // Com a taxa de serviço da Birthdayly (0,39 €), igual ao servidor: (13,33 + 0,25 + 0,39) / 0,985.
+    final withService = PaymentDetails.fromJson({
+      'in_app': true,
+      'in_app_fees': {'mb_way': {'percent': 1.5, 'fixed': 0.25}},
+      'in_app_service_fee': 0.39,
+    });
+    expect(withService.withFee(PaymentMethod.mbway, 13.33), (fee: 0.86, total: 14.19));
     // Com a conta Stripe de quem recebe, cartão, PayPal e MB WAY pagam-se na app sem mais dados.
     expect(payee.methods, [
       PaymentMethod.card,

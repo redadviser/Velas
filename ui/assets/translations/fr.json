@@ -254,6 +254,7 @@
   "groupPhoto.removed": "Photo supprimée.",
   "pay.inApp.badge": "Payer dans l'app",
   "pay.inApp.feeLine": "{amount} + {fee} de frais = {total}",
+  "pay.inApp.serviceNote": "Dont {fee} de frais de service Birthdayly.",
   "pay.inApp.payCard": "Payer {total} par carte",
   "pay.inApp.payPaypal": "Payer {total} avec PayPal",
   "pay.inApp.cardSteps": "Ouvre la page de paiement sécurisée (Stripe) : VISA, Mastercard, Apple Pay ou Google Pay.",

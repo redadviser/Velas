@@ -20,12 +20,17 @@ export const defaultFees: FeeTable = {
   revolut_pay: { percent: 1.5, fixed: 0.25 },
 };
 
+/** Taxa de serviço da Birthdayly por pagamento dentro da app, em euros (PAYMENTS_SERVICE_FEE). */
+export const defaultServiceFee = 0.39;
+
 /**
- * A comissão é somada a quem paga, para quem compra a prenda receber a parte
- * inteira: total = (parte + fixo) / (1 − percentagem), arredondado ao cêntimo acima.
+ * A comissão da Stripe e a taxa de serviço são somadas a quem paga, para quem
+ * compra a prenda receber a parte inteira:
+ * total = (parte + fixo + serviço) / (1 − percentagem), arredondado ao cêntimo acima.
+ * A plataforma fica com total − parte: paga a Stripe e sobra o serviço.
  */
-export function withFee(shareCents: number, fee: { percent: number; fixed: number }) {
-  const totalCents = Math.ceil((shareCents + Math.round(fee.fixed * 100)) / (1 - fee.percent / 100));
+export function withFee(shareCents: number, fee: { percent: number; fixed: number }, serviceCents = 0) {
+  const totalCents = Math.ceil((shareCents + Math.round(fee.fixed * 100) + serviceCents) / (1 - fee.percent / 100));
   return { totalCents, feeCents: totalCents - shareCents };
 }
 
@@ -51,9 +56,11 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export interface PaymentJson {
   id: string;
   method: InAppMethod;
-  /** A parte, a comissão e o total, em euros. */
+  /** A parte, a comissão (Stripe + serviço) e o total, em euros. */
   amount: number;
   fee: number;
+  /** A parte da comissão que é a taxa de serviço da Birthdayly. */
+  service_fee: number;
   total: number;
   /** processing: transferência autorizada, à espera de chegar (a parte já conta como paga). */
   status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled';

@@ -49,6 +49,22 @@ export function playStoreLink(playStoreUrl: string, token: string): string {
   return `${playStoreUrl}${playStoreUrl.includes('?') ? '&' : '?'}referrer=${encodeURIComponent(`card=${token}`)}`;
 }
 
+/** Cartão especial: a fotografia, o vídeo ou o áudio por cima da mensagem. */
+function cardMedia(card: CardPreview): string {
+  if (!card.media_url) return '';
+  const src = escapeHtml(card.media_url);
+  switch (card.media_kind) {
+    case 'image':
+      return `<img class="media" src="${src}" alt="">`;
+    case 'video':
+      return `<video class="media" src="${src}" controls playsinline preload="metadata"></video>`;
+    case 'audio':
+      return `<audio class="media" src="${src}" controls preload="metadata"></audio>`;
+    default:
+      return '';
+  }
+}
+
 export function cardPage(card: CardPreview, config: Config, preview?: LinkPreview): string {
   const sender = escapeHtml(card.sender_name);
   const appLink = `${config.appScheme}://app/card/${card.token}`;
@@ -69,6 +85,7 @@ export function cardPage(card: CardPreview, config: Config, preview?: LinkPrevie
     mark,
     body: `<p>${sender} deixou-te uma mensagem</p>
 <h1>Parabéns, ${escapeHtml(card.recipient_name)}! 🎉</h1>
+${cardMedia(card)}
 <blockquote class="quote">${escapeHtml(card.body)}</blockquote>
 <p class="from">— ${sender}</p>
 <p class="small">Agradece a mensagem de ${sender} na Birthdayly: fica guardada e podem conversar.</p>

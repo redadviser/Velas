@@ -555,9 +555,19 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(color: context.palette.muted, borderRadius: BorderRadius.circular(12)),
-          child: Text(
-            context.tr(Keys.payInAppFeeLine, {'amount': _money, 'fee': Fmt.money(fee), 'total': totalText}),
-            style: context.text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.tr(Keys.payInAppFeeLine, {'amount': _money, 'fee': Fmt.money(fee), 'total': totalText}),
+                style: context.text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              if (_p.inAppServiceFee > 0)
+                Text(
+                  context.tr(Keys.payInAppServiceNote, {'fee': Fmt.money(_p.inAppServiceFee)}),
+                  style: context.text.bodySmall?.copyWith(color: muted),
+                ),
+            ],
           ),
         ),
         if (m == PaymentMethod.mbway) ...[

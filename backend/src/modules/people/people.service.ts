@@ -1,7 +1,8 @@
 import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
 import { imageType, type PhotoStorage } from '../../core/storage.js';
-import type { PersonInput, PersonJson, PersonRow, PhotoJson } from './people.model.js';
+import { hasPlus } from '../../core/plus.js';
+import type { HistoryYear, PersonHistory, PersonInput, PersonJson, PersonRow, PhotoJson } from './people.model.js';
 
 export class PeopleService {
   constructor(
@@ -21,23 +22,31 @@ export class PeopleService {
 
   /** Insere ou atualiza; nunca toca em linhas de outro utilizador. */
   private async upsertIn(c: Tx, userId: string, p: PersonInput): Promise<PersonRow> {
+    // A hora própria do lembrete é do Birthdayly+.
+    const customTime = p.reminder_hour != null && p.reminder_minute != null;
+    if (customTime && !(await hasPlus(c, userId))) throw new HttpError(402, 'plus_required');
     // photo_path não vem da app: só muda pelas rotas de fotografia. Sem
     // linked_user_id no pedido (versões antigas da app), a ligação mantém-se.
     const { rows } = await c.query<PersonRow>(
       `insert into people (id, user_id, name, birth_day, birth_month, birth_year, relation, category_id,
-                           notes, gift_budget, reminder_days, created_at, linked_user_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()), $13)
+                           notes, gift_budget, reminder_days, created_at, linked_user_id, reminder_hour, reminder_minute)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()), $13, $15, $16)
        on conflict (id) do update set
          name = excluded.name, birth_day = excluded.birth_day, birth_month = excluded.birth_month,
          birth_year = excluded.birth_year, relation = excluded.relation, category_id = excluded.category_id,
          notes = excluded.notes, gift_budget = excluded.gift_budget, reminder_days = excluded.reminder_days,
-         linked_user_id = case when $14 then excluded.linked_user_id else people.linked_user_id end
+         linked_user_id = case when $14 then excluded.linked_user_id else people.linked_user_id end,
+         reminder_hour = case when $17 then excluded.reminder_hour else people.reminder_hour end,
+         reminder_minute = case when $17 then excluded.reminder_minute else people.reminder_minute end
        where people.user_id = excluded.user_id
        returning *`,
       [
         p.id, userId, p.name, p.birth_day, p.birth_month, p.birth_year ?? null, p.relation, p.category_id ?? null,
         p.notes, p.gift_budget ?? null, p.reminder_days ?? null, p.created_at ?? null, p.linked_user_id ?? null,
         p.linked_user_id !== undefined,
+        customTime ? p.reminder_hour : null,
+        customTime ? p.reminder_minute : null,
+        p.reminder_hour !== undefined,
       ],
     );
     if (!rows[0]) throw notFound();
@@ -56,6 +65,54 @@ export class PeopleService {
       return out;
     });
     return saved.map(this.toJson);
+  }
+
+  /**
+   * O histórico da pessoa por ano (mais recente primeiro): os cartões que lhe
+   * enviaste, as ideias de presente compradas e as prendas em grupo compradas.
+   * No plano Grátis só vem o ano atual; os outros anos com registos vêm em
+   * locked_years (para a app mostrar o que o Birthdayly+ desbloqueia).
+   */
+  async history(userId: string, personId: string): Promise<PersonHistory> {
+    return tx(this.db, userId, async (c) => {
+      const own = await c.query('select 1 from people where id = $1 and user_id = $2', [personId, userId]);
+      if (!own.rowCount) throw notFound();
+      const [cards, gifts, groups] = await Promise.all([
+        c.query<HistoryYear['cards'][number]>(
+          `select id, body, via, created_at, media_kind from greeting_cards
+           where sender_id = $1 and person_id = $2 order by created_at desc`,
+          [userId, personId],
+        ),
+        c.query<HistoryYear['gifts'][number]>(
+          `select id, title, price, purchased_at from gift_ideas
+           where user_id = $1 and person_id = $2 and purchased and purchased_at is not null
+           order by purchased_at desc`,
+          [userId, personId],
+        ),
+        c.query<HistoryYear['group_gifts'][number]>(
+          `select id, title, target_amount as amount, purchased_at from gift_groups
+           where created_by = $1 and person_id = $2 and purchased_at is not null
+           order by purchased_at desc`,
+          [userId, personId],
+        ),
+      ]);
+      const byYear = new Map<number, HistoryYear>();
+      const year = (d: string | Date) => new Date(d).getUTCFullYear();
+      const slot = (y: number) => {
+        if (!byYear.has(y)) byYear.set(y, { year: y, cards: [], gifts: [], group_gifts: [] });
+        return byYear.get(y)!;
+      };
+      for (const r of cards.rows) slot(year(r.created_at)).cards.push(r);
+      for (const r of gifts.rows) slot(year(r.purchased_at)).gifts.push(r);
+      for (const r of groups.rows) slot(year(r.purchased_at)).group_gifts.push(r);
+      const all = [...byYear.values()].sort((a, b) => b.year - a.year);
+      if (await hasPlus(c, userId)) return { years: all, locked_years: [] };
+      const current = new Date().getUTCFullYear();
+      return {
+        years: all.filter((y) => y.year === current),
+        locked_years: all.filter((y) => y.year !== current).map((y) => y.year),
+      };
+    });
   }
 
   /** As prendas e mensagens da pessoa são apagadas em cascata. */

@@ -10,28 +10,28 @@ class AppTheme {
   static const radius = 16.0;
   static const radiusSmall = 12.0;
 
-  static ThemeData light() => _build(
+  static ThemeData light({AppAccent accent = AppAccent.coral}) => _build(
     brightness: Brightness.light,
     background: AppColors.background,
     foreground: AppColors.foreground,
     card: AppColors.card,
-    primary: AppColors.primary,
+    primary: accent.light,
     onPrimary: AppColors.primaryForeground,
-    secondary: AppColors.secondary,
+    secondary: accent == AppAccent.coral ? AppColors.secondary : accent.gradient.last,
     error: AppColors.destructive,
-    palette: AppPalette.light,
+    palette: AppPalette.light.copyWith(brand: accent.brand),
   );
 
-  static ThemeData dark() => _build(
+  static ThemeData dark({AppAccent accent = AppAccent.coral}) => _build(
     brightness: Brightness.dark,
     background: AppColors.darkBackground,
     foreground: AppColors.darkForeground,
     card: AppColors.darkCard,
-    primary: AppColors.darkPrimary,
+    primary: accent.dark,
     onPrimary: AppColors.darkPrimaryForeground,
-    secondary: AppColors.darkSecondary,
+    secondary: accent == AppAccent.coral ? AppColors.darkSecondary : accent.gradient.last,
     error: AppColors.darkDestructive,
-    palette: AppPalette.dark,
+    palette: AppPalette.dark.copyWith(brand: accent.brand),
   );
 
   /// Títulos editoriais em serifa, como no site de referência.

@@ -26,7 +26,10 @@ export class PhotoStorage {
    * Caminhos sempre no formato <uuid>/<ficheiro>, sem `..`. A pasta é o
    * utilizador (fotografias, stickers) ou a conversa (imagens do chat).
    */
-  private static readonly keyPattern = /^[0-9a-f-]{36}\/[A-Za-z0-9-]+\.(jpg|png|webp|gif)$/;
+  private static readonly keyPattern = /^[0-9a-f-]{36}\/[A-Za-z0-9-]+\.(jpg|png|webp|gif|mp4|mov|m4a)$/;
+
+  /** Vídeos e áudios dos cartões especiais (Birthdayly+). */
+  static readonly mediaMaxBytes = 25 * 1024 * 1024;
 
   /** Uma chave guardada noutro sítio (ex.: na BD) é deste armazenamento? */
   static isKey(key: string): boolean {
@@ -133,6 +136,32 @@ export class PhotoStorage {
     const given = Buffer.from(sig);
     return expected.length === given.length && timingSafeEqual(expected, given);
   }
+}
+
+export type MediaKind = 'image' | 'video' | 'audio';
+
+/**
+ * Tipo real de uma imagem, vídeo ou áudio pelos primeiros bytes. Os vídeos e
+ * áudios do telemóvel são contentores ISO (caixa `ftyp`): a marca diz qual é.
+ */
+export function mediaType(data: Buffer): { ext: string; mime: string; kind: MediaKind } | null {
+  const image = imageType(data);
+  if (image) return { ...image, kind: 'image' };
+  if (data.length > 12 && data.toString('ascii', 4, 8) === 'ftyp') {
+    const brand = data.toString('ascii', 8, 12);
+    if (brand === 'M4A ' || brand === 'M4B ') return { ext: 'm4a', mime: 'audio/mp4', kind: 'audio' };
+    if (brand === 'qt  ') return { ext: 'mov', mime: 'video/quicktime', kind: 'video' };
+    return { ext: 'mp4', mime: 'video/mp4', kind: 'video' };
+  }
+  return null;
+}
+
+/** O tipo de um ficheiro guardado, pela extensão da chave. */
+export function kindOfKey(key: string): MediaKind | null {
+  const ext = key.split('.').pop();
+  if (ext === 'mp4' || ext === 'mov') return 'video';
+  if (ext === 'm4a') return 'audio';
+  return ext === 'jpg' || ext === 'png' || ext === 'webp' || ext === 'gif' ? 'image' : null;
 }
 
 /** Tipo real da imagem pelos primeiros bytes (não se confia no Content-Type). */

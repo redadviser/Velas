@@ -13,11 +13,17 @@ export class GiftsService {
   /** A pessoa tem de ser do mesmo utilizador (trigger check_owner_refs). */
   async save(userId: string, g: GiftInput): Promise<GiftRow> {
     const { rows } = await this.db.query<GiftRow>(
-      `insert into gift_ideas (id, user_id, person_id, title, price, link, notes, purchased, created_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, coalesce($9, now()))
+      `insert into gift_ideas (id, user_id, person_id, title, price, link, notes, purchased, created_at, purchased_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, coalesce($9, now()), case when $8 then now() end)
        on conflict (id) do update set
          person_id = excluded.person_id, title = excluded.title, price = excluded.price,
-         link = excluded.link, notes = excluded.notes, purchased = excluded.purchased
+         link = excluded.link, notes = excluded.notes, purchased = excluded.purchased,
+         -- Para o histórico: a data em que passou a comprada (desmarcar apaga-a).
+         purchased_at = case
+           when not excluded.purchased then null
+           when gift_ideas.purchased then gift_ideas.purchased_at
+           else now()
+         end
        where gift_ideas.user_id = excluded.user_id
        returning *`,
       [g.id, userId, g.person_id, g.title, g.price ?? null, g.link, g.notes, g.purchased, g.created_at ?? null],

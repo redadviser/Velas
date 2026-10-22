@@ -8,6 +8,7 @@ import '../../core/utils/identity.dart';
 import '../../services/google_service.dart';
 import '../models/models.dart';
 import '../repositories/auth_repository.dart';
+import '../../core/utils/errors.dart';
 import 'api_client.dart';
 
 /// Autenticação na API própria (pasta `backend`): email ou username com
@@ -167,6 +168,17 @@ class ApiAuthRepository implements AuthRepository {
     final res = bytes == null ? await _api.delete('/me/photo') : await _api.putBytes('/me/photo', bytes, 'image/jpeg');
     final json = (res as Map).cast<String, dynamic>();
     _set(_profile(json), json);
+  }
+
+  @override
+  Future<void> startPlusTrial() async {
+    try {
+      final json = ((await _api.post('/me/plus/trial')) as Map).cast<String, dynamic>();
+      _set(_profile(json), json);
+    } on ApiException catch (e) {
+      if (e.code == 'trial_used') throw const AppException('Já usaste o período experimental do Birthdayly+.');
+      rethrow;
+    }
   }
 
   @override

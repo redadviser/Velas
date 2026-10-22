@@ -62,7 +62,7 @@ class PersonAvatar extends StatelessWidget {
     if (!celebrate) return avatar;
     return Container(
       padding: const EdgeInsets.all(2.5),
-      decoration: const BoxDecoration(gradient: AppColors.brandGradient, shape: BoxShape.circle),
+      decoration: BoxDecoration(gradient: context.palette.brand, shape: BoxShape.circle),
       child: Container(
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(color: context.palette.card, shape: BoxShape.circle),

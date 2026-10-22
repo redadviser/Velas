@@ -50,7 +50,7 @@ class HomeInbox extends ConsumerWidget {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      gradient: AppColors.brandGradient,
+                      gradient: context.palette.brand,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(LucideIcons.mail, color: Colors.white, size: 18),

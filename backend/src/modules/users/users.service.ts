@@ -21,7 +21,9 @@ export class UsersService {
               p.reminder_hour, p.reminder_minute, p.default_reminder_days, p.payment_methods,
               u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
-              p.message_notifications, p.message_previews, p.mbway_pay_phone
+              p.message_notifications, p.message_previews, p.mbway_pay_phone,
+              coalesce(p.plus_until > now(), false) as plus, p.plus_until,
+              not p.plus_trial_used as plus_trial_available, p.weekly_digest
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
@@ -95,6 +97,20 @@ export class UsersService {
     return profile;
   }
 
+  /** Período experimental do Birthdayly+: 30 dias, uma vez por conta. */
+  async startPlusTrial(userId: string): Promise<Profile> {
+    return tx(this.db, userId, async (c) => {
+      const { rowCount } = await c.query(
+        `update profiles set plus_until = greatest(coalesce(plus_until, now()), now()) + interval '30 days',
+                             plus_trial_used = true
+         where id = $1 and not plus_trial_used`,
+        [userId],
+      );
+      if (!rowCount) throw new HttpError(409, 'trial_used');
+      return this.profileIn(c, userId);
+    });
+  }
+
   /** Fotografia de perfil (bytes da imagem). Substitui a anterior. */
   async setPhoto(userId: string, data: Buffer): Promise<Profile> {
     const type = imageType(data);
@@ -155,5 +171,14 @@ export class UsersService {
     });
     await this.storage.removeFolder(userId);
     for (const { id } of conversations) await this.storage.removeFolder(id);
+  }
+
+  /** Interesse no Birthdayly+ (ainda sem compra): o último plano escolhido conta. */
+  async registerPlusInterest(userId: string, plan: 'monthly' | 'yearly'): Promise<void> {
+    await this.db.query(
+      `insert into plus_interest (user_id, plan) values ($1, $2)
+       on conflict (user_id) do update set plan = excluded.plan`,
+      [userId, plan],
+    );
   }
 }

@@ -11,6 +11,8 @@ import '../../core/widgets/common.dart';
 import '../../data/models/card_models.dart';
 import '../chat/chat_widgets.dart';
 import '../chat/conversations_list.dart';
+import '../profile/plus.dart';
+import 'card_media.dart';
 
 /// O mural: todas as mensagens de parabéns que a pessoa recebeu pela
 /// Birthdayly (cartões guardados a partir de um link ou publicados aqui por
@@ -40,7 +42,10 @@ class _WallScreenState extends ConsumerState<WallScreen> {
   Widget build(BuildContext context) {
     final wall = ref.watch(wallProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('O teu mural')),
+      appBar: AppBar(
+        title: const Text('O teu mural'),
+        actions: [_AlbumButton(year: DateTime.now().year), const SizedBox(width: 8)],
+      ),
       body: wall.when(
         loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(wallProvider)),
@@ -91,8 +96,13 @@ class _WallList extends StatelessWidget {
         year = c.receivedAt.year;
         rows.add(
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
-            child: Text('$year', style: AppTheme.display(context, size: 22)),
+            padding: const EdgeInsets.fromLTRB(4, 20, 0, 8),
+            child: Row(
+              children: [
+                Expanded(child: Text('$year', style: AppTheme.display(context, size: 22))),
+                _AlbumButton(year: year),
+              ],
+            ),
           ),
         );
       }
@@ -135,12 +145,14 @@ class _WallCard extends ConsumerWidget {
                   child: Pill(
                     label: 'Nova',
                     dense: true,
-                    background: AppColors.brandGradient.colors.first,
+                    background: context.palette.brand.colors.first,
                     foreground: Colors.white,
                   ),
                 ),
             ],
           ),
+          if (card.media != null)
+            Padding(padding: const EdgeInsets.fromLTRB(0, 12, 8, 0), child: CardMediaView(media: card.media!)),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 12, 8, 4),
             child: Text(
@@ -179,7 +191,7 @@ class WallBanner extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: Ink(
-          decoration: BoxDecoration(gradient: AppColors.brandGradient, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(gradient: context.palette.brand, borderRadius: BorderRadius.circular(20)),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () => context.push('/wall'),
@@ -210,6 +222,28 @@ class WallBanner extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "Álbum" de um ano (Birthdayly+).
+class _AlbumButton extends ConsumerWidget {
+  const _AlbumButton({required this.year});
+
+  final int year;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TextButton(
+      onPressed: () async {
+        if (await requirePlus(context, ref, feature: 'O álbum do mural') && context.mounted) {
+          context.push('/wall/album/$year');
+        }
+      },
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [Icon(LucideIcons.images, size: 16), SizedBox(width: 6), Text('Álbum'), SizedBox(width: 6), PlusBadge()],
       ),
     );
   }

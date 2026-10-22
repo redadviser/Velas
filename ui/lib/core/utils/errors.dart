@@ -42,6 +42,7 @@ String _apiError(ApiException e) => switch (e.code) {
   'invalid_reset_token' => 'Este link já foi usado ou expirou. Pede um novo email de recuperação.',
   'google_not_configured' => 'O login com Google ainda não está disponível.',
   'invalid_google_token' => 'Não foi possível validar a conta Google. Tenta novamente.',
+  'plus_required' => 'Isto faz parte do Birthdayly+. Vê os planos no Perfil.',
   'friend_already_linked' => 'Este amigo já está ligado a outro aniversário.',
   'forbidden' when e.message == 'not_friends' => 'Só podes ligar o aniversário a um amigo da Birthdayly.',
   'forbidden' => 'Não tens permissão para realizar esta ação.',

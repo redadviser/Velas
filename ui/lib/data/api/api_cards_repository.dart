@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:uuid/uuid.dart';
 
 import '../../core/utils/errors.dart';
@@ -17,6 +19,7 @@ class ApiCardsRepository implements CardsRepository {
     required String recipientName,
     required String body,
     String? friendId,
+    String? mediaKey,
   }) async {
     try {
       final res = await _api.post('/cards', {
@@ -25,12 +28,19 @@ class ApiCardsRepository implements CardsRepository {
         'recipient_name': recipientName,
         'body': body,
         'recipient_id': ?friendId,
+        'media_key': ?mediaKey,
       });
       return SentCard.fromJson((res as Map).cast<String, dynamic>());
     } on ApiException catch (e) {
       if (e.code == 'not_friends') throw const AppException('Só podes publicar no mural dos teus amigos.');
       rethrow;
     }
+  }
+
+  @override
+  Future<String> uploadMedia(Uint8List bytes) async {
+    final res = (await _api.postBytes('/cards/media', bytes, 'application/octet-stream')) as Map;
+    return res['media_key'] as String;
   }
 
   @override

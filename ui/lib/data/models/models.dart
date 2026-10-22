@@ -50,6 +50,9 @@ class UserProfile {
     this.messageNotifications = true,
     this.messagePreviews = true,
     this.mbwayPayPhone = '',
+    this.plusUntil,
+    this.plusTrialAvailable = true,
+    this.weeklyDigest = false,
   });
 
   final String id;
@@ -75,6 +78,18 @@ class UserProfile {
 
   /// Número MB WAY guardado para pagar dentro da app (E.164; privado). Vazio se não houver.
   final String mbwayPayPhone;
+
+  /// Birthdayly+ ativo até esta data (null = nunca teve).
+  final DateTime? plusUntil;
+
+  /// Ainda pode experimentar o Birthdayly+ durante 30 dias.
+  final bool plusTrialAvailable;
+
+  /// Resumo semanal dos aniversários, à segunda-feira (Birthdayly+).
+  final bool weeklyDigest;
+
+  /// Tem o Birthdayly+ agora.
+  bool get isPlus => plusUntil != null && plusUntil!.isAfter(DateTime.now());
 
   /// Único, em minúsculas. Vazio em contas antigas que ainda não o definiram.
   final String username;
@@ -107,6 +122,9 @@ class UserProfile {
     bool? messageNotifications,
     bool? messagePreviews,
     String? mbwayPayPhone,
+    DateTime? Function()? plusUntil,
+    bool? plusTrialAvailable,
+    bool? weeklyDigest,
   }) => UserProfile(
     id: id,
     email: email,
@@ -125,6 +143,9 @@ class UserProfile {
     messageNotifications: messageNotifications ?? this.messageNotifications,
     messagePreviews: messagePreviews ?? this.messagePreviews,
     mbwayPayPhone: mbwayPayPhone ?? this.mbwayPayPhone,
+    plusUntil: plusUntil != null ? plusUntil() : this.plusUntil,
+    plusTrialAvailable: plusTrialAvailable ?? this.plusTrialAvailable,
+    weeklyDigest: weeklyDigest ?? this.weeklyDigest,
   );
 
   /// Campos que o próprio altera com PATCH /me (a fotografia vai à parte).
@@ -143,6 +164,7 @@ class UserProfile {
     'message_notifications': messageNotifications,
     'message_previews': messagePreviews,
     'mbway_pay_phone': mbwayPayPhone.isEmpty ? null : mbwayPayPhone,
+    'weekly_digest': weeklyDigest,
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> j, {required String id, required String email}) => UserProfile(
@@ -167,6 +189,9 @@ class UserProfile {
     messageNotifications: j['message_notifications'] as bool? ?? true,
     messagePreviews: j['message_previews'] as bool? ?? true,
     mbwayPayPhone: j['mbway_pay_phone'] as String? ?? '',
+    plusUntil: j['plus_until'] == null ? null : DateTime.parse(j['plus_until'] as String).toLocal(),
+    plusTrialAvailable: j['plus_trial_available'] as bool? ?? true,
+    weeklyDigest: j['weekly_digest'] as bool? ?? false,
   );
 }
 
@@ -210,6 +235,8 @@ class Person {
     this.giftBudget,
     this.reminderDays,
     this.linkedUserId,
+    this.reminderHour,
+    this.reminderMinute,
     required this.createdAt,
   });
 
@@ -236,6 +263,10 @@ class Person {
 
   /// Amigo da app que é esta pessoa (para o mural, a conversa, ...).
   final String? linkedUserId;
+
+  /// Hora própria dos lembretes desta pessoa (Birthdayly+); null usa a do perfil.
+  final int? reminderHour;
+  final int? reminderMinute;
   final DateTime createdAt;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
@@ -271,6 +302,7 @@ class Person {
     double? Function()? giftBudget,
     List<int>? Function()? reminderDays,
     String? Function()? linkedUserId,
+    ({int hour, int minute})? Function()? reminderTime,
   }) => Person(
     id: id,
     name: name ?? this.name,
@@ -285,6 +317,8 @@ class Person {
     giftBudget: giftBudget != null ? giftBudget() : this.giftBudget,
     reminderDays: reminderDays != null ? reminderDays() : this.reminderDays,
     linkedUserId: linkedUserId != null ? linkedUserId() : this.linkedUserId,
+    reminderHour: reminderTime != null ? reminderTime()?.hour : reminderHour,
+    reminderMinute: reminderTime != null ? reminderTime()?.minute : reminderMinute,
     createdAt: createdAt,
   );
 
@@ -301,6 +335,8 @@ class Person {
     'gift_budget': giftBudget,
     'reminder_days': reminderDays,
     'linked_user_id': linkedUserId,
+    'reminder_hour': reminderHour,
+    'reminder_minute': reminderMinute,
     'created_at': createdAt.toUtc().toIso8601String(),
   };
 
@@ -317,6 +353,8 @@ class Person {
     giftBudget: _double(j['gift_budget']),
     reminderDays: j['reminder_days'] == null ? null : _intList(j['reminder_days']),
     linkedUserId: j['linked_user_id'] as String?,
+    reminderHour: (j['reminder_hour'] as num?)?.toInt(),
+    reminderMinute: (j['reminder_minute'] as num?)?.toInt(),
     createdAt: _date(j['created_at']),
   );
 }

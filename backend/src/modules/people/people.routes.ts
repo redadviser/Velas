@@ -28,6 +28,19 @@ export async function peopleRoutes(app: FastifyInstance, people: PeopleService) 
     }),
   );
 
+  app.get(
+    '/people/:id/history',
+    {
+      schema: doc({
+        tag,
+        summary: 'Histórico da pessoa por ano (cartões, prendas e prendas em grupo)',
+        description: 'No plano Grátis só o ano atual; os outros anos vêm em locked_years.',
+        params: idParams,
+      }),
+    },
+    (req) => people.history(req.uid, idParams.parse(req.params).id),
+  );
+
   app.delete('/people/:id', { schema: doc({ tag, summary: 'Apagar uma pessoa', params: idParams }) }, async (req, reply) => {
     await people.remove(req.uid, idParams.parse(req.params).id);
     return reply.status(204).send();

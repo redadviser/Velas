@@ -98,7 +98,13 @@ class ConversationInfoScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
-          Center(child: ConversationAvatar(conversation: c, size: 88)),
+          Center(
+            child: ZoomablePhoto(
+              url: c.isGroup ? c.photoUrl : other?.photoUrl,
+              title: c.title,
+              child: ConversationAvatar(conversation: c, size: 88),
+            ),
+          ),
           const SizedBox(height: 14),
           Text(c.title, textAlign: TextAlign.center, style: AppTheme.display(context, size: 24)),
           if (other != null && other.username.isNotEmpty)

@@ -79,7 +79,7 @@ class BrandMark extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            gradient: onGradient ? null : AppColors.brandGradient,
+            gradient: onGradient ? null : context.palette.brand,
             color: onGradient ? Colors.white.withValues(alpha: 0.18) : null,
             borderRadius: BorderRadius.circular(size * 0.32),
           ),

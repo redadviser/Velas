@@ -27,7 +27,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Para escolheres fotografias das pessoas e para enviares imagens nas conversas.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Para tirares fotografias das pessoas e para as enviares nas conversas.</string>
+	<string>Para tirares fotografias das pessoas, para as enviares nas conversas e para gravares vídeos de parabéns.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para gravares mensagens de voz e vídeos de parabéns nos cartões.</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>pt-PT</string>

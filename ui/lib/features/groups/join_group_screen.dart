@@ -64,7 +64,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                   child: Container(
                     width: 84,
                     height: 84,
-                    decoration: const BoxDecoration(gradient: AppColors.brandGradient, shape: BoxShape.circle),
+                    decoration: BoxDecoration(gradient: context.palette.brand, shape: BoxShape.circle),
                     child: const Icon(LucideIcons.gift, color: Colors.white, size: 36),
                   ),
                 ),

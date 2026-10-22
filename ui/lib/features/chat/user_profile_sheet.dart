@@ -169,7 +169,9 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: PresenceAvatar(user: u, size: 88)),
+            Center(
+              child: ZoomablePhoto(url: u.photoUrl, title: u.name, child: PresenceAvatar(user: u, size: 88)),
+            ),
             const SizedBox(height: 14),
             Text(u.name, textAlign: TextAlign.center, style: AppTheme.display(context, size: 24)),
             if (u.username.isNotEmpty)

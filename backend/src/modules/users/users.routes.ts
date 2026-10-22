@@ -8,6 +8,7 @@ import { profilePatchSchema } from './users.model.js';
 import type { UsersService } from './users.service.js';
 
 const passwordBody = z.object({ password: passwordSchema });
+const plusInterestBody = z.object({ plan: z.enum(['monthly', 'yearly']) });
 
 /** Perfil e conta do utilizador autenticado. */
 export async function usersRoutes(app: FastifyInstance, users: UsersService) {
@@ -43,6 +44,28 @@ export async function usersRoutes(app: FastifyInstance, users: UsersService) {
     await users.setPassword(req.uid, password);
     return reply.status(204).send();
   });
+
+  app.post(
+    '/me/plus/trial',
+    { schema: doc({ tag, summary: 'Experimentar o Birthdayly+ durante 30 dias (uma vez por conta)' }) },
+    (req) => users.startPlusTrial(req.uid),
+  );
+
+  app.post(
+    '/me/plus-interest',
+    {
+      schema: doc({
+        tag,
+        summary: 'Quero o Birthdayly+ (avisar quando estiver disponível)',
+        description: 'Enquanto a subscrição não se vende, regista o interesse e o plano escolhido (repetir muda o plano).',
+        body: plusInterestBody,
+      }),
+    },
+    async (req, reply) => {
+      await users.registerPlusInterest(req.uid, plusInterestBody.parse(req.body).plan);
+      return reply.status(204).send();
+    },
+  );
 
   app.delete('/me', { schema: doc({ tag, summary: 'Apagar a conta e todos os dados' }) }, async (req, reply) => {
     await users.deleteAccount(req.uid);

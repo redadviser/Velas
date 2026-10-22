@@ -287,6 +287,7 @@ abstract final class Keys {
   static const payFormCardHint = 'pay.form.cardHint';
   static const payInAppBadge = 'pay.inApp.badge';
   static const payInAppFeeLine = 'pay.inApp.feeLine';
+  static const payInAppServiceNote = 'pay.inApp.serviceNote';
   static const payInAppPayCard = 'pay.inApp.payCard';
   static const payInAppPayPaypal = 'pay.inApp.payPaypal';
   static const payInAppCardSteps = 'pay.inApp.cardSteps';

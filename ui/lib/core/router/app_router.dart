@@ -13,6 +13,7 @@ import '../../features/auth/reset_password_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/cards/card_links.dart';
 import '../../features/cards/card_screen.dart';
+import '../../features/cards/album_screen.dart';
 import '../../features/cards/wall_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/chat/chat_settings_screen.dart';
@@ -26,12 +27,14 @@ import '../../features/groups/join_group_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/messages/message_screen.dart';
 import '../../features/people/people_screen.dart';
+import '../../features/people/history_screen.dart';
 import '../../features/people/import_contacts_screen.dart';
 import '../../features/people/onboarding.dart';
 import '../../features/people/person_detail_screen.dart';
 import '../../features/people/person_form_screen.dart';
 import '../../features/profile/categories_screen.dart';
 import '../../features/profile/payment_details_screen.dart';
+import '../../features/profile/plans_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../services/deferred_link.dart';
@@ -123,7 +126,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(path: '/wall', parentNavigatorKey: _rootKey, builder: (_, _) => const WallScreen()),
+      GoRoute(
+        path: '/wall',
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const WallScreen(),
+        routes: [
+          GoRoute(
+            path: 'album/:year',
+            parentNavigatorKey: _rootKey,
+            builder: (_, s) => AlbumScreen(year: int.parse(s.pathParameters['year']!)),
+          ),
+        ],
+      ),
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
@@ -146,6 +160,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'message',
             parentNavigatorKey: _rootKey,
             builder: (_, s) => MessageScreen(personId: s.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'history',
+            parentNavigatorKey: _rootKey,
+            builder: (_, s) => HistoryScreen(personId: s.pathParameters['id']!),
           ),
         ],
       ),
@@ -173,6 +192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
           GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
+          GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
         ],
       ),
     ],

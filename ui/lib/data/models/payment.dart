@@ -46,6 +46,7 @@ class PaymentDetails {
     this.acceptsCash = true,
     this.inApp = false,
     this.inAppFees = const {},
+    this.inAppServiceFee = 0,
   });
 
   final String mbwayPhone;
@@ -63,17 +64,22 @@ class PaymentDetails {
   /// Comissão de cada método dentro da app (`card`, `paypal`, `mb_way`).
   final Map<String, ({double percent, double fixed})> inAppFees;
 
+  /// Taxa de serviço da Birthdayly em cada pagamento dentro da app (euros).
+  final double inAppServiceFee;
+
   static const empty = PaymentDetails();
 
   /// Este método paga-se dentro da app?
   bool payInApp(PaymentMethod m) => inApp && m.inAppName != null;
 
-  /// A comissão somada a [amount] para quem recebe ficar com [amount] (igual ao servidor).
+  /// A comissão (Stripe + taxa de serviço) somada a [amount] para quem recebe
+  /// ficar com [amount] (igual ao servidor, payments.model.ts).
   ({double fee, double total}) withFee(PaymentMethod m, double amount) {
     final f = inAppFees[m.inAppName];
     if (f == null) return (fee: 0, total: amount);
     final shareCents = (amount * 100).round();
-    final totalCents = ((shareCents + (f.fixed * 100).round()) / (1 - f.percent / 100)).ceil();
+    final serviceCents = (inAppServiceFee * 100).round();
+    final totalCents = ((shareCents + (f.fixed * 100).round() + serviceCents) / (1 - f.percent / 100)).ceil();
     return (fee: (totalCents - shareCents) / 100, total: totalCents / 100);
   }
 
@@ -140,6 +146,7 @@ class PaymentDetails {
       skrillEmail: j['skrill_email'] as String? ?? '',
       acceptsCash: j['accepts_cash'] as bool? ?? true,
       inApp: j['in_app'] as bool? ?? false,
+      inAppServiceFee: (j['in_app_service_fee'] as num?)?.toDouble() ?? 0,
       inAppFees: {
         for (final MapEntry(:key, :value) in ((j['in_app_fees'] as Map?) ?? const {}).entries)
           key as String: (

@@ -6,6 +6,8 @@
     <!-- Importar aniversários dos contactos (só leitura) -->
     <!-- Importar aniversários dos contactos (só leitura). -->
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <!-- Mensagens de voz e vídeos nos cartões de parabéns (Birthdayly+). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Birthdayly"
         android:name="${applicationName}"
@@ -47,6 +49,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Widget dos próximos aniversários no ecrã inicial (Birthdayly+). -->
+        <receiver android:name=".BirthdaysWidget" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/birthdays_widget_info" />
+        </receiver>
         <!-- Lembretes de aniversário agendados (funcionam com a app fechada e após reinício) -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">

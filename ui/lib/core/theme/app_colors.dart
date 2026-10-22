@@ -47,6 +47,25 @@ class AppColors {
   );
 }
 
+/// Temas da app (Birthdayly+): a cor principal e o gradiente da marca. O resto
+/// da paleta (fundos, texto, bordas) é igual em todos.
+enum AppAccent {
+  coral('Coral', Color(0xFFF05560), Color(0xFFFA686A), [Color(0xFFF05560), Color(0xFFE662A8), Color(0xFFAB8BE3)]),
+  lavanda('Lavanda', Color(0xFF8B6FD6), Color(0xFFA58BEA), [Color(0xFF8B6FD6), Color(0xFFB57FE0), Color(0xFFE662A8)]),
+  oceano('Oceano', Color(0xFF2F86D1), Color(0xFF5AA6E8), [Color(0xFF2F86D1), Color(0xFF3BB3C3), Color(0xFF6ED3B0)]),
+  menta('Menta', Color(0xFF23A078), Color(0xFF45C497), [Color(0xFF23A078), Color(0xFF7CC46B), Color(0xFFF4C35C)]);
+
+  const AppAccent(this.label, this.light, this.dark, this.gradient);
+
+  final String label;
+  final Color light;
+  final Color dark;
+  final List<Color> gradient;
+
+  LinearGradient get brand =>
+      LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradient);
+}
+
 /// Cores semânticas extra que o [ColorScheme] do Material não cobre.
 @immutable
 class AppPalette extends ThemeExtension<AppPalette> {
@@ -59,6 +78,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.border,
     required this.card,
     required this.softGradient,
+    this.brand = AppColors.brandGradient,
   });
 
   final Color muted;
@@ -69,6 +89,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color border;
   final Color card;
   final Gradient softGradient;
+
+  /// O gradiente da marca no tema escolhido (ver [AppAccent]).
+  final LinearGradient brand;
 
   static const light = AppPalette(
     muted: AppColors.muted,
@@ -101,7 +124,17 @@ class AppPalette extends ThemeExtension<AppPalette> {
   );
 
   @override
-  AppPalette copyWith() => this;
+  AppPalette copyWith({LinearGradient? brand}) => AppPalette(
+    muted: muted,
+    mutedForeground: mutedForeground,
+    accent: accent,
+    accentForeground: accentForeground,
+    success: success,
+    border: border,
+    card: card,
+    softGradient: softGradient,
+    brand: brand ?? this.brand,
+  );
 
   @override
   AppPalette lerp(ThemeExtension<AppPalette>? other, double t) {
@@ -115,6 +148,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       border: Color.lerp(border, other.border, t)!,
       card: Color.lerp(card, other.card, t)!,
       softGradient: t < 0.5 ? softGradient : other.softGradient,
+      brand: LinearGradient.lerp(brand, other.brand, t)!,
     );
   }
 }

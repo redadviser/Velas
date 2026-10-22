@@ -209,6 +209,32 @@ class PersonDetailScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (ref.watch(apiClientProvider) != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              onTap: () => context.push('/person/${person.id}/history'),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.history, size: 18, color: context.colors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Histórico', style: context.text.titleSmall),
+                        Text(
+                          'O que lhe escreveste e deste, ano a ano',
+                          style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
+                ],
+              ),
+            ),
+          ],
           SectionTitle('Mensagem', padding: const EdgeInsets.fromLTRB(4, 28, 0, 10)),
           if (message == null)
             AppCard(

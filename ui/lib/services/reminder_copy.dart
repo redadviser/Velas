@@ -75,7 +75,30 @@ class ReminderCopy {
       'person' => '/person/$id',
       'message' => '/person/$id/message',
       'group' => '/groups/new?personId=$id',
+      'agenda' => '/agenda',
       _ => null,
     };
+  }
+
+  /// Resumo semanal (Birthdayly+): os aniversários da semana que começa em
+  /// [monday], por ordem. `null` se não houver nenhum (não se manda nada).
+  static ({String title, String body, String payload})? weeklyDigest(List<Person> people, DateTime monday) {
+    final start = DateTime(monday.year, monday.month, monday.day);
+    final week = <(DateTime, Person)>[];
+    for (final p in people) {
+      final next = BirthdayUtils.nextOccurrence(p.day, p.month, from: start);
+      if (next.difference(start).inDays < 7) week.add((next, p));
+    }
+    if (week.isEmpty) return null;
+    week.sort((a, b) => a.$1.compareTo(b.$1));
+    final names = [
+      for (final (d, p) in week.take(4)) '${p.firstName} (${Fmt.weekdayShort(d).toLowerCase()})',
+    ];
+    final more = week.length - names.length;
+    return (
+      title: week.length == 1 ? '🎂 Esta semana faz anos 1 pessoa' : '🎂 Esta semana fazem anos ${week.length} pessoas',
+      body: more > 0 ? '${names.join(', ')} e mais $more.' : '${names.join(', ')}.',
+      payload: 'agenda:week',
+    );
   }
 }

@@ -13,6 +13,7 @@ import '../../data/models/card_models.dart';
 import '../../data/models/chat_models.dart';
 import '../auth/auth_widgets.dart';
 import '../chat/chat_widgets.dart';
+import 'card_media.dart';
 
 final _cardProvider = FutureProvider.autoDispose.family<GreetingCard, String>((ref, token) {
   return ref.watch(cardsRepositoryProvider)!.preview(token);
@@ -131,7 +132,7 @@ class _CardBody extends StatelessWidget {
         Center(
           child: Container(
             padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(gradient: AppColors.brandGradient, shape: BoxShape.circle),
+            decoration: BoxDecoration(gradient: context.palette.brand, shape: BoxShape.circle),
             child: UserAvatar(user: sender, size: 72),
           ),
         ),
@@ -143,6 +144,7 @@ class _CardBody extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text('Parabéns, ${card.recipientName}! 🎉', textAlign: TextAlign.center, style: AppTheme.display(context, size: 28)),
+        if (card.media != null) ...[const SizedBox(height: 20), CardMediaView(media: card.media!)],
         const SizedBox(height: 20),
         AppCard(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),

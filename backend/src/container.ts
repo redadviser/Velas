@@ -51,7 +51,7 @@ export function createServices(deps: Deps) {
   const chat = new ChatService(db, storage, hub);
   const payments = new PaymentsService(db, deps.config, deps.payments, hub);
   const groups = new GroupsService(db, storage, hub);
-  groups.inApp = { enabled: payments.enabled, fees: payments.fees };
+  groups.inApp = { enabled: payments.enabled, fees: payments.fees, serviceFee: payments.serviceFee };
   // Mudar a privacidade da presença avisa logo quem a estava a ver.
   users.onUpdated = async (userId, patch) => {
     if (patch.show_presence !== undefined) await chat.announcePresence(userId);

@@ -5,6 +5,7 @@ import type { RealtimeHub } from '../../core/realtime.js';
 import type { GatewayEvent, GatewayStatus, InAppMethod, PaymentsGateway } from './gateway.js';
 import {
   defaultFees,
+  defaultServiceFee,
   mbwayPhone,
   withFee,
   type CheckoutInput,
@@ -18,6 +19,7 @@ interface PaymentRow {
   method: InAppMethod;
   amount: number;
   fee: number;
+  service_fee: number;
   status: PaymentJson['status'];
   error: string | null;
   stripe_payment_intent: string | null;
@@ -53,6 +55,11 @@ export class PaymentsService {
 
   get fees(): FeeTable {
     return this.config.payments?.fees ?? defaultFees;
+  }
+
+  /** Taxa de serviço por pagamento, em euros. */
+  get serviceFee(): number {
+    return this.config.payments?.serviceFee ?? defaultServiceFee;
   }
 
   private requireGateway(): PaymentsGateway {
@@ -175,11 +182,12 @@ export class PaymentsService {
       if (input.save_phone) await this.db.query('update profiles set mbway_pay_phone = $2 where id = $1', [userId, phone]);
     }
 
-    const { totalCents, feeCents } = withFee(ctx.shareCents, this.fees[input.method]);
+    const serviceCents = Math.round(this.serviceFee * 100);
+    const { totalCents, feeCents } = withFee(ctx.shareCents, this.fees[input.method], serviceCents);
     const { rows } = await this.db.query<{ id: string }>(
-      `insert into payments (group_id, member_id, payer_id, payee_id, method, amount, fee)
-       values ($1, $2, $3, $4, $5, $6, $7) returning id`,
-      [ctx.group_id, memberId, userId, ctx.buyer_id, input.method, ctx.shareCents / 100, feeCents / 100],
+      `insert into payments (group_id, member_id, payer_id, payee_id, method, amount, fee, service_fee)
+       values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+      [ctx.group_id, memberId, userId, ctx.buyer_id, input.method, ctx.shareCents / 100, feeCents / 100, serviceCents / 100],
     );
     const paymentId = rows[0]!.id;
     const metadata = { payment_id: paymentId, group_id: ctx.group_id, member_id: memberId };
@@ -230,6 +238,7 @@ export class PaymentsService {
       method: p.method,
       amount: p.amount,
       fee: p.fee,
+      service_fee: p.service_fee,
       total: Math.round((p.amount + p.fee) * 100) / 100,
       status: p.status,
       error: p.error,

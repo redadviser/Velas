@@ -73,6 +73,8 @@ p{margin:0 0 12px;color:var(--muted)}
 .from{text-align:right;font-style:italic}
 .field{display:block;width:100%;margin-top:12px;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font:inherit;font-size:16px}
 .fields{display:flex;gap:12px}.fields .field{flex:1}
+.media{display:block;width:100%;margin:20px 0 0;border-radius:18px;background:var(--accent)}
+audio.media{background:none}
 [hidden]{display:none!important}
 </style></head><body><main>
 ${mark}

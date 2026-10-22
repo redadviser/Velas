@@ -14,6 +14,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../../services/notification_service.dart';
 import '../auth/auth_widgets.dart';
+import '../profile/plus.dart';
 import 'birthday_picker.dart';
 import 'linked_friend.dart';
 
@@ -57,6 +58,9 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
   String? _categoryId;
   String? _linkedUserId;
   bool _useDefaultReminders = true;
+
+  /// Hora própria dos lembretes desta pessoa (Birthdayly+); null usa a do perfil.
+  ({int hour, int minute})? _time;
   Set<int> _reminders = {...kDefaultReminderDays};
   Uint8List? _newPhoto;
   bool _removePhoto = false;
@@ -80,6 +84,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
       _date = (day: p.day, month: p.month, year: p.year);
       _categoryId = p.categoryId;
       _linkedUserId = p.linkedUserId;
+      if (p.reminderHour != null && p.reminderMinute != null) _time = (hour: p.reminderHour!, minute: p.reminderMinute!);
       _useDefaultReminders = p.reminderDays == null;
       if (p.reminderDays != null) _reminders = {...p.reminderDays!};
     }
@@ -152,6 +157,18 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
     }
   }
 
+  Future<void> _pickTime() async {
+    if (!await requirePlus(context, ref, feature: 'Escolher a hora por pessoa')) return;
+    if (!mounted) return;
+    final user = ref.read(currentUserProvider);
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _time?.hour ?? user?.reminderHour ?? 9, minute: _time?.minute ?? user?.reminderMinute ?? 0),
+      helpText: 'Hora dos lembretes desta pessoa',
+    );
+    if (t != null) setState(() => _time = (hour: t.hour, minute: t.minute));
+  }
+
   Future<void> _pickDate() async {
     final picked = await showBirthdayPicker(context, initial: _date);
     if (picked != null) {
@@ -193,6 +210,8 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
       giftBudget: _parseBudget,
       reminderDays: () => _useDefaultReminders ? null : (_reminders.toList()..sort()),
       linkedUserId: () => _linkedUserId,
+      // Sem o Birthdayly+ a hora própria não se guarda (volta à do perfil).
+      reminderTime: () => ref.read(isPlusProvider) ? _time : null,
     );
 
     setState(() => _saving = true);
@@ -349,6 +368,25 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
                     ),
                     value: _useDefaultReminders,
                     onChanged: (v) => setState(() => _useDefaultReminders = v),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    onTap: _pickTime,
+                    leading: const Icon(LucideIcons.clock, size: 20),
+                    title: const Row(children: [Text('Hora'), SizedBox(width: 8), PlusBadge()]),
+                    subtitle: Text(
+                      _time != null && ref.watch(isPlusProvider)
+                          ? TimeOfDay(hour: _time!.hour, minute: _time!.minute).format(context)
+                          : 'A hora geral (${TimeOfDay(hour: user?.reminderHour ?? 9, minute: user?.reminderMinute ?? 0).format(context)})',
+                      style: TextStyle(color: context.palette.mutedForeground),
+                    ),
+                    trailing: _time == null
+                        ? null
+                        : IconButton(
+                            tooltip: 'Usar a hora geral',
+                            icon: const Icon(LucideIcons.x, size: 18),
+                            onPressed: () => setState(() => _time = null),
+                          ),
                   ),
                   if (!_useDefaultReminders)
                     Wrap(

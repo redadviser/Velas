@@ -57,4 +57,7 @@ abstract class AuthRepository {
 
   /// Elimina a conta e todos os dados associados (direito ao apagamento, RGPD).
   Future<void> deleteAccount();
+
+  /// Experimentar o Birthdayly+ durante 30 dias (uma vez por conta).
+  Future<void> startPlusTrial();
 }

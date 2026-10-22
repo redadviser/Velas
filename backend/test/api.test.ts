@@ -11,7 +11,7 @@ import { buildApp } from '../src/app.js';
 import { HttpError } from '../src/core/errors.js';
 import { AccessTokens } from '../src/modules/auth/tokens.js';
 import type { GoogleIdentity } from '../src/modules/auth/google.js';
-import type { Config } from '../src/config/env.js';
+import { loadPaymentsConfig, type Config } from '../src/config/env.js';
 import type { Mail } from '../src/core/mailer.js';
 import { migrate } from '../src/core/migrations.js';
 import { PhotoStorage } from '../src/core/storage.js';
@@ -886,7 +886,7 @@ describe('pagamentos na app (Stripe)', () => {
     expect(stripeCalls.find((c) => c.op === 'onboardingLink')!.args).toMatchObject({ returnUrl: 'http://api.test/stripe/return' });
     expect((await call('POST', '/me/payouts/refresh', { token: bia.access_token })).body).toMatchObject({ connected: true, ready: true });
     const payee = (await call('GET', `/groups/${groupId}/payee`, { token: caio.access_token })).body;
-    expect(payee).toMatchObject({ in_app: true, in_app_fees: { card: { percent: 1.5, fixed: 0.25 } } });
+    expect(payee).toMatchObject({ in_app: true, in_app_fees: { card: { percent: 1.5, fixed: 0.25 } }, in_app_service_fee: 0.39 });
 
     // Quem compra não paga a si próprio; um membro só paga a sua parte.
     const biaMember = await memberOf(bia);
@@ -897,9 +897,11 @@ describe('pagamentos na app (Stripe)', () => {
     expect((await checkout(caio, caioMember.id, { method: 'mb_way' })).body.error).toBe('invalid_phone');
     const mbway = await checkout(caio, caioMember.id, { method: 'mb_way', phone: '912 345 678', save_phone: true });
     expect(mbway.status).toBe(200);
-    // 40 € a três: a Bia 13,34 €, o Caio e a Dani 13,33 €. A comissão vai por cima.
-    expect(mbway.body).toMatchObject({ method: 'mb_way', status: 'pending', amount: 13.33, fee: 0.46, total: 13.79, checkout_url: null });
-    expect(stripeCalls.at(-1)!.args).toMatchObject({ amountCents: 1379, transferCents: 1333, phone: '+351912345678', destination: expect.stringMatching(/^acct_/) });
+    // 40 € a três: a Bia 13,34 €, o Caio e a Dani 13,33 €. A comissão da Stripe e a
+    // taxa de serviço (0,39 €) vão por cima: (13,33 + 0,25 + 0,39) / 0,985 = 14,19 €.
+    expect(mbway.body).toMatchObject({ method: 'mb_way', status: 'pending', amount: 13.33, fee: 0.86, service_fee: 0.39, total: 14.19, checkout_url: null });
+    // Quem compra recebe a parte inteira; a Birthdayly fica com o resto (Stripe + serviço).
+    expect(stripeCalls.at(-1)!.args).toMatchObject({ amountCents: 1419, transferCents: 1333, phone: '+351912345678', destination: expect.stringMatching(/^acct_/) });
     expect((await call('GET', '/me', { token: caio.access_token })).body.mbway_pay_phone).toBe('+351912345678');
     expect((await call('GET', `/payments/${mbway.body.id}`, { token: dani.access_token })).status).toBe(404);
 
@@ -956,9 +958,9 @@ describe('pagamentos na app (Stripe)', () => {
     for (const [payer, outcome] of [[fil, 'checkout.session.async_payment_succeeded'], [gui, 'checkout.session.async_payment_failed']] as const) {
       const member = await memberOf(payer);
       const pay = await call('POST', `/group-members/${member.id}/checkout`, { token: payer.access_token, body: { method: 'sepa_debit' } });
-      // 30 € a três = 10 €; a transferência só tem a parte fixa (0,35 €).
-      expect(pay.body).toMatchObject({ method: 'sepa_debit', amount: 10, fee: 0.35, total: 10.35 });
-      expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'sepa_debit', amountCents: 1035, transferCents: 1000 });
+      // 30 € a três = 10 €; a transferência só tem a parte fixa (0,35 €), mais o serviço.
+      expect(pay.body).toMatchObject({ method: 'sepa_debit', amount: 10, fee: 0.74, service_fee: 0.39, total: 10.74 });
+      expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'sepa_debit', amountCents: 1074, transferCents: 1000 });
 
       await webhook('checkout.session.completed', { payment_status: 'unpaid', metadata: { payment_id: pay.body.id } });
       expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('processing');
@@ -1191,6 +1193,136 @@ describe('pedir aniversários por link', () => {
   });
 });
 
+describe('planos', () => {
+  it('regista quem quer o Birthdayly+ e com que plano (o último conta)', async () => {
+    const s = await signup('Lara', 'lara', 'lara@ex.pt');
+    expect((await call('POST', '/me/plus-interest', { token: s.access_token, body: { plan: 'yearly' } })).status).toBe(204);
+    expect((await call('POST', '/me/plus-interest', { token: s.access_token, body: { plan: 'monthly' } })).status).toBe(204);
+    expect((await call('POST', '/me/plus-interest', { token: s.access_token, body: { plan: 'semanal' } })).status).toBe(400);
+    expect((await call('POST', '/me/plus-interest', { body: { plan: 'yearly' } })).status).toBe(401);
+    const { rows } = await db.query<{ plan: string }>('select plan from plus_interest where user_id = $1', [s.user.id]);
+    expect(rows).toEqual([{ plan: 'monthly' }]);
+  });
+});
+
+describe('Birthdayly+', () => {
+  let nuno: Session;
+  let olga: Session;
+  const personId = uuid();
+  // Inícios de um vídeo MP4 e de um áudio M4A (caixa ftyp): o tipo vem dos bytes.
+  const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypisom'), Buffer.alloc(64, 1)]);
+  const m4a = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypM4A '), Buffer.alloc(64, 2)]);
+  const upload = (s: Session, url: string, data: Buffer) =>
+    app.inject({ method: 'POST', url, payload: data, headers: { authorization: `Bearer ${s.access_token}`, 'content-type': 'application/octet-stream' } });
+
+  beforeAll(async () => {
+    nuno = await signup('Nuno', 'nuno', 'nuno@ex.pt');
+    olga = await signup('Olga', 'olga', 'olga@ex.pt');
+    await call('PUT', `/people/${personId}`, { token: nuno.access_token, body: { id: personId, name: 'Pai', birth_day: 9, birth_month: 9 } });
+  });
+
+  it('sem o plano, as funcionalidades Plus respondem plus_required', async () => {
+    const me = (await call('GET', '/me', { token: nuno.access_token })).body;
+    expect(me).toMatchObject({ plus: false, plus_until: null, plus_trial_available: true, weekly_digest: false });
+    expect((await upload(nuno, '/cards/media', mp4)).json().error).toBe('plus_required');
+    expect((await upload(nuno, '/wall/photos?year=2026', jpeg)).statusCode).toBe(402);
+    const custom = await call('PUT', `/people/${personId}`, {
+      token: nuno.access_token,
+      body: { id: personId, name: 'Pai', birth_day: 9, birth_month: 9, reminder_hour: 20, reminder_minute: 30 },
+    });
+    expect(custom.body.error).toBe('plus_required');
+  });
+
+  it('o período experimental dá 30 dias, uma vez por conta', async () => {
+    const trial = await call('POST', '/me/plus/trial', { token: nuno.access_token });
+    expect(trial.status).toBe(200);
+    expect(trial.body).toMatchObject({ plus: true, plus_trial_available: false });
+    const days = (Date.parse(trial.body.plus_until) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect((await call('POST', '/me/plus/trial', { token: nuno.access_token })).body.error).toBe('trial_used');
+    expect((await call('PATCH', '/me', { token: nuno.access_token, body: { weekly_digest: true } })).body.weekly_digest).toBe(true);
+  });
+
+  it('lembrete à hora própria por pessoa', async () => {
+    const base = { id: personId, name: 'Pai', birth_day: 9, birth_month: 9 };
+    const saved = await call('PUT', `/people/${personId}`, { token: nuno.access_token, body: { ...base, reminder_hour: 20, reminder_minute: 30 } });
+    expect(saved.body).toMatchObject({ reminder_hour: 20, reminder_minute: 30 });
+    // Versões antigas da app não mandam os campos: mantém-se; null volta à hora do perfil.
+    expect((await call('PUT', `/people/${personId}`, { token: nuno.access_token, body: base })).body.reminder_hour).toBe(20);
+    expect((await call('PUT', `/people/${personId}`, { token: nuno.access_token, body: { ...base, reminder_hour: null, reminder_minute: null } })).body.reminder_hour).toBeNull();
+  });
+
+  it('cartão especial com vídeo ou áudio, também na página do link', async () => {
+    const video = (await upload(nuno, '/cards/media', mp4)).json();
+    expect(video).toMatchObject({ media_kind: 'video', media_key: expect.stringMatching(new RegExp(`^${nuno.user.id}/card-.+\\.mp4$`)) });
+    const audio = (await upload(nuno, '/cards/media', m4a)).json();
+    expect(audio.media_kind).toBe('audio');
+    expect((await upload(nuno, '/cards/media', Buffer.from('texto'))).statusCode).toBe(415);
+
+    const card = await call('POST', '/cards', {
+      token: nuno.access_token,
+      body: { id: uuid(), person_id: personId, recipient_name: 'Pai', body: 'Parabéns, pai!', media_key: video.media_key },
+    });
+    expect(card.status).toBe(201);
+    expect(card.body).toMatchObject({ media_kind: 'video', media_url: expect.stringContaining('/files/') });
+    expect(card.body.media_key).toBeUndefined(); // a chave nunca sai do servidor
+    // O ficheiro de outra conta não se usa.
+    const other = { id: uuid(), person_id: personId, recipient_name: 'Pai', body: 'x', media_key: `${olga.user.id}/card-abc.mp4` };
+    expect((await call('POST', '/cards', { token: nuno.access_token, body: other })).status).toBe(422);
+
+    const page = await call('GET', `/c/${card.body.token}`);
+    expect(page.raw.body).toContain('<video class="media" src="http://api.test/files/');
+    expect((await call('GET', `/cards/${card.body.token}`)).body.media_kind).toBe('video');
+
+    // O vídeo serve-se aos bocados (o leitor do iPhone pede assim).
+    const path = new URL(card.body.media_url).pathname + new URL(card.body.media_url).search;
+    const part = await app.inject({ method: 'GET', url: path, headers: { range: 'bytes=0-7' } });
+    expect(part.statusCode).toBe(206);
+    expect(part.headers['content-range']).toBe(`bytes 0-7/${mp4.length}`);
+    expect(part.headers['content-type']).toBe('video/mp4');
+    expect(part.rawPayload.length).toBe(8);
+  });
+
+  it('histórico completo no Plus; no Grátis só o ano atual', async () => {
+    const giftId = uuid();
+    await call('PUT', `/gift-ideas/${giftId}`, { token: nuno.access_token, body: { person_id: personId, title: 'Relógio', price: 80, link: '', notes: '', purchased: true } });
+    // Um cartão de há dois anos.
+    const oldCard = uuid();
+    await call('POST', '/cards', { token: nuno.access_token, body: { id: oldCard, person_id: personId, recipient_name: 'Pai', body: 'Há dois anos' } });
+    await db.query(`update greeting_cards set created_at = now() - interval '2 years' where id = $1`, [oldCard]);
+
+    const full = (await call('GET', `/people/${personId}/history`, { token: nuno.access_token })).body;
+    const thisYear = new Date().getUTCFullYear();
+    expect(full.years.map((y: { year: number }) => y.year)).toEqual([thisYear, thisYear - 2]);
+    expect(full.years[0].gifts[0]).toMatchObject({ title: 'Relógio', price: 80 });
+    expect(full.locked_years).toEqual([]);
+
+    // Sem o plano, os anos anteriores ficam escondidos.
+    await db.query('update profiles set plus_until = null where id = $1', [nuno.user.id]);
+    const free = (await call('GET', `/people/${personId}/history`, { token: nuno.access_token })).body;
+    expect(free.years.map((y: { year: number }) => y.year)).toEqual([thisYear]);
+    expect(free.locked_years).toEqual([thisYear - 2]);
+    expect((await call('GET', `/people/${personId}/history`, { token: olga.access_token })).status).toBe(404);
+    await db.query(`update profiles set plus_until = now() + interval '30 days' where id = $1`, [nuno.user.id]);
+  });
+
+  it('fotografias do mural num álbum por ano', async () => {
+    const added = await app.inject({
+      method: 'POST',
+      url: '/wall/photos?year=2026&caption=Jantar',
+      payload: jpeg,
+      headers: { authorization: `Bearer ${nuno.access_token}`, 'content-type': 'image/jpeg' },
+    });
+    expect(added.statusCode).toBe(200);
+    expect(added.json()).toMatchObject({ year: 2026, caption: 'Jantar', url: expect.stringContaining('/files/') });
+    expect((await call('GET', '/wall/photos?year=2026', { token: nuno.access_token })).body).toHaveLength(1);
+    expect((await call('GET', '/wall/photos?year=2025', { token: nuno.access_token })).body).toHaveLength(0);
+    expect((await call('GET', '/wall/photos', { token: olga.access_token })).body).toEqual([]);
+    expect((await call('DELETE', `/wall/photos/${added.json().id}`, { token: nuno.access_token })).status).toBe(204);
+    expect((await call('GET', '/wall/photos', { token: nuno.access_token })).body).toEqual([]);
+  });
+});
+
 describe('sistema', () => {
   it('o /health mostra a versão da base de dados e se as imagens podem ser gravadas', async () => {
     const res = await call('GET', '/health');
@@ -1201,6 +1333,12 @@ describe('sistema', () => {
       storage_persistent: expect.any(Boolean),
       upload_dir: uploadDir,
     });
+  });
+
+  it('a taxa de serviço dos pagamentos é 0,39 € por omissão e configurável', () => {
+    expect(loadPaymentsConfig({ STRIPE_SECRET_KEY: 'sk_test' })!.serviceFee).toBe(0.39);
+    expect(loadPaymentsConfig({ STRIPE_SECRET_KEY: 'sk_test', PAYMENTS_SERVICE_FEE: '0' })!.serviceFee).toBe(0);
+    expect(() => loadPaymentsConfig({ STRIPE_SECRET_KEY: 'sk_test', PAYMENTS_SERVICE_FEE: 'muito' })).toThrow(/PAYMENTS_SERVICE_FEE/);
   });
 
   it('sem pasta gravável, falha com um erro claro (e não um erro interno)', async () => {

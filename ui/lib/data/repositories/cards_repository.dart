@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/card_models.dart';
 
 /// Cartões de parabéns (links com a mensagem). Só com servidor.
@@ -9,7 +11,12 @@ abstract class CardsRepository {
     required String recipientName,
     required String body,
     String? friendId,
+    String? mediaKey,
   });
+
+  /// Fotografia, vídeo ou áudio de um cartão especial (Birthdayly+). Devolve o
+  /// media_key para [create].
+  Future<String> uploadMedia(Uint8List bytes);
 
   /// Cartões enviados a uma pessoa, mais recentes primeiro.
   Future<List<SentCard>> sentTo(String personId);

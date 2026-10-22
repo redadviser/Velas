@@ -51,13 +51,10 @@ void main() {
       PaymentMethod.mbway,
       PaymentMethod.paypal,
       PaymentMethod.revolut,
-      PaymentMethod.transfer,
       PaymentMethod.cash,
     ]);
     expect(payee.payInApp(PaymentMethod.mbway), isTrue);
-    expect(payee.payInApp(PaymentMethod.transfer), isTrue); // IBAN na página da Stripe (débito SEPA)
     expect(payee.payInApp(PaymentMethod.skrill), isFalse);
-    expect(PaymentMethod.transfer.inAppName, 'sepa_debit');
     expect(PaymentMethod.revolut.inAppName, 'revolut_pay');
     expect(PaymentFormat.toE164('912 345 678'), '+351912345678');
     expect(PaymentFormat.displayE164('+351912345678'), '912 345 678');
@@ -141,27 +138,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('transferência: autorizada fica a caminho e a janela fecha', (tester) async {
+  testWidgets('autorizado com o dinheiro a caminho: conta como pago e a janela fecha', (tester) async {
     final methods = <PaymentMethod>[];
     final result = await open(
       tester,
       InAppPay(
         start: (m, {phone, savePhone = false}) async {
           methods.add(m);
-          return payment('pending', method: 'sepa_debit', url: 'https://checkout.stripe.test/sepa_debit');
+          return payment('pending', method: 'revolut_pay', url: 'https://checkout.stripe.test/revolut_pay');
         },
-        poll: (_) async => payment('processing', method: 'sepa_debit'),
+        poll: (_) async => payment('processing', method: 'revolut_pay'),
       ),
     );
-    await tester.tap(find.text('Transferência'));
+    // A transferência por IBAN já não existe.
+    expect(find.text('Transferência'), findsNothing);
+    await tester.tap(find.text('Revolut'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('IBAN na página segura da Stripe'), findsOneWidget);
-    await tester.ensureVisible(find.textContaining('Transferir'));
+    await tester.ensureVisible(find.textContaining('com Revolut'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Transferir'));
+    await tester.tap(find.textContaining('com Revolut'));
     await tester.pump();
     await tester.pump();
-    expect(methods, [PaymentMethod.transfer]);
+    expect(methods, [PaymentMethod.revolut]);
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(result()?.paidInApp, isTrue);

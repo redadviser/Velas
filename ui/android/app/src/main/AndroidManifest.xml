@@ -6,6 +6,9 @@
     <!-- Importar aniversários dos contactos (só leitura) -->
     <!-- Importar aniversários dos contactos (só leitura). -->
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <!-- Importar aniversários do calendário (o plugin pede leitura e escrita juntas; a app só lê). -->
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
     <!-- Mensagens de voz e vídeos nos cartões de parabéns (Birthdayly+). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application

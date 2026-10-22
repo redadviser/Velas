@@ -43,7 +43,7 @@ export const memberInfoSchema = z.object({
 export type MemberInfo = z.infer<typeof memberInfoSchema>;
 
 /** card = VISA/Mastercard pelo link Revolut/PayPal de quem recebe; skrill = para o email Skrill. */
-export const paymentMethods = ['mbway', 'transfer', 'revolut', 'paypal', 'cash', 'card', 'skrill'] as const;
+export const paymentMethods = ['mbway', 'revolut', 'paypal', 'cash', 'card', 'skrill'] as const;
 export type PaymentMethod = (typeof paymentMethods)[number];
 
 export const paidSchema = z.object({ method: z.enum(paymentMethods).nullable() });

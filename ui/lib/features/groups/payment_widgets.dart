@@ -22,7 +22,6 @@ IconData paymentIcon(PaymentMethod m) => switch (m) {
   PaymentMethod.paypal => LucideIcons.wallet,
   PaymentMethod.skrill => LucideIcons.wallet,
   PaymentMethod.revolut => LucideIcons.creditCard,
-  PaymentMethod.transfer => LucideIcons.landmark,
   PaymentMethod.cash => LucideIcons.banknote,
 };
 
@@ -33,10 +32,10 @@ String? paymentLogoAsset(PaymentMethod m) => switch (m) {
   PaymentMethod.paypal => 'assets/images/payments/paypal.png',
   PaymentMethod.skrill => 'assets/images/payments/skrill.png',
   PaymentMethod.revolut => 'assets/images/payments/revolut.png',
-  PaymentMethod.transfer || PaymentMethod.cash => null,
+  PaymentMethod.cash => null,
 };
 
-/// Logótipo (cartão VISA/Mastercard, MB WAY, PayPal, Skrill, Revolut); ícone para transferência e dinheiro.
+/// Logótipo (cartão VISA/Mastercard, MB WAY, PayPal, Skrill, Revolut); ícone para o dinheiro.
 class PaymentLogo extends StatelessWidget {
   const PaymentLogo(this.method, {super.key, this.size = 24, this.color});
 
@@ -81,8 +80,6 @@ class PaymentDetailsFields extends StatefulWidget {
 
 class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
   late final _phone = TextEditingController(text: PaymentFormat.displayPhone(widget.initial.mbwayPhone));
-  late final _iban = TextEditingController(text: PaymentFormat.displayIban(widget.initial.iban));
-  late final _holder = TextEditingController(text: widget.initial.ibanHolder);
   late final _revolut = TextEditingController(text: widget.initial.revolutTag);
   late final _paypal = TextEditingController(text: widget.initial.paypalUser);
   late final _skrill = TextEditingController(text: widget.initial.skrillEmail);
@@ -90,7 +87,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
 
   @override
   void dispose() {
-    for (final c in [_phone, _iban, _holder, _revolut, _paypal, _skrill]) {
+    for (final c in [_phone, _revolut, _paypal, _skrill]) {
       c.dispose();
     }
     super.dispose();
@@ -99,8 +96,6 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
   void _emit() => widget.onChanged(
     PaymentDetails(
       mbwayPhone: PaymentFormat.normalizePhone(_phone.text) ?? '',
-      iban: PaymentFormat.normalizeIban(_iban.text) ?? '',
-      ibanHolder: _holder.text.trim(),
       revolutTag: PaymentFormat.cleanHandle(_revolut.text),
       paypalUser: PaymentFormat.cleanHandle(_paypal.text),
       skrillEmail: PaymentFormat.normalizeEmail(_skrill.text) ?? '',
@@ -123,27 +118,6 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
               ? null
               : 'Número de telemóvel inválido.',
           decoration: InputDecoration(hintText: '912 345 678', prefixIcon: _fieldLogo(PaymentMethod.mbway)),
-        ),
-        const SizedBox(height: 18),
-        const FieldLabel('Transferência bancária'),
-        TextFormField(
-          controller: _iban,
-          textCapitalization: TextCapitalization.characters,
-          onChanged: (_) => _emit(),
-          validator: (v) => (v == null || v.trim().isEmpty || PaymentFormat.normalizeIban(v) != null)
-              ? null
-              : 'IBAN inválido. Confirma os dígitos.',
-          decoration: const InputDecoration(
-            hintText: 'PT50 0000 0000 0000 0000 0000 0',
-            prefixIcon: Icon(LucideIcons.landmark, size: 18),
-          ),
-        ),
-        const SizedBox(height: 10),
-        TextFormField(
-          controller: _holder,
-          textCapitalization: TextCapitalization.words,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(hintText: 'Nome do titular da conta'),
         ),
         const SizedBox(height: 18),
         Row(
@@ -226,7 +200,7 @@ class PayResult {
   /// Pago dentro da app (Stripe): a parte já ficou paga (e confirmada) no servidor.
   final bool paidInApp;
 
-  /// Transferência autorizada mas ainda a caminho: fica confirmada quando chegar.
+  /// Pagamento autorizado mas com o dinheiro a caminho: fica confirmado quando chegar.
   final bool processing;
 }
 
@@ -243,7 +217,7 @@ class InAppPay {
 }
 
 /// Ecrã "Pagar a …": escolher o método (cartão VISA/Mastercard, MB WAY,
-/// PayPal, Skrill, Revolut, transferência ou em mão) e pagar.
+/// PayPal, Skrill, Revolut ou em mão) e pagar.
 ///
 /// Se quem compra ligou a conta Stripe ([PaymentDetails.inApp]) e há [inApp],
 /// cartão e PayPal pagam-se na página segura da Stripe e o MB WAY envia um
@@ -465,29 +439,6 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
         sendLabel: context.tr(Keys.paySendLink, {'amount': _money, 'method': m.label}),
         send: () => _open(_revolutLink),
       ),
-      PaymentMethod.transfer => (
-        steps: [context.tr(Keys.payStepsTransfer)],
-        details: [
-          _CopyRow(
-            label: context.tr(Keys.payFieldIban),
-            value: PaymentFormat.displayIban(_p.iban),
-            onCopy: () => _copy(_p.iban, context.tr(Keys.payFieldIban)),
-          ),
-          if (_p.ibanHolder.isNotEmpty)
-            _CopyRow(
-              label: context.tr(Keys.payFieldHolder),
-              value: _p.ibanHolder,
-              onCopy: () => _copy(_p.ibanHolder, context.tr(Keys.payFieldHolder)),
-            ),
-          _CopyRow(
-            label: context.tr(Keys.payFieldReference),
-            value: widget.reference,
-            onCopy: () => _copy(widget.reference, context.tr(Keys.payFieldReference)),
-          ),
-        ],
-        sendLabel: context.tr(Keys.paySendIban),
-        send: () => _copy(_p.iban, context.tr(Keys.payFieldIban)),
-      ),
       PaymentMethod.cash => (
         steps: [
           context.tr(Keys.payStepsCash, {'name': name}),
@@ -543,7 +494,6 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
             switch (m) {
               PaymentMethod.mbway => Keys.payInAppMbwaySteps,
               PaymentMethod.paypal => Keys.payInAppPaypalSteps,
-              PaymentMethod.transfer => Keys.payInAppTransferSteps,
               PaymentMethod.revolut => Keys.payInAppRevolutSteps,
               _ => Keys.payInAppCardSteps,
             },
@@ -618,13 +568,11 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
               : Icon(switch (m) {
                   PaymentMethod.mbway => LucideIcons.smartphone,
-                  PaymentMethod.transfer => LucideIcons.landmark,
                   _ => LucideIcons.lock,
                 }, size: 18),
           label: Text(switch (m) {
             PaymentMethod.mbway => context.tr(Keys.payInAppSendRequest, {'total': totalText}),
             PaymentMethod.paypal => context.tr(Keys.payInAppPayPaypal, {'total': totalText}),
-            PaymentMethod.transfer => context.tr(Keys.payInAppPayTransfer, {'total': totalText}),
             PaymentMethod.revolut => context.tr(Keys.payInAppPayRevolut, {'total': totalText}),
             _ => context.tr(Keys.payInAppPayCard, {'total': totalText}),
           }),
@@ -744,9 +692,7 @@ class _PaySheetState extends State<_PaySheet> with WidgetsBindingObserver {
                             FilledButton.tonalIcon(
                               onPressed: flow.send,
                               icon: Icon(
-                                selected == PaymentMethod.mbway || selected == PaymentMethod.transfer
-                                    ? LucideIcons.copy
-                                    : LucideIcons.send,
+                                selected == PaymentMethod.mbway ? LucideIcons.copy : LucideIcons.send,
                                 size: 18,
                               ),
                               label: Text(flow.sendLabel!),

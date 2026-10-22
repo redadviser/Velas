@@ -156,7 +156,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/people/import',
         parentNavigatorKey: _rootKey,
-        builder: (_, s) => ImportContactsScreen(welcome: s.uri.queryParameters['welcome'] == '1'),
+        builder: (_, s) => ImportContactsScreen(
+          welcome: s.uri.queryParameters['welcome'] == '1',
+          fromCalendar: s.uri.queryParameters['from'] == 'calendar',
+        ),
       ),
       GoRoute(
         path: '/person/:id',

@@ -34,9 +34,10 @@ void main() {
     await pump(tester, const UserProfile(id: 'me', email: 'eu@ex.pt', name: 'Eu', phone: '+351912345678'));
     expect(find.text('Pagamentos'), findsOneWidget);
     expect(find.textContaining('Escolhe como preferes receber'), findsOneWidget);
-    for (final label in ['MB WAY', 'Transferência bancária', 'Revolut', 'PayPal.me', 'Skrill (email)']) {
+    for (final label in ['MB WAY', 'Revolut', 'PayPal.me', 'Skrill (email)']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    expect(find.text('Transferência bancária'), findsNothing);
     expect(field(tester, 0), '912 345 678');
     // Nada de "ligar conta Stripe".
     expect(find.textContaining('Stripe'), findsNothing);
@@ -50,10 +51,10 @@ void main() {
         email: 'eu@ex.pt',
         name: 'Eu',
         phone: '+351912345678',
-        payment: PaymentDetails(mbwayPhone: '936000111', iban: 'PT50000201231234567890154'),
+        payment: PaymentDetails(mbwayPhone: '936000111', revolutTag: 'eu'),
       ),
     );
     expect(field(tester, 0), '936 000 111');
-    expect(field(tester, 1), 'PT50 0002 0123 1234 5678 9015 4');
+    expect(field(tester, 1), 'eu');
   });
 }

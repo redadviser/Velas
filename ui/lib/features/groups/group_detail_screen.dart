@@ -919,7 +919,7 @@ class _GroupPhotoState extends ConsumerState<_GroupPhoto> {
   }
 }
 
-/// "Para onde queres receber?": quem compra a prenda ainda não indicou MB WAY ou IBAN.
+/// "Para onde queres receber?": quem compra a prenda ainda não indicou como quer receber.
 class _ReceivePrompt extends StatelessWidget {
   const _ReceivePrompt({required this.onTap});
 

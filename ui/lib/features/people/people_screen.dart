@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/text.dart';
@@ -68,12 +67,12 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     child: Row(
                       children: [
                         Expanded(child: Text('Pessoas', style: AppTheme.display(context, size: 30))),
-                        if (ref.watch(apiClientProvider) != null)
-                          IconButton(
-                            tooltip: 'Pedir aniversários por link',
-                            icon: const Icon(LucideIcons.link, size: 20),
-                            onPressed: () => shareBirthdayRequest(context, ref),
-                          ),
+                        // O link de pedido está no ecrã dos contactos.
+                        IconButton(
+                          tooltip: 'Importar do calendário',
+                          icon: const Icon(LucideIcons.calendarDays, size: 20),
+                          onPressed: () => context.push('/people/import?from=calendar'),
+                        ),
                         IconButton(
                           tooltip: 'Adicionar dos contactos',
                           icon: const Icon(LucideIcons.contactRound, size: 20),
@@ -164,6 +163,13 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                             style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
                           ),
                           const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => context.push('/people/import?from=calendar'),
+                            icon: const Icon(LucideIcons.calendarDays, size: 18),
+                            label: const Text('Importar do calendário'),
+                            style: OutlinedButton.styleFrom(minimumSize: const Size(240, 48)),
+                          ),
+                          const SizedBox(height: 4),
                           TextButton.icon(
                             onPressed: () => context.push('/person/new'),
                             icon: const Icon(LucideIcons.userPlus, size: 18),

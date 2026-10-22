@@ -249,7 +249,6 @@ abstract final class Keys {
   static const payMethodPaypal = 'pay.method.paypal';
   static const payMethodSkrill = 'pay.method.skrill';
   static const payMethodRevolut = 'pay.method.revolut';
-  static const payMethodTransfer = 'pay.method.transfer';
   static const payMethodCash = 'pay.method.cash';
   static const payCardBrands = 'pay.cardBrands';
   static const payTitle = 'pay.title';
@@ -264,18 +263,13 @@ abstract final class Keys {
   static const payStepsPaypal = 'pay.steps.paypal';
   static const payStepsSkrill = 'pay.steps.skrill';
   static const payStepsRevolut = 'pay.steps.revolut';
-  static const payStepsTransfer = 'pay.steps.transfer';
   static const payStepsCash = 'pay.steps.cash';
   static const paySendCard = 'pay.send.card';
   static const paySendLink = 'pay.send.link';
   static const paySendCopyNumber = 'pay.send.copyNumber';
   static const paySendSkrill = 'pay.send.skrill';
-  static const paySendIban = 'pay.send.iban';
   static const payAfterSend = 'pay.afterSend';
   static const payFieldNumber = 'pay.field.number';
-  static const payFieldIban = 'pay.field.iban';
-  static const payFieldHolder = 'pay.field.holder';
-  static const payFieldReference = 'pay.field.reference';
   static const payFieldEmail = 'pay.field.email';
   static const payCopy = 'pay.copy';
   static const payCopied = 'pay.copied';
@@ -311,9 +305,7 @@ abstract final class Keys {
   static const payInAppErrorCanceled = 'pay.inApp.error.canceled';
   static const payInAppErrorGeneric = 'pay.inApp.error.generic';
   static const payInAppErrorPayeeNotReady = 'pay.inApp.error.payeeNotReady';
-  static const payInAppTransferSteps = 'pay.inApp.transferSteps';
   static const payInAppRevolutSteps = 'pay.inApp.revolutSteps';
-  static const payInAppPayTransfer = 'pay.inApp.payTransfer';
   static const payInAppPayRevolut = 'pay.inApp.payRevolut';
   static const payInAppProcessing = 'pay.inApp.processing';
 

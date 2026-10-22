@@ -620,7 +620,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Adiciona o teu MB WAY ou IBAN para os outros te pagarem.',
+                        'Adiciona o teu MB WAY ou Revolut para os outros te pagarem.',
                         style: TextStyle(color: context.palette.accentForeground, fontWeight: FontWeight.w600),
                       ),
                     ),

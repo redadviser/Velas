@@ -28,12 +28,13 @@ interface PaymentRow {
 }
 
 /** paid_method de group_members para cada método da Stripe. */
-const paidMethod: Record<InAppMethod, string> = {
+const paidMethod: Record<InAppMethod, string> & Record<string, string> = {
   card: 'card',
   paypal: 'paypal',
   mb_way: 'mbway',
-  sepa_debit: 'transfer',
   revolut_pay: 'revolut',
+  // Já não se oferece: só para as transferências antigas que ainda estejam a caminho.
+  sepa_debit: 'transfer',
 };
 
 /**
@@ -265,8 +266,8 @@ export class PaymentsService {
   }
 
   /**
-   * Muda o estado do pagamento. `processing` (transferência a caminho) marca a
-   * parte como paga; `succeeded` também a confirma; uma transferência que
+   * Muda o estado do pagamento. `processing` (autorizado, dinheiro a caminho)
+   * marca a parte como paga; `succeeded` também a confirma; um pagamento que
    * falha depois de `processing` volta a pôr a parte por pagar.
    * Corre sem utilizador (os triggers de permissões não se aplicam: é a Stripe a confirmar).
    */
@@ -293,7 +294,7 @@ export class PaymentsService {
         [p.member_id, paidMethod[p.method]],
       );
     } else if (p.was === 'processing') {
-      // A transferência não passou: volta a "por pagar".
+      // O pagamento não passou: volta a "por pagar".
       await this.db.query(
         `update group_members set paid_at = null, paid_method = null where id = $1 and confirmed_at is null`,
         [p.member_id],
@@ -340,7 +341,7 @@ export class PaymentsService {
         if (paymentId) await this.finalize(paymentId, 'canceled');
         break;
       case 'checkout.session.completed':
-        // Transferência (débito SEPA): autorizada, o dinheiro chega daqui a uns dias.
+        // Pago, ou autorizado com o dinheiro ainda a caminho.
         if (paymentId) await this.finalize(paymentId, o.payment_status === 'paid' ? 'succeeded' : 'processing');
         break;
       case 'payment_intent.processing':

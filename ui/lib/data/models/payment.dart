@@ -13,19 +13,16 @@ enum PaymentMethod {
   paypal,
   skrill,
   revolut,
-  transfer,
   cash;
 
   /// Nome na língua da app (chaves `pay.method.<nome>`).
   String get label => tr('pay.method.$name');
 
   /// O nome na API de pagamentos dentro da app (Stripe), se o método o permitir.
-  /// A transferência é um débito SEPA: quem paga escreve o IBAN na página da Stripe.
   String? get inAppName => switch (this) {
     PaymentMethod.card => 'card',
     PaymentMethod.paypal => 'paypal',
     PaymentMethod.mbway => 'mb_way',
-    PaymentMethod.transfer => 'sepa_debit',
     PaymentMethod.revolut => 'revolut_pay',
     PaymentMethod.skrill || PaymentMethod.cash => null,
   };
@@ -38,8 +35,6 @@ enum PaymentMethod {
 class PaymentDetails {
   const PaymentDetails({
     this.mbwayPhone = '',
-    this.iban = '',
-    this.ibanHolder = '',
     this.revolutTag = '',
     this.paypalUser = '',
     this.skrillEmail = '',
@@ -50,8 +45,6 @@ class PaymentDetails {
   });
 
   final String mbwayPhone;
-  final String iban;
-  final String ibanHolder;
   final String revolutTag;
   final String paypalUser;
   final String skrillEmail;
@@ -84,11 +77,7 @@ class PaymentDetails {
   }
 
   bool get hasAnyDigital =>
-      mbwayPhone.isNotEmpty ||
-      iban.isNotEmpty ||
-      revolutTag.isNotEmpty ||
-      paypalUser.isNotEmpty ||
-      skrillEmail.isNotEmpty;
+      mbwayPhone.isNotEmpty || revolutTag.isNotEmpty || paypalUser.isNotEmpty || skrillEmail.isNotEmpty;
 
   /// Cartão VISA / Mastercard: pelo Revolut (não pede conta) ou pelo PayPal.
   bool get acceptsCard => revolutTag.isNotEmpty || paypalUser.isNotEmpty;
@@ -100,7 +89,6 @@ class PaymentDetails {
     PaymentMethod.paypal => inApp || paypalUser.isNotEmpty,
     PaymentMethod.skrill => skrillEmail.isNotEmpty,
     PaymentMethod.revolut => inApp || revolutTag.isNotEmpty,
-    PaymentMethod.transfer => inApp || iban.isNotEmpty,
     PaymentMethod.cash => acceptsCash,
   };
 
@@ -109,16 +97,12 @@ class PaymentDetails {
 
   PaymentDetails copyWith({
     String? mbwayPhone,
-    String? iban,
-    String? ibanHolder,
     String? revolutTag,
     String? paypalUser,
     String? skrillEmail,
     bool? acceptsCash,
   }) => PaymentDetails(
     mbwayPhone: mbwayPhone ?? this.mbwayPhone,
-    iban: iban ?? this.iban,
-    ibanHolder: ibanHolder ?? this.ibanHolder,
     revolutTag: revolutTag ?? this.revolutTag,
     paypalUser: paypalUser ?? this.paypalUser,
     skrillEmail: skrillEmail ?? this.skrillEmail,
@@ -127,8 +111,6 @@ class PaymentDetails {
 
   Map<String, dynamic> toJson() => {
     'mbway_phone': mbwayPhone,
-    'iban': iban,
-    'iban_holder': ibanHolder,
     'revolut_tag': revolutTag,
     'paypal_user': paypalUser,
     'skrill_email': skrillEmail,
@@ -139,8 +121,6 @@ class PaymentDetails {
     if (j == null) return empty;
     return PaymentDetails(
       mbwayPhone: j['mbway_phone'] as String? ?? '',
-      iban: j['iban'] as String? ?? '',
-      ibanHolder: j['iban_holder'] as String? ?? '',
       revolutTag: j['revolut_tag'] as String? ?? '',
       paypalUser: j['paypal_user'] as String? ?? '',
       skrillEmail: j['skrill_email'] as String? ?? '',
@@ -172,25 +152,6 @@ class PaymentFormat {
 
   static String displayPhone(String d) =>
       d.length == 9 ? '${d.substring(0, 3)} ${d.substring(3, 6)} ${d.substring(6)}' : d;
-
-  /// Valida um IBAN com o algoritmo mod-97 (ISO 13616).
-  static String? normalizeIban(String input) {
-    final s = input.replaceAll(' ', '').toUpperCase();
-    if (!RegExp(r'^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$').hasMatch(s)) return null;
-    if (s.startsWith('PT') && s.length != 25) return null;
-    final rearranged = s.substring(4) + s.substring(0, 4);
-    var remainder = 0;
-    for (final ch in rearranged.codeUnits) {
-      final value = ch >= 65 ? (ch - 55).toString() : String.fromCharCode(ch);
-      for (final digit in value.codeUnits) {
-        remainder = (remainder * 10 + (digit - 48)) % 97;
-      }
-    }
-    return remainder == 1 ? s : null;
-  }
-
-  static String displayIban(String s) =>
-      [for (var i = 0; i < s.length; i += 4) s.substring(i, i + 4 > s.length ? s.length : i + 4)].join(' ');
 
   static String cleanHandle(String input) => input.trim().replaceFirst(RegExp(r'^@'), '').replaceAll(' ', '');
 

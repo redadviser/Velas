@@ -20,13 +20,7 @@ void main() {
     expect(onlyMbway.methods, [PaymentMethod.mbway]);
     expect(onlyMbway.acceptsCard, isFalse);
 
-    const all = PaymentDetails(
-      mbwayPhone: '912345678',
-      iban: 'PT50000201231234567890154',
-      revolutTag: 'ana',
-      paypalUser: 'ana',
-      skrillEmail: 'ana@ex.pt',
-    );
+    const all = PaymentDetails(mbwayPhone: '912345678', revolutTag: 'ana', paypalUser: 'ana', skrillEmail: 'ana@ex.pt');
     expect(all.methods, PaymentMethod.values);
     expect(const PaymentDetails(paypalUser: 'ana').acceptsCard, isTrue);
     expect(PaymentDetails.fromJson(all.toJson()).skrillEmail, 'ana@ex.pt');
@@ -73,10 +67,11 @@ void main() {
 
     expect(find.text('Pagar a Ana'), findsOneWidget);
     // Todos os métodos aparecem; os que a Ana não indicou ficam indisponíveis.
-    for (final label in ['Cartão', 'MB WAY', 'PayPal', 'Skrill', 'Revolut', 'Transferência', 'Dinheiro']) {
+    for (final label in ['Cartão', 'MB WAY', 'PayPal', 'Skrill', 'Revolut', 'Dinheiro']) {
       expect(find.text(label), findsWidgets, reason: label);
     }
-    expect(find.text('Não disponível'), findsNWidgets(3)); // PayPal, Skrill, Transferência
+    expect(find.text('Não disponível'), findsNWidgets(2)); // PayPal, Skrill
+    expect(find.text('Transferência'), findsNothing);
     // O cartão (pelo Revolut) vem escolhido primeiro.
     expect(find.textContaining('com cartão'), findsOneWidget); // "Pagar 15 € com cartão"
     expect(find.textContaining('não precisas de conta Revolut'), findsOneWidget);

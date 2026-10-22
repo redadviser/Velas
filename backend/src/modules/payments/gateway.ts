@@ -1,13 +1,13 @@
 import Stripe from 'stripe';
 
-export type InAppMethod = 'card' | 'paypal' | 'mb_way' | 'sepa_debit' | 'revolut_pay';
+export type InAppMethod = 'card' | 'paypal' | 'mb_way' | 'revolut_pay';
 
 /** Métodos pagos na página da Stripe (Checkout); o MB WAY é à parte. */
 export type CheckoutMethod = Exclude<InAppMethod, 'mb_way'>;
 
 /**
- * Estado de um pagamento do lado da Stripe, já traduzido. `processing`: a
- * transferência (débito SEPA) foi autorizada mas o dinheiro ainda não chegou.
+ * Estado de um pagamento do lado da Stripe, já traduzido. `processing`: o
+ * pagamento foi autorizado mas o dinheiro ainda não chegou.
  */
 export type GatewayStatus = 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled';
 
@@ -38,7 +38,7 @@ export interface PaymentsGateway {
     metadata: Record<string, string>;
   }): Promise<{ paymentIntentId: string; status: GatewayStatus; error?: string }>;
 
-  /** Cartão, PayPal, transferência (IBAN) ou Revolut Pay: página de pagamento segura da Stripe (Checkout). */
+  /** Cartão, PayPal ou Revolut Pay: página de pagamento segura da Stripe (Checkout). */
   createCheckout(p: {
     method: CheckoutMethod;
     amountCents: number;
@@ -165,7 +165,7 @@ export class StripeGateway implements PaymentsGateway {
     const s = await this.stripe.checkout.sessions.retrieve(id);
     const paymentIntentId = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id;
     if (s.status === 'complete' && s.payment_status === 'paid') return { status: 'succeeded' as const, paymentIntentId };
-    // Transferência: autorizada, mas o dinheiro só chega daqui a uns dias (o webhook confirma).
+    // Autorizado, mas o dinheiro ainda não chegou (o webhook confirma).
     if (s.status === 'complete') return { status: 'processing' as const, paymentIntentId };
     if (s.status === 'expired') return { status: 'canceled' as const, paymentIntentId };
     return { status: 'pending' as const, paymentIntentId };

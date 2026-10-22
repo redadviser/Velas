@@ -18,6 +18,7 @@ import '../../services/notification_service.dart';
 import '../auth/auth_widgets.dart';
 import 'birthday_picker.dart';
 import 'birthday_request.dart';
+import 'calendar_birthdays.dart';
 
 /// Um contacto do telemóvel, com o aniversário quando o tem guardado.
 typedef ContactEntry = ({String key, String name, Uint8List? photo, BirthDate? date});
@@ -99,11 +100,15 @@ ContactDate? parseContactDate(String raw) {
 /// tem a data guardada no contacto, por isso mostram-se todos: os que têm
 /// data vêm marcados; nos outros basta tocar e escolher o dia (nome e foto
 /// já vêm do contacto).
+///
+/// Com [fromCalendar], os aniversários vêm do calendário do telemóvel (o do
+/// Google ou do iPhone): eventos de aniversário, todos já com dia e mês.
 class ImportContactsScreen extends ConsumerStatefulWidget {
-  const ImportContactsScreen({super.key, this.welcome = false});
+  const ImportContactsScreen({super.key, this.welcome = false, this.fromCalendar = false});
 
   /// Aberto sozinho na primeira entrada na conta: com boas-vindas e "Depois".
   final bool welcome;
+  final bool fromCalendar;
 
   @override
   ConsumerState<ImportContactsScreen> createState() => _ImportContactsScreenState();
@@ -139,6 +144,7 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
 
   Future<void> _load() async {
     setState(() => _stage = _Stage.loading);
+    if (widget.fromCalendar) return _loadCalendar();
     try {
       final status = await FlutterContacts.permissions.request(PermissionType.read);
       if (status != PermissionStatus.granted && status != PermissionStatus.limited) {
@@ -162,6 +168,29 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
         _selected
           ..clear()
           ..addAll(entries.where((c) => c.date != null).map((c) => c.key));
+        _stage = _Stage.ready;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _stage = _Stage.denied);
+    }
+  }
+
+  Future<void> _loadCalendar() async {
+    try {
+      final events = await readCalendarEvents();
+      if (events == null) {
+        if (mounted) setState(() => _stage = _Stage.denied);
+        return;
+      }
+      final found = calendarBirthdays(events);
+      final entries = newContacts(found, ref.read(dataProvider).people);
+      if (!mounted) return;
+      setState(() {
+        _entries = entries;
+        _contactsRead = found.length;
+        _selected
+          ..clear()
+          ..addAll(entries.map((c) => c.key));
         _stage = _Stage.ready;
       });
     } catch (_) {
@@ -210,7 +239,7 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
     final name = ref.watch(currentUserProvider)?.firstName ?? '';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Adicionar dos contactos'),
+        title: Text(widget.fromCalendar ? 'Importar do calendário' : 'Adicionar dos contactos'),
         actions: [
           if (widget.welcome) TextButton(onPressed: () => context.pop(), child: const Text('Depois')),
           const SizedBox(width: 8),
@@ -228,7 +257,8 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
                 style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
               ),
             ),
-          const Padding(padding: EdgeInsets.fromLTRB(20, 4, 20, 4), child: BirthdayRequestCard()),
+          if (!widget.fromCalendar)
+            const Padding(padding: EdgeInsets.fromLTRB(20, 4, 20, 4), child: BirthdayRequestCard()),
           Expanded(
             child: _stage == _Stage.loading
                 ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
@@ -243,17 +273,26 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
     return switch (_stage) {
       _Stage.loading => const SizedBox.shrink(),
       _Stage.denied => EmptyState(
-        icon: LucideIcons.contactRound,
-        title: 'Sem acesso aos contactos',
-        message: 'Para adicionar a partir dos contactos, permite o acesso nas definições do telemóvel.',
+        icon: widget.fromCalendar ? LucideIcons.calendarDays : LucideIcons.contactRound,
+        title: widget.fromCalendar ? 'Sem acesso ao calendário' : 'Sem acesso aos contactos',
+        message: widget.fromCalendar
+            ? 'Para importar os aniversários do calendário, permite o acesso nas definições do telemóvel.'
+            : 'Para adicionar a partir dos contactos, permite o acesso nas definições do telemóvel.',
         action: FilledButton(
           onPressed: () async {
-            await FlutterContacts.permissions.openSettings();
+            await (widget.fromCalendar ? openCalendarSettings() : FlutterContacts.permissions.openSettings());
             if (mounted) _load();
           },
           style: FilledButton.styleFrom(minimumSize: const Size(220, 52)),
           child: const Text('Abrir definições'),
         ),
+      ),
+      _Stage.ready when _entries.isEmpty && widget.fromCalendar => EmptyState(
+        icon: LucideIcons.calendarDays,
+        title: _contactsRead == 0 ? 'Sem aniversários no calendário' : 'Já tens todos',
+        message: _contactsRead == 0
+            ? 'Não encontrámos aniversários no teu calendário, como "Aniversário da Ana" ou o calendário Aniversários do Google.'
+            : 'Todos os aniversários do teu calendário já estão na tua lista.',
       ),
       _Stage.ready when _entries.isEmpty => EmptyState(
         icon: LucideIcons.cake,
@@ -274,7 +313,7 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
     final dated = shown.where((c) => c.date != null).toList();
     final undated = shown.where((c) => c.date == null).toList();
     final rows = <Object>[
-      if (dated.isNotEmpty) 'Com data no contacto · ${dated.length}',
+      if (dated.isNotEmpty) '${widget.fromCalendar ? 'Do calendário' : 'Com data no contacto'} · ${dated.length}',
       ...dated,
       if (undated.isNotEmpty) 'Sem data · toca para escolher',
       ...undated,
@@ -288,8 +327,8 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
           child: TextField(
             controller: _search,
             onChanged: (v) => setState(() => _query = v),
-            decoration: const InputDecoration(
-              hintText: 'Procurar contacto',
+            decoration: InputDecoration(
+              hintText: widget.fromCalendar ? 'Procurar' : 'Procurar contacto',
               prefixIcon: Icon(LucideIcons.search, size: 18),
             ),
           ),

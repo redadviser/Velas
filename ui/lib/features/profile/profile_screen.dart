@@ -170,7 +170,6 @@ class ProfileScreen extends ConsumerWidget {
                 title: context.tr(Keys.paymentsScreenTitle),
                 value: [
                   if (user.mbwayPayPhone.isNotEmpty || user.payment.mbwayPhone.isNotEmpty) 'MB WAY',
-                  if (user.payment.iban.isNotEmpty) 'IBAN',
                   if (user.payment.revolutTag.isNotEmpty) 'Revolut',
                   if (user.payment.paypalUser.isNotEmpty) 'PayPal',
                 ].join(', ').ifEmpty('Por definir'),

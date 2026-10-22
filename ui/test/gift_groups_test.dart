@@ -104,12 +104,6 @@ void paymentTests() {
       expect(PaymentFormat.normalizePhone('91234567'), isNull);
     });
 
-    test('IBAN válido e inválido (mod-97)', () {
-      expect(PaymentFormat.normalizeIban('PT50 0002 0123 1234 5678 9015 4'), 'PT50000201231234567890154');
-      expect(PaymentFormat.normalizeIban('PT50 0002 0123 1234 5678 9015 5'), isNull);
-      expect(PaymentFormat.normalizeIban('GB82 WEST 1234 5698 7654 32'), 'GB82WEST12345698765432');
-    });
-
     test('métodos disponíveis seguem os dados preenchidos', () {
       const p = PaymentDetails(mbwayPhone: '912345678', paypalUser: 'ana', acceptsCash: false);
       // Com PayPal também se pode pagar com cartão (VISA / Mastercard).

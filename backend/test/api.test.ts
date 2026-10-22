@@ -344,7 +344,7 @@ describe('prendas em grupo', () => {
     admin = await signup('Carla', 'carla', 'carla@ex.pt');
     member = await signup('Diogo', 'diogo', 'diogo@ex.pt');
     other = await signup('Eva', 'eva', 'eva@ex.pt');
-    await call('PATCH', '/me', { token: admin.access_token, body: { payment_methods: { iban: 'PT50000201231234567890154', accepts_cash: false } } });
+    await call('PATCH', '/me', { token: admin.access_token, body: { payment_methods: { mbway_phone: '+351936000111', iban: 'PT50000201231234567890154', accepts_cash: false } } });
   });
 
   it('cria o grupo com o administrador e um participante sem conta', async () => {
@@ -392,7 +392,8 @@ describe('prendas em grupo', () => {
     expect(accepted.body.group_id).toBe(groupId);
 
     const payee = await call('GET', `/groups/${groupId}/payee`, { token: member.access_token });
-    expect(payee.body).toEqual({ iban: 'PT50000201231234567890154', accepts_cash: false });
+    // O IBAN (de apps antigas) já não se guarda nem se mostra.
+    expect(payee.body).toEqual({ mbway_phone: '+351936000111', accepts_cash: false });
     expect((await call('GET', `/groups/${groupId}/payee`, { token: other.access_token })).status).toBe(403);
   });
 
@@ -932,7 +933,7 @@ describe('pagamentos na app (Stripe)', () => {
     expect(done.raw.body).toContain('com.eupasoft.velas://app/payments');
   });
 
-  it('transferência (IBAN na Stripe): paga ao autorizar, confirmada quando chega, por pagar se falhar', async () => {
+  it('pagamento a caminho: pago ao autorizar, confirmado quando chega, por pagar se falhar; sem IBAN', async () => {
     const eli = await signup('Eli', 'eli', 'eli@ex.pt');
     const fil = await signup('Fil', 'fil', 'fil@ex.pt');
     const gui = await signup('Gui', 'gui', 'gui@ex.pt');
@@ -959,27 +960,27 @@ describe('pagamentos na app (Stripe)', () => {
 
     for (const [payer, outcome] of [[fil, 'checkout.session.async_payment_succeeded'], [gui, 'checkout.session.async_payment_failed']] as const) {
       const member = await memberOf(payer);
-      const pay = await call('POST', `/group-members/${member.id}/checkout`, { token: payer.access_token, body: { method: 'sepa_debit' } });
-      // 30 € a três = 10 €; a transferência só tem a parte fixa (0,35 €), mais o serviço.
-      expect(pay.body).toMatchObject({ method: 'sepa_debit', amount: 10, fee: 0.74, service_fee: 0.39, total: 10.74 });
-      expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'sepa_debit', amountCents: 1074, transferCents: 1000 });
+      const pay = await call('POST', `/group-members/${member.id}/checkout`, { token: payer.access_token, body: { method: 'revolut_pay' } });
+      // 30 € a três = 10 €; (10 + 0,25 + 0,39) / (1 − 1,5%) = 10,81 €.
+      expect(pay.body).toMatchObject({ method: 'revolut_pay', amount: 10, fee: 0.81, service_fee: 0.39, total: 10.81 });
+      expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'revolut_pay', amountCents: 1081, transferCents: 1000 });
 
       await webhook('checkout.session.completed', { payment_status: 'unpaid', metadata: { payment_id: pay.body.id } });
       expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('processing');
-      expect(await memberOf(payer)).toMatchObject({ paid_method: 'transfer', paid_at: expect.any(String), confirmed_at: null });
+      expect(await memberOf(payer)).toMatchObject({ paid_method: 'revolut', paid_at: expect.any(String), confirmed_at: null });
 
       await webhook(outcome, { metadata: { payment_id: pay.body.id } });
       if (outcome.endsWith('succeeded')) {
-        expect(await memberOf(payer)).toMatchObject({ paid_method: 'transfer', confirmed_at: expect.any(String) });
+        expect(await memberOf(payer)).toMatchObject({ paid_method: 'revolut', confirmed_at: expect.any(String) });
       } else {
         expect(await memberOf(payer)).toMatchObject({ paid_at: null, paid_method: null, confirmed_at: null });
         expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('failed');
       }
     }
 
-    // Revolut Pay também vai pelo Checkout.
-    const fil2 = await call('POST', `/group-members/${(await memberOf(gui)).id}/checkout`, { token: gui.access_token, body: { method: 'revolut_pay' } });
-    expect(fil2.body).toMatchObject({ method: 'revolut_pay', checkout_url: 'https://checkout.stripe.test/revolut_pay' });
+    // A transferência por IBAN (débito SEPA) deixou de existir.
+    const sepa = await call('POST', `/group-members/${(await memberOf(gui)).id}/checkout`, { token: gui.access_token, body: { method: 'sepa_debit' } });
+    expect(sepa.status).toBe(400);
   });
 });
 

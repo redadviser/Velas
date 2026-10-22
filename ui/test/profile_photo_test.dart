@@ -43,7 +43,7 @@ void main() {
     for (final label in ['Cartão', 'MB WAY', 'PayPal', 'Skrill', 'Revolut']) {
       expect(find.bySemanticsLabel(label), findsOneWidget);
     }
-    expect(find.byType(Icon), findsNWidgets(2)); // transferência e dinheiro
+    expect(find.byType(Icon), findsNWidgets(1)); // dinheiro
     expect(tester.takeException(), isNull);
   });
 }

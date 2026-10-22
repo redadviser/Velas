@@ -11,8 +11,8 @@ import '../../core/widgets/common.dart';
 import '../../data/models/payment.dart';
 import '../groups/payment_widgets.dart';
 
-/// Como preferes receber quando és tu a comprar a prenda (MB WAY, IBAN,
-/// Revolut, PayPal, Skrill, em mão). O dinheiro não passa pela app: quem paga
+/// Como preferes receber quando és tu a comprar a prenda (MB WAY, Revolut,
+/// PayPal, Skrill, em mão). O dinheiro não passa pela app: quem paga
 /// vê estes dados prontos a copiar e envia-te diretamente.
 class PaymentDetailsScreen extends ConsumerStatefulWidget {
   const PaymentDetailsScreen({super.key});

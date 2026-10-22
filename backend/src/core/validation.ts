@@ -17,9 +17,13 @@ export const passwordSchema = z.string().min(8).max(128);
 export const timestampSchema = z.iso.datetime({ offset: true }).nullish();
 export const moneySchema = z.number().min(0).max(1_000_000).nullish();
 
-/** Dados de pagamento (MB WAY, IBAN, ...): objeto pequeno de texto/booleanos. */
+/**
+ * Dados de pagamento (MB WAY, Revolut, ...): objeto pequeno de texto/booleanos.
+ * A transferência por IBAN deixou de existir: o IBAN de apps antigas é ignorado.
+ */
 export const paymentSchema = z
   .record(z.string().max(40), z.union([z.string().max(120), z.boolean()]))
-  .refine((o) => Object.keys(o).length <= 12, 'too many fields');
+  .refine((o) => Object.keys(o).length <= 12, 'too many fields')
+  .transform(({ iban: _iban, iban_holder: _holder, ...rest }) => rest);
 
 export type PaymentMethods = z.infer<typeof paymentSchema>;

@@ -4,6 +4,10 @@
 <dict>
 	<key>NSContactsUsageDescription</key>
 	<string>Para importar os aniversários guardados nos teus contactos.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Para importar os aniversários guardados no teu calendário.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Para importar os aniversários guardados no teu calendário.</string>
 	<key>FlutterDeepLinkingEnabled</key>
 	<false/>
 	<key>CFBundleURLTypes</key>

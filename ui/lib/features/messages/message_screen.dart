@@ -17,11 +17,13 @@ import '../../data/models/chat_models.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/cards_repository.dart';
 import '../../services/message_suggestions.dart';
+import '../../services/notification_service.dart';
 import '../../data/models/card_models.dart';
 import '../cards/card_links.dart';
 import '../cards/card_media.dart';
 import '../profile/plus.dart';
 import '../people/linked_friend.dart';
+import 'schedule_sheet.dart';
 
 enum _SendAs { card, wall, text }
 
@@ -30,9 +32,12 @@ enum _SendAs { card, wall, text }
 /// ou sem a app e que, na app, lhe permite responder; ou, se a pessoa já for
 /// amiga na Birthdayly, diretamente para o mural dela (ver features/cards).
 class MessageScreen extends ConsumerStatefulWidget {
-  const MessageScreen({super.key, required this.personId});
+  const MessageScreen({super.key, required this.personId, this.autoSend = false});
 
   final String personId;
+
+  /// Aberto pelo aviso de uma mensagem agendada: abre logo o "Como queres enviar?".
+  final bool autoSend;
 
   @override
   ConsumerState<MessageScreen> createState() => _MessageScreenState();
@@ -72,6 +77,12 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     _existing = ref.read(dataProvider).messageFor(widget.personId);
     _text.text = _existing?.body ?? '';
     _tone = MessageTone.values.firstWhere((t) => t.label == _existing?.tone, orElse: () => MessageTone.warm);
+    if (widget.autoSend) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final person = ref.read(dataProvider).person(widget.personId);
+        if (mounted && person != null && _text.text.trim().isNotEmpty) _share(person);
+      });
+    }
   }
 
   @override
@@ -82,31 +93,69 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
 
   bool get _dirty => _text.text.trim() != (_existing?.body ?? '');
 
-  Future<bool> _save({bool quiet = false}) async {
+  /// Guarda o texto (e, com [schedule], o agendamento; `() => null` cancela-o).
+  Future<bool> _save({
+    bool quiet = false,
+    ({DateTime at, ScheduleVia via, String? friendId, String? mediaKey})? Function()? schedule,
+    String? success,
+  }) async {
     final repo = ref.read(dataRepositoryProvider)!;
     final body = _text.text.trim();
+    // A versão mais recente (o servidor pode já a ter enviado entretanto).
+    final current = ref.read(dataProvider).messageFor(widget.personId) ?? _existing;
     setState(() => _saving = true);
     final ok = await runGuarded(context, () async {
       if (body.isEmpty) {
-        if (_existing != null) await repo.deleteMessage(_existing!.id);
+        if (current != null) await repo.deleteMessage(current.id);
         _existing = null;
         return;
       }
       final msg =
-          (_existing ??
+          (current ??
                   BirthdayMessage(
                     id: const Uuid().v4(),
                     personId: widget.personId,
                     body: body,
                     updatedAt: DateTime.now(),
                   ))
-              .copyWith(body: body, tone: _tone.label);
+              .copyWith(body: body, tone: _tone.label, schedule: schedule);
       await repo.saveMessage(msg);
       _existing = msg;
-    }, success: quiet ? null : (body.isEmpty ? 'Mensagem removida.' : 'Mensagem guardada.'));
+    }, success: quiet ? null : (success ?? (body.isEmpty ? 'Mensagem removida.' : 'Mensagem guardada.')));
     if (mounted) setState(() => _saving = false);
     return ok;
   }
+
+  /// Agendar: para o mural de um amigo (sai sozinha) ou um aviso para a enviar fora da app.
+  Future<void> _schedule(Person person) async {
+    if (_text.text.trim().isEmpty) return;
+    final cards = ref.read(cardsRepositoryProvider);
+    final friends = cards == null ? const <ChatUser>[] : await _friends();
+    if (!mounted) return;
+    final match =
+        friends.where((f) => f.userId == person.linkedUserId).firstOrNull ?? matchingFriend(person.name, friends);
+    final choice = await showScheduleSheet(
+      context,
+      person: person,
+      friends: friends,
+      match: match,
+      current: ref.read(dataProvider).messageFor(person.id),
+    );
+    if (choice == null || !mounted) return;
+    String? mediaKey;
+    if (choice.via == ScheduleVia.wall && cards != null && _media != null) {
+      final uploaded = await runGuarded(context, () async => mediaKey = await _mediaKey(cards));
+      if (!uploaded || !mounted) return;
+    }
+    final ok = await _save(
+      schedule: () => (at: choice.at, via: choice.via, friendId: choice.friend?.userId, mediaKey: mediaKey),
+      success: 'Agendada para ${scheduleLabel(choice.at).toLowerCase()}.',
+    );
+    // O aviso do "lembrar-me" é uma notificação deste telemóvel.
+    if (ok && choice.via == ScheduleVia.remind) await NotificationService.instance.requestPermission();
+  }
+
+  Future<void> _cancelSchedule() => _save(schedule: () => null, success: 'Agendamento cancelado.');
 
   Future<void> _share(Person person) async {
     final body = _text.text.trim();
@@ -148,7 +197,11 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     // A mesma mensagem reenviada (sem fotografia, vídeo ou áudio) usa o mesmo cartão.
     var card = _media != null
         ? null
-        : ref.read(sentCardsProvider(person.id)).value?.where((c) => c.body == body && !c.onWall && c.media == null).firstOrNull;
+        : ref
+              .read(sentCardsProvider(person.id))
+              .value
+              ?.where((c) => c.body == body && !c.onWall && c.media == null)
+              .firstOrNull;
     final ok = await runGuarded(context, () async {
       card ??= await cards.create(
         personId: person.id,
@@ -164,7 +217,8 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
 
   Future<void> _postToWall(CardsRepository cards, Person person, ChatUser friend, String body) async {
     final already =
-        _media == null && (ref.read(sentCardsProvider(person.id)).value?.any((c) => c.body == body && c.onWall) ?? false);
+        _media == null &&
+        (ref.read(sentCardsProvider(person.id)).value?.any((c) => c.body == body && c.onWall) ?? false);
     if (already) {
       showMessage(context, 'Esta mensagem já está no mural de ${friend.firstName}.');
       return;
@@ -187,57 +241,63 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   }
 
   /// Com um amigo que é esta pessoa ([match]), o mural é a opção recomendada.
-  Future<_SendAs?> _chooseFormat(Person person, {required bool hasFriends, ChatUser? match}) =>
-      showModalBottomSheet<_SendAs>(
-        context: context,
-        builder: (ctx) {
-          Widget title(String text, {bool recommended = false}) => Row(
-            children: [
-              Flexible(child: Text(text)),
-              if (recommended) ...[const SizedBox(width: 8), const Pill(label: 'Recomendado', dense: true)],
-            ],
-          );
-          final wall = ListTile(
-            leading: const Icon(LucideIcons.partyPopper),
-            title: title(match != null ? 'No mural de ${match.firstName}' : 'No mural de um amigo', recommended: match != null),
-            subtitle: Text(
-              match != null
-                  ? '${match.firstName} já está na Birthdayly: a mensagem chega logo ao mural e à vossa conversa.'
-                  : 'Para amigos que já estão na Birthdayly: a mensagem chega logo ao mural.',
-            ),
-            onTap: () => Navigator.pop(ctx, _SendAs.wall),
-          );
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Text('Como queres enviar?', style: AppTheme.display(ctx, size: 22)),
-                ),
-                if (match != null) wall,
-                ListTile(
-                  leading: const Icon(LucideIcons.mailOpen),
-                  title: title('Cartão de parabéns', recommended: match == null),
-                  subtitle: Text(
-                    '${person.firstName} abre a tua mensagem num cartão, mesmo sem a app, e pode responder-te na Birthdayly.',
-                  ),
-                  onTap: () => Navigator.pop(ctx, _SendAs.card),
-                ),
-                if (match == null && hasFriends) wall,
-                ListTile(
-                  leading: const Icon(LucideIcons.messageSquareText),
-                  title: const Text('Só o texto'),
-                  subtitle: const Text('Envia a mensagem como texto normal.'),
-                  onTap: () => Navigator.pop(ctx, _SendAs.text),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          );
-        },
+  Future<_SendAs?> _chooseFormat(
+    Person person, {
+    required bool hasFriends,
+    ChatUser? match,
+  }) => showModalBottomSheet<_SendAs>(
+    context: context,
+    builder: (ctx) {
+      Widget title(String text, {bool recommended = false}) => Row(
+        children: [
+          Flexible(child: Text(text)),
+          if (recommended) ...[const SizedBox(width: 8), const Pill(label: 'Recomendado', dense: true)],
+        ],
       );
+      final wall = ListTile(
+        leading: const Icon(LucideIcons.partyPopper),
+        title: title(
+          match != null ? 'No mural de ${match.firstName}' : 'No mural de um amigo',
+          recommended: match != null,
+        ),
+        subtitle: Text(
+          match != null
+              ? '${match.firstName} já está na Birthdayly: a mensagem chega logo ao mural e à vossa conversa.'
+              : 'Para amigos que já estão na Birthdayly: a mensagem chega logo ao mural.',
+        ),
+        onTap: () => Navigator.pop(ctx, _SendAs.wall),
+      );
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Como queres enviar?', style: AppTheme.display(ctx, size: 22)),
+            ),
+            if (match != null) wall,
+            ListTile(
+              leading: const Icon(LucideIcons.mailOpen),
+              title: title('Cartão de parabéns', recommended: match == null),
+              subtitle: Text(
+                '${person.firstName} abre a tua mensagem num cartão, mesmo sem a app, e pode responder-te na Birthdayly.',
+              ),
+              onTap: () => Navigator.pop(ctx, _SendAs.card),
+            ),
+            if (match == null && hasFriends) wall,
+            ListTile(
+              leading: const Icon(LucideIcons.messageSquareText),
+              title: const Text('Só o texto'),
+              subtitle: const Text('Envia a mensagem como texto normal.'),
+              onTap: () => Navigator.pop(ctx, _SendAs.text),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -369,7 +429,15 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                     label: const Text('Copiar'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _text.text.trim().isEmpty || _saving ? null : () => _schedule(person),
+                    icon: const Icon(LucideIcons.calendarClock, size: 18),
+                    label: const Text('Agendar'),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: _text.text.trim().isEmpty ? null : () => _share(person),
@@ -378,6 +446,11 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                   ),
                 ),
               ],
+            ),
+            _ScheduleStatus(
+              personId: person.id,
+              firstName: person.firstName,
+              onCancel: _saving ? null : _cancelSchedule,
             ),
             _CardStatus(personId: person.id, firstName: person.firstName),
             const SizedBox(height: 28),
@@ -424,6 +497,66 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   }
 }
 
+/// A mensagem agendada: quando sai e como, se já saiu, ou porque falhou.
+class _ScheduleStatus extends ConsumerWidget {
+  const _ScheduleStatus({required this.personId, required this.firstName, this.onCancel});
+
+  final String personId;
+  final String firstName;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final m = ref.watch(dataProvider).messageFor(personId);
+    if (m == null || !m.isScheduled) return const SizedBox.shrink();
+    final when = scheduleLabel(m.scheduledAt!).toLowerCase();
+    final friend = m.scheduleVia == ScheduleVia.wall
+        ? ref.watch(friendsProvider).value?.friends.where((f) => f.userId == m.scheduleFriendId).firstOrNull?.firstName
+        : null;
+    final wallOf = friend ?? firstName;
+    final (icon, text, error, pending) = switch (m) {
+      _ when m.scheduleVia == ScheduleVia.wall && m.sendError != null => (
+        LucideIcons.circleAlert,
+        'Não foi possível publicar no mural de $wallOf. Envia-a de outra forma.',
+        true,
+        false,
+      ),
+      _ when m.scheduleVia == ScheduleVia.wall && m.sentAt != null => (
+        LucideIcons.checkCheck,
+        'Publicada no mural de $wallOf ($when).',
+        false,
+        false,
+      ),
+      _ when m.scheduleVia == ScheduleVia.wall => (
+        LucideIcons.calendarClock,
+        'Vai para o mural de $wallOf $when.',
+        false,
+        true,
+      ),
+      _ when m.isPending => (LucideIcons.bellRing, 'Vamos lembrar-te de a enviar $when.', false, true),
+      _ => (LucideIcons.bellRing, 'Lembrete enviado $when.', false, false),
+    };
+    final color = error
+        ? context.colors.error
+        : pending
+        ? context.colors.primary
+        : context.palette.mutedForeground;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: context.text.bodySmall?.copyWith(color: color)),
+          ),
+          if (pending) TextButton(onPressed: onCancel, child: const Text('Cancelar')),
+        ],
+      ),
+    );
+  }
+}
+
 /// Estado do último cartão enviado a esta pessoa.
 class _CardStatus extends ConsumerWidget {
   const _CardStatus({required this.personId, required this.firstName});
@@ -451,7 +584,9 @@ class _CardStatus extends ConsumerWidget {
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: context.text.bodySmall?.copyWith(color: color))),
+          Expanded(
+            child: Text(text, style: context.text.bodySmall?.copyWith(color: color)),
+          ),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -10,6 +11,7 @@ import '../data/api/chat_socket.dart';
 import '../data/models/chat_models.dart';
 import '../data/repositories/chat_repository.dart';
 import '../services/notification_service.dart';
+import '../services/push_service.dart';
 import 'constants.dart';
 import 'i18n/translations.dart';
 import 'providers.dart';
@@ -228,7 +230,11 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
     state = AsyncData(await _fetch(repo));
   }
 
-  void setOpen(String? conversationId) => _open = conversationId;
+  void setOpen(String? conversationId) {
+    _open = conversationId;
+    // A notificação dessa conversa já não faz falta.
+    if (conversationId != null) unawaited(NotificationService.instance.clearChat(conversationId));
+  }
 
   /// A conversa aberta no ecrã (as notificações dela não aparecem).
   String? get openConversationId => _open;
@@ -790,5 +796,54 @@ final chatNotificationsProvider = Provider<void>((ref) {
         : m.preview;
     ref.read(showChatNotificationProvider)(conversationId: m.conversationId, title: title, body: body);
   });
+  ref.onDispose(sub.cancel);
+
+  // "Responder" / "Marcar como lida" numa notificação mostrada com a app aberta.
+  final notifications = NotificationService.instance;
+  notifications.onChatReply = (conversationId, text) async {
+    final repo = ref.read(chatRepositoryProvider);
+    if (repo == null) return;
+    final sent = await repo.sendMessage(
+      conversationId,
+      OutgoingMessage(id: const Uuid().v4(), kind: MessageKind.text, body: text),
+    );
+    ref.read(conversationsProvider.notifier).applyLocal(sent);
+    await ref.read(conversationsProvider.notifier).markRead(conversationId);
+  };
+  notifications.onChatRead = (conversationId) => ref.read(conversationsProvider.notifier).markRead(conversationId);
+  ref.onDispose(() {
+    notifications.onChatReply = null;
+    notifications.onChatRead = null;
+  });
+});
+
+/// Regista este telemóvel para as notificações push (com sessão e com o
+/// Firebase configurado), na língua da app; volta a registar se o token mudar.
+final pushRegistrationProvider = Provider<void>((ref) {
+  final api = ref.watch(apiClientProvider);
+  final userId = ref.watch(currentUserProvider.select((u) => u?.id));
+  ref.watch(localeProvider);
+  final push = PushService.instance;
+  if (api == null || userId == null || !push.available) return;
+
+  void register(String token) {
+    unawaited(
+      api
+          .put('/me/push-token', {
+            'token': token,
+            'platform': Platform.isIOS ? 'ios' : 'android',
+            'lang': Translations.current.locale.languageCode,
+          })
+          .catchError((_) => null),
+    );
+  }
+
+  unawaited(
+    push.start(socketConnected: () => ref.read(chatSocketProvider)?.isConnected ?? false).then((_) {
+      final token = push.token;
+      if (token != null) register(token);
+    }),
+  );
+  final sub = push.tokens.listen(register);
   ref.onDispose(sub.cancel);
 });

@@ -83,7 +83,7 @@ class ApiClient {
   Future<dynamic> post(String path, [Object? body]) => _send('POST', path, body: body ?? const {});
   Future<dynamic> put(String path, Object body) => _send('PUT', path, body: body);
   Future<dynamic> patch(String path, Object body) => _send('PATCH', path, body: body);
-  Future<dynamic> delete(String path) => _send('DELETE', path);
+  Future<dynamic> delete(String path, [Object? body]) => _send('DELETE', path, body: body);
   Future<dynamic> putBytes(String path, Uint8List bytes, String contentType) =>
       _send('PUT', path, bytes: bytes, contentType: contentType);
   Future<dynamic> postBytes(String path, Uint8List bytes, String contentType) =>

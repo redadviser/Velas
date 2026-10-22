@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/utils/identity.dart';
 import '../../services/google_service.dart';
+import '../../services/push_service.dart';
 import '../models/models.dart';
 import '../repositories/auth_repository.dart';
 import '../../core/utils/errors.dart';
@@ -134,6 +135,9 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    // Este telemóvel deixa de receber as notificações desta conta.
+    final push = PushService.instance.token;
+    if (push != null) await _api.delete('/me/push-token', {'token': push}).catchError((_) => null);
     final token = _api.refreshToken;
     if (token != null) {
       // Termina a sessão no servidor; sem rede basta esquecê-la aqui.

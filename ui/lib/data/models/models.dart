@@ -423,6 +423,11 @@ class GiftIdea {
   );
 }
 
+/// Como a mensagem agendada sai: [wall] a Birthdayly publica-a sozinha no
+/// mural do amigo (e na vossa conversa); [remind] a app avisa à hora marcada
+/// para a enviares fora da app (WhatsApp, SMS, cartão por link).
+enum ScheduleVia { wall, remind }
+
 @immutable
 class BirthdayMessage {
   const BirthdayMessage({
@@ -431,6 +436,12 @@ class BirthdayMessage {
     required this.body,
     this.tone = '',
     required this.updatedAt,
+    this.scheduledAt,
+    this.scheduleVia,
+    this.scheduleFriendId,
+    this.scheduleMediaKey,
+    this.sentAt,
+    this.sendError,
   });
 
   final String id;
@@ -439,13 +450,47 @@ class BirthdayMessage {
   final String tone;
   final DateTime updatedAt;
 
-  BirthdayMessage copyWith({String? body, String? tone}) => BirthdayMessage(
-    id: id,
-    personId: personId,
-    body: body ?? this.body,
-    tone: tone ?? this.tone,
-    updatedAt: DateTime.now(),
-  );
+  /// Agendada para esta hora (`null` = não agendada).
+  final DateTime? scheduledAt;
+  final ScheduleVia? scheduleVia;
+
+  /// [ScheduleVia.wall]: o amigo (utilizador da Birthdayly) que a recebe.
+  final String? scheduleFriendId;
+
+  /// [ScheduleVia.wall] com fotografia, vídeo ou áudio (Birthdayly+).
+  final String? scheduleMediaKey;
+
+  /// [ScheduleVia.wall]: quando foi publicada (ou tentada) e o erro, se falhou.
+  final DateTime? sentAt;
+  final String? sendError;
+
+  bool get isScheduled => scheduledAt != null && scheduleVia != null;
+
+  /// Agendada e ainda por enviar (ou, no "lembrar-me", por avisar).
+  bool get isPending => isScheduled && sentAt == null && (scheduleVia == ScheduleVia.wall || scheduledAt!.isAfter(DateTime.now()));
+
+  BirthdayMessage copyWith({
+    String? body,
+    String? tone,
+    ({DateTime at, ScheduleVia via, String? friendId, String? mediaKey})? Function()? schedule,
+  }) {
+    final s = schedule == null ? null : schedule();
+    final changed = schedule != null;
+    return BirthdayMessage(
+      id: id,
+      personId: personId,
+      body: body ?? this.body,
+      tone: tone ?? this.tone,
+      updatedAt: DateTime.now(),
+      scheduledAt: changed ? s?.at : scheduledAt,
+      scheduleVia: changed ? s?.via : scheduleVia,
+      scheduleFriendId: changed ? s?.friendId : scheduleFriendId,
+      scheduleMediaKey: changed ? s?.mediaKey : scheduleMediaKey,
+      // Mudar o agendamento volta a pôr a mensagem por enviar (como no servidor).
+      sentAt: changed ? null : sentAt,
+      sendError: changed ? null : sendError,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -453,6 +498,12 @@ class BirthdayMessage {
     'body': body,
     'tone': tone,
     'updated_at': updatedAt.toUtc().toIso8601String(),
+    'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
+    'schedule_via': scheduleVia?.name,
+    'schedule_friend_id': scheduleFriendId,
+    'schedule_media_key': scheduleMediaKey,
+    'sent_at': sentAt?.toUtc().toIso8601String(),
+    'send_error': sendError,
   };
 
   factory BirthdayMessage.fromJson(Map<String, dynamic> j) => BirthdayMessage(
@@ -461,6 +512,12 @@ class BirthdayMessage {
     body: j['body'] as String,
     tone: j['tone'] as String? ?? '',
     updatedAt: _date(j['updated_at']),
+    scheduledAt: j['scheduled_at'] == null ? null : _date(j['scheduled_at']),
+    scheduleVia: ScheduleVia.values.where((v) => v.name == j['schedule_via']).firstOrNull,
+    scheduleFriendId: j['schedule_friend_id'] as String?,
+    scheduleMediaKey: j['schedule_media_key'] as String?,
+    sentAt: j['sent_at'] == null ? null : _date(j['sent_at']),
+    sendError: j['send_error'] as String?,
   );
 }
 

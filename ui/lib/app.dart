@@ -17,6 +17,7 @@ class VelasApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(notificationSyncProvider);
     ref.watch(chatNotificationsProvider);
+    ref.watch(pushRegistrationProvider);
     ref.watch(dataSyncProvider);
     ref.watch(homeWidgetSyncProvider);
     final router = ref.watch(routerProvider);

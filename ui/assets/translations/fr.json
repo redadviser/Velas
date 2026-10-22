@@ -281,5 +281,9 @@
   "receive.hint": "C'est vous qui achetez le cadeau : indiquez votre MB WAY ou votre Revolut pour que les autres vous envoient leur part.",
   "receive.action": "Indiquer comment être payé",
   "receive.screenHint": "Choisissez comment être payé quand c'est vous qui achetez le cadeau. Visible seulement par les membres de ces groupes, au moment de payer.",
-  "receive.saved": "Coordonnées de paiement enregistrées."
+  "receive.saved": "Coordonnées de paiement enregistrées.",
+  "notify.reply": "Répondre",
+  "notify.replyHint": "Message",
+  "notify.send": "Envoyer",
+  "notify.markRead": "Marquer comme lu"
 }

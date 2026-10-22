@@ -234,6 +234,10 @@ abstract final class Keys {
   static const notifyNewMessage = 'notify.newMessage';
   static const notifyChannel = 'notify.channel';
   static const notifyChannelDescription = 'notify.channelDescription';
+  static const notifyReply = 'notify.reply';
+  static const notifyReplyHint = 'notify.replyHint';
+  static const notifySend = 'notify.send';
+  static const notifyMarkRead = 'notify.markRead';
 
   // homeInbox -------------------------------------------------------------
   static const homeInboxTitle = 'homeInbox.title';

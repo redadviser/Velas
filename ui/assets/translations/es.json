@@ -281,5 +281,9 @@
   "receive.hint": "Eres tú quien compra el regalo: indica tu MB WAY o Revolut para que los demás te envíen su parte.",
   "receive.action": "Indicar cómo cobrar",
   "receive.screenHint": "Elige cómo prefieres recibir cuando seas tú quien compra el regalo. Solo se muestra a las personas de esos grupos, cuando te paguen.",
-  "receive.saved": "Datos de pago guardados."
+  "receive.saved": "Datos de pago guardados.",
+  "notify.reply": "Responder",
+  "notify.replyHint": "Mensaje",
+  "notify.send": "Enviar",
+  "notify.markRead": "Marcar como leído"
 }

@@ -101,6 +101,9 @@ function visiblePresence(hub: RealtimeHub, p: { user_id: string; show_presence: 
  * pelo [RealtimeHub].
  */
 export class ChatService {
+  /** Mensagem nova gravada: as notificações push (ligado no container). */
+  onSent: (message: MessageJson, participantIds: string[]) => void = () => {};
+
   constructor(
     private readonly db: Db,
     private readonly storage: PhotoStorage,
@@ -457,7 +460,10 @@ export class ChatService {
       );
       return { message: await this.messageIn(c, m.id), ids: await ChatService.participantIds(c, conversationId), created: true };
     });
-    if (created) this.hub.send(ids, { type: 'message', message });
+    if (created) {
+      this.hub.send(ids, { type: 'message', message });
+      this.onSent(message, ids);
+    }
     return message;
   }
 

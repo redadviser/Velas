@@ -174,7 +174,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'message',
             parentNavigatorKey: _rootKey,
-            builder: (_, s) => MessageScreen(personId: s.pathParameters['id']!),
+            builder: (_, s) => MessageScreen(
+              personId: s.pathParameters['id']!,
+              autoSend: s.uri.queryParameters['send'] == '1',
+            ),
           ),
           GoRoute(
             path: 'history',

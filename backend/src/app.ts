@@ -24,13 +24,23 @@ import { legalRoutes } from './modules/legal/legal.routes.js';
 import { invitationsRoutes } from './modules/invitations/invitations.routes.js';
 import { messagesRoutes } from './modules/messages/messages.routes.js';
 import { peopleRoutes } from './modules/people/people.routes.js';
+import { pushPublicRoutes, pushRoutes } from './modules/push/push.routes.js';
 import { safetyRoutes } from './modules/safety/safety.routes.js';
 import { syncRoutes } from './modules/sync/sync.routes.js';
 import { usersRoutes } from './modules/users/users.routes.js';
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Tarefas periódicas (o servidor corre-as a cada minuto; os testes chamam-nas à mão). */
+    jobs: { sendScheduledMessages(): Promise<number> };
+  }
+}
+
 export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   const services = createServices(deps);
   const app = Fastify({ trustProxy: true, ...options });
+  services.push.onError = (e) => app.log.warn({ err: e }, 'push: envio falhou');
+  app.decorate('jobs', { sendScheduledMessages: () => services.messages.sendDue() });
   app.setErrorHandler(errorHandler);
   await app.register(rateLimit, { global: false, enableDraftSpec: true, allowList: () => !deps.config.rateLimit });
   // Quem valida os pedidos é o Zod; os schemas das rotas são só documentação (ver core/openapi.ts).
@@ -63,6 +73,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await cardsPublicRoutes(app, services.cards);
   await birthdayRequestsPublicRoutes(app, services.birthdayRequests, deps.config);
   await paymentsPublicRoutes(app, services.payments, deps.config);
+  await pushPublicRoutes(app, services.push, services.chat);
   // Tempo real: a autenticação é a primeira mensagem da ligação.
   await realtimeRoutes(app, services.hub, deps.tokens, {
     typing: (uid, cid) => services.chat.typing(uid, cid),
@@ -95,6 +106,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await chatRoutes(scope, services.chat, services.stickers);
     await gifsRoutes(scope, services.gifs);
     await paymentsRoutes(scope, services.payments);
+    await pushRoutes(scope, services.push);
   });
 
   return app;

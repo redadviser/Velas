@@ -281,5 +281,9 @@
   "receive.hint": "You're buying the gift: add your MB WAY or Revolut so the others can send you their share.",
   "receive.action": "Choose how to get paid",
   "receive.screenHint": "Choose how you'd like to be paid when you're buying the gift. Only shown to people in those groups, when they pay you.",
-  "receive.saved": "Payment details saved."
+  "receive.saved": "Payment details saved.",
+  "notify.reply": "Reply",
+  "notify.replyHint": "Message",
+  "notify.send": "Send",
+  "notify.markRead": "Mark as read"
 }

@@ -15,6 +15,8 @@ import { FriendsService } from './modules/friends/friends.service.js';
 import { GifsService } from './modules/gifs/gifs.service.js';
 import type { PaymentsGateway } from './modules/payments/gateway.js';
 import { PaymentsService } from './modules/payments/payments.service.js';
+import type { PushSender } from './modules/push/push.gateway.js';
+import { PushService, ReplyTokens } from './modules/push/push.service.js';
 import { GiftsService } from './modules/gifts/gifts.service.js';
 import { GroupsService } from './modules/groups/groups.service.js';
 import { InvitationsService } from './modules/invitations/invitations.service.js';
@@ -36,6 +38,8 @@ export interface Deps {
   fetch?: typeof fetch;
   /** Stripe (pagamentos na app); sem ele ficam desligados. Substituído nos testes. */
   payments?: PaymentsGateway;
+  /** Firebase Cloud Messaging (notificações push); sem ele não há push. Substituído nos testes. */
+  push?: PushSender;
 }
 
 export type Services = ReturnType<typeof createServices>;
@@ -52,6 +56,11 @@ export function createServices(deps: Deps) {
   const chat = new ChatService(db, storage, hub);
   const payments = new PaymentsService(db, deps.config, deps.payments, hub);
   const groups = new GroupsService(db, storage, hub);
+  const push = new PushService(db, deps.push, new ReplyTokens(deps.config.jwtSecret));
+  push.isOnline = (userId) => hub.isOnline(userId);
+  chat.onSent = (message, ids) => void push.chatMessage(message, ids).catch((e) => push.onError(e));
+  const cards = new CardsService(db, storage, chat, hub);
+  messages.scheduled = { cards, push, hub };
   groups.inApp = { enabled: payments.enabled, fees: payments.fees, serviceFee: payments.serviceFee };
   // Mudar a privacidade da presença avisa logo quem a estava a ver.
   users.onUpdated = async (userId, patch) => {
@@ -70,11 +79,12 @@ export function createServices(deps: Deps) {
     invitations: new InvitationsService(db, storage),
     friends: new FriendsService(db, hub, storage),
     chat,
-    cards: new CardsService(db, storage, chat, hub),
+    cards,
     birthdayRequests: new BirthdayRequestsService(db, hub),
     safety: new SafetyService(db, storage, hub, deps.mail, deps.config),
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
     payments,
+    push,
   };
 }

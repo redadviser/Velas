@@ -11,6 +11,7 @@ import { PhotoStorage } from './core/storage.js';
 import { googleVerifier } from './modules/auth/google.js';
 import { AccessTokens } from './modules/auth/tokens.js';
 import { StripeGateway } from './modules/payments/gateway.js';
+import { FcmSender, loadServiceAccount } from './modules/push/push.gateway.js';
 
 async function main() {
   loadDotEnv();
@@ -20,6 +21,7 @@ async function main() {
   // O mailer usa o logger da app (para escrever os emails quando não há SMTP),
   // por isso só é criado depois dela.
   let mailer: Mailer = async () => {};
+  const firebase = loadServiceAccount();
 
   const deps: Deps = {
     config,
@@ -31,6 +33,7 @@ async function main() {
     payments: config.payments
       ? new StripeGateway(config.payments.stripeSecretKey, config.payments.stripeWebhookSecret)
       : undefined,
+    push: firebase ? new FcmSender(firebase) : undefined,
   };
 
   const app = await buildApp(deps, { logger: { level: process.env.LOG_LEVEL ?? 'info' } });
@@ -55,11 +58,18 @@ async function main() {
     );
   }
   if (config.googleClientIds.length === 0) app.log.warn('GOOGLE_CLIENT_IDS vazio: o login com Google está desativado.');
+  if (!firebase) app.log.warn('FIREBASE_SERVICE_ACCOUNT vazio: as notificações push estão desligadas.');
+
+  // Mensagens de parabéns agendadas: vê a cada minuto se há alguma para publicar.
+  const scheduler = setInterval(() => {
+    app.jobs.sendScheduledMessages().catch((e: unknown) => app.log.error({ err: e }, 'mensagens agendadas: falhou'));
+  }, 60_000);
 
   await app.listen({ port: config.port, host: config.host });
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, async () => {
+      clearInterval(scheduler);
       await app.close();
       await db.end();
       process.exit(0);

@@ -18,6 +18,7 @@ import { PhotoStorage } from '../src/core/storage.js';
 import type { Db } from '../src/core/database.js';
 import { GifsService } from '../src/modules/gifs/gifs.service.js';
 import type { GatewayStatus, PaymentsGateway } from '../src/modules/payments/gateway.js';
+import type { PushMessage, PushSender } from '../src/modules/push/push.gateway.js';
 import { createTestDb } from './pglite-pool.js';
 
 const secret = 'test-secret-with-at-least-32-characters!!';
@@ -85,6 +86,16 @@ const fakeStripe: PaymentsGateway = {
   },
 };
 
+// FCM falso: guarda as notificações; o token 'morto…' já não existe.
+const pushes: { token: string; platform: string; message: PushMessage }[] = [];
+const fakePush: PushSender = {
+  async send(token, platform, message) {
+    if (token.startsWith('morto')) return 'unregistered';
+    pushes.push({ token, platform, message });
+    return 'ok';
+  },
+};
+
 // JPEG mínimo (só os bytes iniciais interessam à validação).
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
 
@@ -125,6 +136,7 @@ beforeAll(async () => {
     },
     fetch: fakeGiphy,
     payments: fakeStripe,
+    push: fakePush,
   });
 }, 60_000);
 
@@ -1546,5 +1558,147 @@ describe('documentação', () => {
     expect(person.security).toEqual([{ bearerAuth: [] }]);
     expect(person.parameters).toContainEqual(expect.objectContaining({ in: 'path', name: 'id', required: true }));
     expect(person.requestBody.content['application/json'].schema.properties.id).toBeUndefined();
+  });
+});
+
+describe('notificações push', () => {
+  let ana: Session;
+  let bruno: Session;
+  let conv: string;
+  const anaPhone = 'fcm-ana-0123456789abcdefghij';
+
+  beforeAll(async () => {
+    ana = await signup('Ana Push', 'anapush', 'anapush@ex.pt');
+    bruno = await signup('Bruno Push', 'brunopush', 'brunopush@ex.pt');
+    await call('POST', '/friends/requests', { token: ana.access_token, body: { user_id: bruno.user.id } });
+    await call('POST', '/friends/requests', { token: bruno.access_token, body: { user_id: ana.user.id } });
+    conv = (await call('POST', '/conversations/direct', { token: ana.access_token, body: { user_id: bruno.user.id } })).body.id;
+  });
+
+  const say = (s: Session, body: string) =>
+    call('POST', `/conversations/${conv}/messages`, { token: s.access_token, body: { id: uuid(), kind: 'text', body } });
+  const toAna = () => pushes.filter((p) => p.token === anaPhone);
+
+  it('regista o telemóvel e avisa de mensagens novas, com o texto e o token de resposta', async () => {
+    expect((await call('PUT', '/me/push-token', { token: ana.access_token, body: { token: anaPhone, platform: 'android', lang: 'pt' } })).status).toBe(204);
+    // Um telemóvel que já não existe é esquecido no primeiro envio.
+    await call('PUT', '/me/push-token', { token: ana.access_token, body: { token: 'morto-0123456789abcdefghij', platform: 'ios' } });
+
+    await say(bruno, 'Parabéns atrasados!');
+    await new Promise((r) => setTimeout(r, 50));
+    const p = toAna().at(-1)!;
+    expect(p.message).toMatchObject({ title: 'Bruno Push', body: 'Parabéns atrasados!', data: { type: 'chat', conversation_id: conv } });
+    expect(p.message.data.reply_token).toEqual(expect.any(String));
+    const { rows } = await db.query('select token from push_tokens where user_id = $1', [ana.user.id]);
+    expect(rows.map((r: { token: string }) => r.token)).toEqual([anaPhone]);
+    // Quem envia não recebe a própria mensagem.
+    expect(pushes.filter((x) => x.message.body === 'Parabéns atrasados!')).toHaveLength(1);
+  });
+
+  it('respeita a pré-visualização desligada e as conversas silenciadas', async () => {
+    await call('PATCH', '/me', { token: ana.access_token, body: { message_previews: false } });
+    await say(bruno, 'segredo');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(toAna().at(-1)!.message.body).toBe('Nova mensagem');
+    await call('PATCH', '/me', { token: ana.access_token, body: { message_previews: true } });
+
+    const before = toAna().length;
+    await call('PATCH', `/conversations/${conv}/prefs`, { token: ana.access_token, body: { muted_until: '9999-12-31T00:00:00Z' } });
+    await say(bruno, 'silêncio');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(toAna()).toHaveLength(before);
+    await call('PATCH', `/conversations/${conv}/prefs`, { token: ana.access_token, body: { muted_until: null } });
+  });
+
+  it('responde e marca como lida a partir da notificação, só naquela conversa', async () => {
+    await say(bruno, 'Vens jantar?');
+    await new Promise((r) => setTimeout(r, 50));
+    const token = toAna().at(-1)!.message.data.reply_token!;
+    const id = uuid();
+    const reply = await call('POST', '/push/reply', { body: { token, id, body: 'Vou sim!' } });
+    expect(reply.status).toBe(200);
+    expect(reply.body).toMatchObject({ id, sender_id: ana.user.id, body: 'Vou sim!' });
+    // Repetir o pedido (a rede falhou) não duplica.
+    expect((await call('POST', '/push/reply', { body: { token, id, body: 'Vou sim!' } })).status).toBe(200);
+    const msgs = (await call('GET', `/conversations/${conv}/messages`, { token: bruno.access_token })).body.messages;
+    expect(msgs.filter((m: { body: string }) => m.body === 'Vou sim!')).toHaveLength(1);
+    const anaConv = (await call('GET', '/conversations', { token: ana.access_token })).body.find((c: { id: string }) => c.id === conv);
+    expect(anaConv.unread_count).toBe(0);
+
+    expect((await call('POST', '/push/read', { body: { token } })).status).toBe(204);
+    expect((await call('POST', '/push/reply', { body: { token: 'falso', id: uuid(), body: 'x' } })).status).toBe(401);
+    // O token de acesso normal não serve para responder.
+    expect((await call('POST', '/push/reply', { body: { token: ana.access_token, id: uuid(), body: 'x' } })).status).toBe(401);
+
+    expect((await call('DELETE', '/me/push-token', { token: ana.access_token, body: { token: anaPhone } })).status).toBe(204);
+    const before = pushes.length;
+    await say(bruno, 'já não chega');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(pushes).toHaveLength(before);
+  });
+});
+
+describe('mensagens agendadas', () => {
+  let rui: Session;
+  let sara: Session;
+  let tiago: Session;
+  const personId = uuid();
+  const messageId = uuid();
+  const ruiPhone = 'fcm-rui-0123456789abcdefghij';
+
+  beforeAll(async () => {
+    rui = await signup('Rui Agenda', 'ruiagenda', 'ruiagenda@ex.pt');
+    sara = await signup('Sara Agenda', 'saraagenda', 'saraagenda@ex.pt');
+    tiago = await signup('Tiago Agenda', 'tiagoagenda', 'tiagoagenda@ex.pt');
+    await call('POST', '/friends/requests', { token: rui.access_token, body: { user_id: sara.user.id } });
+    await call('POST', '/friends/requests', { token: sara.access_token, body: { user_id: rui.user.id } });
+    await call('PUT', `/people/${personId}`, { token: rui.access_token, body: { name: 'Sara Matos', birth_day: 2, birth_month: 3 } });
+    await call('PUT', '/me/push-token', { token: rui.access_token, body: { token: ruiPhone, platform: 'android', lang: 'pt' } });
+  });
+
+  const save = (body: object) => call('PUT', `/messages/${messageId}`, { token: rui.access_token, body: { person_id: personId, body: 'Parabéns, Sara! 🎂', ...body } });
+  const message = async () =>
+    (await call('GET', '/data', { token: rui.access_token })).body.messages.find((m: { id: string }) => m.id === messageId);
+
+  it('só agenda para o mural de um amigo', async () => {
+    const soon = new Date(Date.now() + 3600_000).toISOString();
+    expect((await save({ scheduled_at: soon, schedule_via: 'wall' })).status).toBe(422);
+    expect((await save({ scheduled_at: soon, schedule_via: 'wall', schedule_friend_id: tiago.user.id })).status).toBe(403);
+    // "remind" fica só no telemóvel: a API guarda mas não envia.
+    expect((await save({ scheduled_at: new Date(Date.now() - 1000).toISOString(), schedule_via: 'remind' })).status).toBe(200);
+    expect(await app.jobs.sendScheduledMessages()).toBe(0);
+    expect(await message()).toMatchObject({ schedule_via: 'remind', sent_at: null });
+  });
+
+  it('publica no mural à hora marcada, uma só vez, e avisa quem agendou', async () => {
+    const future = new Date(Date.now() + 3600_000).toISOString();
+    expect((await save({ scheduled_at: future, schedule_via: 'wall', schedule_friend_id: sara.user.id })).status).toBe(200);
+    expect(await app.jobs.sendScheduledMessages()).toBe(0);
+
+    const past = new Date(Date.now() - 60_000).toISOString();
+    await save({ scheduled_at: past, schedule_via: 'wall', schedule_friend_id: sara.user.id });
+    expect(await app.jobs.sendScheduledMessages()).toBe(1);
+    expect(await app.jobs.sendScheduledMessages()).toBe(0);
+
+    const wall = (await call('GET', '/cards/received', { token: sara.access_token })).body;
+    expect(wall.filter((c: { body: string }) => c.body === 'Parabéns, Sara! 🎂')).toHaveLength(1);
+    expect(await message()).toMatchObject({ sent_at: expect.any(String), send_error: null });
+    expect(pushes.filter((p) => p.token === ruiPhone).at(-1)!.message).toMatchObject({
+      title: '🎉 Enviámos os teus parabéns a Sara',
+      data: { type: 'scheduled_sent', person_id: personId },
+    });
+
+    // Gravar o texto outra vez não volta a enviar; mudar a hora sim.
+    await save({ body: 'Parabéns, Sara! 🎂', scheduled_at: past, schedule_via: 'wall', schedule_friend_id: sara.user.id });
+    expect((await message()).sent_at).not.toBeNull();
+    await save({ scheduled_at: new Date(Date.now() - 1000).toISOString(), schedule_via: 'wall', schedule_friend_id: sara.user.id });
+    expect((await message()).sent_at).toBeNull();
+  });
+
+  it('se deixarem de ser amigos, fica o motivo e o aviso de que falhou', async () => {
+    await call('DELETE', `/friends/${sara.user.id}`, { token: rui.access_token });
+    expect(await app.jobs.sendScheduledMessages()).toBe(1);
+    expect(await message()).toMatchObject({ send_error: 'not_friends' });
+    expect(pushes.filter((p) => p.token === ruiPhone).at(-1)!.message.data.type).toBe('scheduled_failed');
   });
 });

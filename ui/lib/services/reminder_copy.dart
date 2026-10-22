@@ -14,6 +14,18 @@ class ReminderCopy {
   /// Ação do botão "Prenda em grupo" (ver [target]).
   static const groupAction = 'group';
 
+  /// Mensagem agendada para enviar fora da app: chegou a hora. Tocar abre a
+  /// mensagem já com o "Como queres enviar?" aberto.
+  static Reminder scheduledSend(Person p, BirthdayMessage m) {
+    final text = m.body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return (
+      title: '⏰ Está na hora de dar os parabéns a ${p.firstName}',
+      body: text.length > 120 ? '${text.substring(0, 120)}…' : text,
+      payload: 'send:${p.id}',
+      groupAction: false,
+    );
+  }
+
   /// Com menos de 3 dias já não dá para combinar uma prenda em grupo.
   static const _groupMinDays = 3;
 
@@ -60,7 +72,9 @@ class ReminderCopy {
   static String? target(String? payload, String? actionId) {
     if (payload == null) return null;
     if (actionId == groupAction && payload.startsWith('person:')) return 'group:${payload.substring(7)}';
-    return payload;
+    // Notificações de mensagens: `chat:<id>|<token de resposta>` (o token não é destino).
+    final bar = payload.indexOf('|');
+    return bar < 0 ? payload : payload.substring(0, bar);
   }
 
   /// Rota da app para um destino (`chat:`, `person:`, `message:`, `group:`).
@@ -74,6 +88,7 @@ class ReminderCopy {
       'chat' => '/chats/$id',
       'person' => '/person/$id',
       'message' => '/person/$id/message',
+      'send' => '/person/$id/message?send=1',
       'group' => '/groups/new?personId=$id',
       'agenda' => '/agenda',
       _ => null,

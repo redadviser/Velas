@@ -281,5 +281,9 @@
   "receive.hint": "És tu a comprar a prenda: indica o teu MB WAY ou Revolut para os outros te enviarem a parte deles.",
   "receive.action": "Indicar como receber",
   "receive.screenHint": "Escolhe como preferes receber quando és tu a comprar a prenda. Só é mostrado às pessoas desses grupos, na hora de te pagarem.",
-  "receive.saved": "Dados de pagamento guardados."
+  "receive.saved": "Dados de pagamento guardados.",
+  "notify.reply": "Responder",
+  "notify.replyHint": "Mensagem",
+  "notify.send": "Enviar",
+  "notify.markRead": "Marcar como lida"
 }

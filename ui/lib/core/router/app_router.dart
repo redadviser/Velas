@@ -30,6 +30,7 @@ import '../../features/people/people_screen.dart';
 import '../../features/people/history_screen.dart';
 import '../../features/people/import_contacts_screen.dart';
 import '../../features/people/onboarding.dart';
+import '../../features/people/pending_answers_screen.dart';
 import '../../features/people/person_detail_screen.dart';
 import '../../features/people/person_form_screen.dart';
 import '../../features/profile/categories_screen.dart';
@@ -141,6 +142,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
+      GoRoute(path: '/people/requests', parentNavigatorKey: _rootKey, builder: (_, _) => const PendingAnswersScreen()),
       GoRoute(
         path: '/people/import',
         parentNavigatorKey: _rootKey,

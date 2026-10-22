@@ -55,16 +55,15 @@ void main() {
     expect(ReminderCopy.weeklyDigest([people.last], monday), isNull);
   });
 
-  test('o widget mostra os próximos 4 aniversários só com o Birthdayly+', () {
+  test('o widget recebe as datas (é ele que conta quanto falta)', () {
     final people = [
-      for (final (i, n) in ['Ana', 'Bea', 'Rui', 'Tó', 'Zé'].indexed)
-        Person(id: '$i', name: n, day: 1 + i, month: 12, createdAt: DateTime(2026)),
+      Person(id: 'a', name: 'Ana Silva', day: 3, month: 5, year: 1990, createdAt: DateTime(2026)),
+      Person(id: 'b', name: 'Rui', day: 29, month: 2, createdAt: DateTime(2026)),
     ];
-    final plus = homeWidgetText(people, plus: true);
-    expect(plus.title, 'Próximos aniversários');
-    expect(plus.lines.split('\n'), hasLength(4));
-    expect(plus.lines, startsWith('Ana · 1 de dezembro'));
-    expect(homeWidgetText(people, plus: false).lines, contains('Ativa o Birthdayly+'));
+    expect(homeWidgetPeople(people), 'Ana|3|5|1990|AS|\nRui|29|2||R|');
+    // A fotografia do primeiro, num ficheiro que o widget lê.
+    expect(homeWidgetPeople(people, photos: {'a': '/data/widget/a.img'}).split('\n').first, 'Ana|3|5|1990|AS|/data/widget/a.img');
+    expect(homeWidgetPeople(const []), '');
   });
 
   test('o histórico lê os anos, cartões e prendas do servidor', () {

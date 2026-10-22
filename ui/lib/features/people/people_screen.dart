@@ -116,6 +116,14 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     ),
                   ),
                 ),
+                // Datas deixadas pelo link à espera de confirmação.
+                if ((ref.watch(birthdayRequestProvider).value?.pending ?? 0) > 0)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      child: _PendingBanner(count: ref.watch(birthdayRequestProvider).value!.pending),
+                    ),
+                  ),
                 SliverToBoxAdapter(
                   child: SizedBox(
                     height: 56,
@@ -238,6 +246,35 @@ class _FilterChip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PendingBanner extends StatelessWidget {
+  const _PendingBanner({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = context.palette.accentForeground;
+    return AppCard(
+      color: context.palette.accent,
+      onTap: () => context.push('/people/requests'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      child: Row(
+        children: [
+          Icon(LucideIcons.inbox, size: 20, color: fg),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              count == 1 ? '1 aniversário à espera de confirmação' : '$count aniversários à espera de confirmação',
+              style: context.text.titleSmall?.copyWith(color: fg),
+            ),
+          ),
+          Icon(LucideIcons.chevronRight, size: 18, color: fg),
+        ],
       ),
     );
   }

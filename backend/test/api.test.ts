@@ -1166,28 +1166,75 @@ describe('pedir aniversários por link', () => {
     expect((await call('GET', `/b/${'x'.repeat(22)}`)).status).toBe(404);
   });
 
-  it('a resposta entra na lista de quem pediu, sem repetir', async () => {
-    const answer = (body: object) => call('POST', `/birthday-requests/${token}/answers`, { body });
-    expect((await answer({ name: ' Rosa Matos ', day: 14, month: 2, year: 1958 })).status).toBe(201);
-    expect((await answer({ name: 'rosa matos', day: '14', month: '2' })).status).toBe(201); // repetida: não duplica
+  const answer = (body: object, link = token) =>
+    call('POST', `/birthday-requests/${link}/answers`, { body: { elapsed_ms: 5000, device: `dev-${uuid()}`, ...body } });
+
+  it('a resposta fica pendente até ser aceite; o mesmo telemóvel não repete', async () => {
+    expect((await answer({ name: ' Rosa Matos ', day: 14, month: 2, year: 1958, device: 'tel-da-rosa' })).status).toBe(201);
+    // O mesmo telemóvel corrige a resposta em vez de criar outra.
+    expect((await answer({ name: 'Rosa Matos', day: 15, month: 2, year: 1958, device: 'tel-da-rosa' })).status).toBe(201);
     expect((await answer({ name: 'Tó', day: 29, month: 2 })).status).toBe(201);
     // Datas impossíveis e anos fora do intervalo são recusados.
     expect((await answer({ name: 'X', day: 31, month: 4 })).status).toBe(400);
     expect((await answer({ name: 'X', day: 1, month: 1, year: 1850 })).status).toBe(400);
-    expect((await call('POST', `/birthday-requests/${'x'.repeat(22)}/answers`, { body: { name: 'X', day: 1, month: 1 } })).body.error).toBe('request_not_found');
+    expect((await answer({ name: 'X', day: 1, month: 1 }, 'x'.repeat(22))).body.error).toBe('request_not_found');
 
+    // Nada entrou ainda na lista de aniversários.
+    expect((await call('GET', '/data', { token: ze.access_token })).body.people).toEqual([]);
+    const pending = (await call('GET', '/birthday-request/answers', { token: ze.access_token })).body;
+    expect(pending.map((a: { name: string; birth_day: number }) => [a.name, a.birth_day])).toEqual([['Rosa Matos', 15], ['Tó', 29]]);
+    expect((await call('GET', '/birthday-request', { token: ze.access_token })).body).toMatchObject({ pending: 2, answers: 0, open: true });
+
+    // Aceitar uma, ignorar a outra.
+    const rosa = pending[0].id;
+    expect((await call('POST', `/birthday-request/answers/${rosa}/accept`, { token: ze.access_token })).body.added).toBe(1);
+    expect((await call('POST', `/birthday-request/answers/${pending[1].id}/ignore`, { token: ze.access_token })).status).toBe(204);
+    expect((await call('POST', `/birthday-request/answers/${rosa}/accept`, { token: ze.access_token })).status).toBe(404);
     const people = (await call('GET', '/data', { token: ze.access_token })).body.people;
-    expect(people.map((p: { name: string; birth_day: number; birth_month: number; birth_year: number | null }) => [p.name, p.birth_day, p.birth_month, p.birth_year])).toEqual([
-      ['Rosa Matos', 14, 2, 1958],
-      ['Tó', 29, 2, null],
-    ]);
-    expect((await call('GET', '/birthday-request', { token: ze.access_token })).body.answers).toBe(2);
+    expect(people.map((p: { name: string; birth_day: number; birth_year: number }) => [p.name, p.birth_day, p.birth_year])).toEqual([['Rosa Matos', 15, 1958]]);
+    expect((await call('GET', '/birthday-request', { token: ze.access_token })).body).toMatchObject({ pending: 0, answers: 1 });
+    // Quem já está na lista não volta a ficar pendente.
+    await answer({ name: 'rosa matos', day: 15, month: 2 });
+    expect((await call('GET', '/birthday-request/answers', { token: ze.access_token })).body).toEqual([]);
   });
 
-  it('trocar de link desliga o antigo', async () => {
+  it('robôs não deixam nada; aceitar todos de uma vez', async () => {
+    // Campo escondido preenchido ou envio rápido demais: responde igual, não guarda.
+    expect((await answer({ name: 'Bot', day: 1, month: 1, website: 'http://spam' })).status).toBe(201);
+    expect((await answer({ name: 'Bot rápido', day: 1, month: 1, elapsed_ms: 300 })).status).toBe(201);
+    expect((await call('GET', '/birthday-request/answers', { token: ze.access_token })).body).toEqual([]);
+
+    await answer({ name: 'Ivo', day: 3, month: 3 });
+    await answer({ name: 'Júlia', day: 4, month: 4 });
+    expect((await call('POST', '/birthday-request/answers/accept', { token: ze.access_token })).body.added).toBe(2);
+    expect((await call('GET', '/data', { token: ze.access_token })).body.people).toHaveLength(3);
+  });
+
+  it('no máximo 30 respostas por hora em cada link', async () => {
+    const s = await signup('Kiko', 'kikoo', 'kiko@ex.pt');
+    const link = (await call('GET', '/birthday-request', { token: s.access_token })).body.token;
+    for (let i = 0; i < 30; i++) expect((await answer({ name: `Nome ${i}`, day: 1, month: 1 }, link)).status).toBe(201);
+    expect((await answer({ name: 'Mais um', day: 1, month: 1 }, link)).body.error).toBe('request_busy');
+    expect((await call('POST', '/birthday-request/answers/ignore', { token: s.access_token })).status).toBe(204);
+    expect((await call('GET', '/birthday-request/answers', { token: s.access_token })).body).toEqual([]);
+  });
+
+  it('desligar, voltar a ligar, expirar e trocar de link', async () => {
+    const off = await call('PATCH', '/birthday-request', { token: ze.access_token, body: { enabled: false } });
+    expect(off.body).toMatchObject({ enabled: false, open: false });
+    expect((await call('GET', `/b/${token}`)).status).toBe(410);
+    expect((await answer({ name: 'Lia', day: 5, month: 5 })).body.error).toBe('request_closed');
+    expect((await call('PATCH', '/birthday-request', { token: ze.access_token, body: { enabled: true } })).body.open).toBe(true);
+
+    // Ao fim de 30 dias o link fecha sozinho.
+    await db.query(`update birthday_requests set expires_at = now() - interval '1 day' where user_id = $1`, [ze.user.id]);
+    expect((await call('GET', '/birthday-request', { token: ze.access_token })).body.open).toBe(false);
+    expect((await call('GET', `/b/${token}`)).status).toBe(410);
+
+    // Trocar dá um link novo, aberto por mais 30 dias; o antigo deixa de existir.
     const fresh = await call('POST', '/birthday-request/reset', { token: ze.access_token });
+    expect(fresh.body).toMatchObject({ open: true, answers: 3 });
     expect(fresh.body.token).not.toBe(token);
-    expect(fresh.body.answers).toBe(2);
     expect((await call('GET', `/b/${token}`)).status).toBe(404);
     expect((await call('GET', `/b/${fresh.body.token}`)).status).toBe(200);
   });

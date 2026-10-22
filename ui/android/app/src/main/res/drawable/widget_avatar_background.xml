@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Círculo das iniciais quando a pessoa não tem fotografia, com um aro branco. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#40FFFFFF" />
+    <stroke android:width="2dp" android:color="#CCFFFFFF" />
+</shape>

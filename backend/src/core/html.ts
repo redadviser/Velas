@@ -76,6 +76,7 @@ p{margin:0 0 12px;color:var(--muted)}
 .media{display:block;width:100%;margin:20px 0 0;border-radius:18px;background:var(--accent)}
 audio.media{background:none}
 [hidden]{display:none!important}
+.trap{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 </style></head><body><main>
 ${mark}
 ${body}

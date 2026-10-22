@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- O texto é atualizado pela app (não há atualizações periódicas). -->
+<!-- 2 × 2 por omissão, redimensionável. Volta a desenhar-se a cada 6 h para
+     "Hoje", "Amanhã" e "Em N dias" estarem sempre certos. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
     android:initialLayout="@layout/birthdays_widget"
-    android:minWidth="180dp"
-    android:minHeight="110dp"
-    android:targetCellWidth="3"
+    android:previewLayout="@layout/birthdays_widget"
+    android:minWidth="100dp"
+    android:minHeight="100dp"
+    android:minResizeWidth="100dp"
+    android:minResizeHeight="100dp"
+    android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
-    android:updatePeriodMillis="0"
+    android:updatePeriodMillis="21600000"
     android:widgetCategory="home_screen" />

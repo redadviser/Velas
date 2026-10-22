@@ -51,7 +51,10 @@ export async function authRoutes(app: FastifyInstance, auth: AuthService) {
   app.post(
     '/auth/google',
     { config: strict, schema: doc({ tag, summary: 'Entrar com o ID token do Google', body: googleSchema }) },
-    (req) => auth.google(googleSchema.parse(req.body).id_token),
+    (req) => {
+      const body = googleSchema.parse(req.body);
+      return auth.google(body.id_token, body.accept_terms ?? false);
+    },
   );
 
   app.post(

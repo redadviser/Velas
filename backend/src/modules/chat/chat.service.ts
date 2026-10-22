@@ -14,6 +14,8 @@ const conversationsQuery = `
       and ($1 in (c.user_a, c.user_b)
            or c.group_id in (select id from gift_groups where created_by = $1
                              union select group_id from group_members where user_id = $1))
+      -- A conversa privada com alguém bloqueado (de qualquer dos lados) deixa de aparecer.
+      and not (c.group_id is null and is_blocked(c.user_a, c.user_b))
   )
   select c.id,
     case when c.group_id is null then 'direct' else 'group' end as kind,
@@ -31,13 +33,16 @@ const conversationsQuery = `
     mp.show_presence as viewer_show_presence,
     (select count(*)::int from chat_messages m
      where m.conversation_id = c.id and m.deleted_at is null and m.sender_id is distinct from $1
-       and m.created_at > coalesce(r.last_read_at, '-infinity'::timestamptz)) as unread_count,
+       and m.created_at > coalesce(r.last_read_at, '-infinity'::timestamptz)
+       and not exists (select 1 from user_blocks b where b.blocker_id = $1 and b.blocked_id = m.sender_id)) as unread_count,
     (select json_build_object(
         'id', m.id, 'sender_id', m.sender_id, 'sender_name', sp.display_name, 'kind', m.kind,
         'body', case when m.deleted_at is null then left(m.body, 200) else '' end,
         'created_at', m.created_at, 'deleted', m.deleted_at is not null)
      from chat_messages m left join profiles sp on sp.id = m.sender_id
-     where m.conversation_id = c.id order by m.created_at desc, m.id desc limit 1) as last_message,
+     where m.conversation_id = c.id
+       and not exists (select 1 from user_blocks b where b.blocker_id = $1 and b.blocked_id = m.sender_id)
+     order by m.created_at desc, m.id desc limit 1) as last_message,
     (select coalesce(json_agg(json_build_object('user_id', rp.id, 'display_name', rp.display_name)
                               order by r2.last_read_at), '[]')
      from conversation_reads r2 join profiles rp on rp.id = r2.user_id
@@ -357,9 +362,11 @@ export class ChatService {
         `${messagesSelect}
          where m.conversation_id = $1
            and ($2::uuid is null or (m.created_at, m.id) < (select created_at, id from chat_messages where id = $2))
+           -- As mensagens de quem bloqueei deixam de aparecer (nos grupos).
+           and not exists (select 1 from user_blocks b where b.blocker_id = $4 and b.blocked_id = m.sender_id)
          order by m.created_at desc, m.id desc
          limit $3`,
-        [conversationId, before ?? null, limit + 1],
+        [conversationId, before ?? null, limit + 1, userId],
       );
       return { messages: rows.slice(0, limit).map((r) => this.message(r)), has_more: rows.length > limit };
     });

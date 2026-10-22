@@ -68,6 +68,8 @@ export class FriendsService {
     if (otherId === userId) return 'self';
     const result = await tx(this.db, userId, async (c): Promise<FriendRequestResult> => {
       if (!(await c.query('select 1 from profiles where id = $1', [otherId])).rowCount) return 'not_found';
+      // Com um bloqueio (de qualquer dos lados) é como se a conta não existisse.
+      if ((await c.query<{ b: boolean }>('select is_blocked($1, $2) as b', [userId, otherId])).rows[0]?.b) return 'not_found';
       const { rows } = await c.query<{ id: string; status: string; requester_id: string }>(
         `select id, status, requester_id from friendships
          where least(requester_id, addressee_id) = least($1::uuid, $2::uuid)

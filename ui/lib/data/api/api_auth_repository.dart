@@ -93,7 +93,8 @@ class ApiAuthRepository implements AuthRepository {
   @override
   Future<void> signInWithGoogle() async {
     final idToken = await GoogleService.instance.signIn();
-    await _applySession(await _api.postPublic('/auth/google', {'id_token': idToken}));
+    // O botão diz "Ao continuar, aceitas os Termos…": numa conta nova fica registado.
+    await _applySession(await _api.postPublic('/auth/google', {'id_token': idToken, 'accept_terms': true}));
   }
 
   @override
@@ -124,6 +125,8 @@ class ApiAuthRepository implements AuthRepository {
         'email': email.trim(),
         'password': password,
         if (phone.isNotEmpty) 'phone': phone,
+        // O registo só avança com a caixa "Tenho 16 anos ou mais e aceito…" marcada.
+        'accept_terms': true,
       }),
     );
     return SignUpResult.signedIn;
@@ -167,6 +170,12 @@ class ApiAuthRepository implements AuthRepository {
   Future<void> updatePhoto(Uint8List? bytes) async {
     final res = bytes == null ? await _api.delete('/me/photo') : await _api.putBytes('/me/photo', bytes, 'image/jpeg');
     final json = (res as Map).cast<String, dynamic>();
+    _set(_profile(json), json);
+  }
+
+  @override
+  Future<void> acceptTerms() async {
+    final json = ((await _api.post('/me/accept-terms')) as Map).cast<String, dynamic>();
     _set(_profile(json), json);
   }
 

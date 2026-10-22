@@ -77,6 +77,9 @@ p{margin:0 0 12px;color:var(--muted)}
 audio.media{background:none}
 [hidden]{display:none!important}
 .trap{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+main:has(.doc){max-width:720px}
+.doc{text-align:left}.doc h1{font-size:30px}.doc h2{font-size:18px;margin:28px 0 8px}
+.doc p,.doc li{color:var(--fg);line-height:1.6}.doc .lead{color:var(--muted)}.doc ul{padding-left:20px;margin:0 0 12px}.doc li{margin-bottom:6px}
 </style></head><body><main>
 ${mark}
 ${body}

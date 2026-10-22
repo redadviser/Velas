@@ -5,6 +5,7 @@ import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, unauthorized } from '../../core/errors.js';
 import type { Mailer } from '../../core/mailer.js';
 import { hashPassword, verifyPassword } from '../../core/passwords.js';
+import { termsVersion } from '../legal/legal.content.js';
 import type { UsersService } from '../users/users.service.js';
 import type { Session, SignupInput } from './auth.model.js';
 import type { GoogleVerifier } from './google.js';
@@ -47,6 +48,7 @@ export class AuthService {
         username: input.username,
         phone: input.phone,
       });
+      if (input.accept_terms) await acceptTermsIn(c, userId);
       return this.issueSession(c, userId);
     });
   }
@@ -80,7 +82,7 @@ export class AuthService {
    * Entrar com Google. Liga à conta existente com o mesmo email (verificado
    * pelo Google) ou cria uma conta nova com username sugerido.
    */
-  async google(idToken: string): Promise<Session> {
+  async google(idToken: string, acceptTerms = false): Promise<Session> {
     const g = await this.verifyGoogle(idToken);
     const email = g.email.trim().toLowerCase();
     return tx(this.db, null, async (c) => {
@@ -102,6 +104,7 @@ export class AuthService {
             name: g.name,
             username: await this.users.suggestUsernameIn(c, email),
           });
+          if (acceptTerms) await acceptTermsIn(c, userId);
         }
       }
       return this.issueSession(c, userId);
@@ -162,4 +165,9 @@ export class AuthService {
       return this.issueSession(c, rows[0].user_id);
     });
   }
+}
+
+/** Regista a aceitação da versão atual dos Termos e da Política de Privacidade. */
+export async function acceptTermsIn(c: Tx, userId: string): Promise<void> {
+  await c.query('update users set terms_accepted_at = now(), terms_version = $2 where id = $1', [userId, termsVersion]);
 }

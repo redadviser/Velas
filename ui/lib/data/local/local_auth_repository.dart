@@ -237,6 +237,10 @@ class LocalAuthRepository implements AuthRepository {
     _set(_profileOf(p.email, (users[p.email] as Map).cast<String, dynamic>()));
   }
 
+  /// No modo local não há servidor que guarde a aceitação: não há nada a fazer.
+  @override
+  Future<void> acceptTerms() async {}
+
   /// No modo local o período experimental fica guardado no próprio dispositivo.
   @override
   Future<void> startPlusTrial() async {

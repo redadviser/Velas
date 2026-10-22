@@ -18,6 +18,8 @@ export const signupSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   phone: z.union([phoneSchema, z.literal('')]).optional(),
+  /** Aceitou os Termos e a Política de Privacidade e confirmou a idade mínima. */
+  accept_terms: z.boolean().optional(),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
@@ -29,7 +31,11 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
-export const googleSchema = z.object({ id_token: z.string().min(20).max(4096) });
+export const googleSchema = z.object({
+  id_token: z.string().min(20).max(4096),
+  /** "Ao continuar, aceitas os Termos…": regista a aceitação numa conta nova. */
+  accept_terms: z.boolean().optional(),
+});
 export const refreshSchema = z.object({ refresh_token: z.string().min(20).max(200) });
 export const logoutSchema = z.object({ refresh_token: z.string().max(200) });
 export const forgotSchema = z.object({ email: emailSchema });

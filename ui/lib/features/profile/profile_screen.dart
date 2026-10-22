@@ -1,11 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -16,6 +13,7 @@ import '../../core/utils/identity.dart';
 import '../../services/notification_service.dart';
 import '../chat/chat_widgets.dart';
 import 'identity_sheets.dart';
+import 'legal.dart';
 import 'plus.dart';
 import '../auth/reset_password_screen.dart';
 import '../../core/utils/text.dart';
@@ -50,11 +48,6 @@ class ProfileScreen extends ConsumerWidget {
     if (t != null && context.mounted) {
       await _update(context, ref, user.copyWith(reminderHour: t.hour, reminderMinute: t.minute));
     }
-  }
-
-  Future<void> _export(BuildContext context, WidgetRef ref) async {
-    final json = const JsonEncoder.withIndent('  ').convert(ref.read(dataProvider).toExportJson());
-    await SharePlus.instance.share(ShareParams(text: json, subject: 'Os meus dados — Birthdayly'));
   }
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
@@ -256,6 +249,12 @@ class ProfileScreen extends ConsumerWidget {
           _Section(
             children: [
               _Tile(
+                icon: LucideIcons.accessibility,
+                title: 'Acessibilidade',
+                value: _a11ySummary(ref.watch(accessibilityProvider)),
+                onTap: () => context.push('/profile/accessibility'),
+              ),
+              _Tile(
                 icon: LucideIcons.palette,
                 title: 'Tema',
                 value: user.isPlus ? ref.watch(themeAccentProvider).label : 'Coral',
@@ -318,13 +317,46 @@ class ProfileScreen extends ConsumerWidget {
           const _Group('Privacidade e dados'),
           _Section(
             children: [
-              _Tile(icon: LucideIcons.download, title: 'Exportar os meus dados', onTap: () => _export(context, ref)),
+              _Tile(
+                icon: LucideIcons.download,
+                title: 'Exportar os meus dados',
+                onTap: () => exportMyData(context, ref),
+              ),
+              _Tile(
+                icon: LucideIcons.scale,
+                title: 'Os teus direitos (RGPD)',
+                onTap: () => context.push('/profile/privacy'),
+              ),
+              if (ref.watch(apiClientProvider) != null) ...[
+                _Tile(
+                  icon: LucideIcons.shieldCheck,
+                  title: 'Política de Privacidade',
+                  onTap: () => openLegal(context, LegalLinks.privacy),
+                ),
+                _Tile(
+                  icon: LucideIcons.fileText,
+                  title: 'Termos de Utilização',
+                  onTap: () => openLegal(context, LegalLinks.terms),
+                ),
+              ],
               _Tile(
                 icon: LucideIcons.trash2,
                 title: 'Eliminar conta',
                 destructive: true,
                 onTap: () => _deleteAccount(context, ref),
               ),
+            ],
+          ),
+          const _Group('Ajuda'),
+          _Section(
+            children: [
+              _Tile(icon: LucideIcons.lifeBuoy, title: 'Ajuda e contacto', onTap: () => showHelpSheet(context, ref)),
+              if (ref.watch(chatRepositoryProvider) != null)
+                _Tile(
+                  icon: LucideIcons.ban,
+                  title: 'Utilizadores bloqueados',
+                  onTap: () => context.push('/chat-settings/blocked'),
+                ),
             ],
           ),
           const SizedBox(height: 24),
@@ -576,6 +608,16 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
 }
 
 /// Idioma da app: o do telemóvel ou um escolhido.
+/// "130%, contraste" ou "Do telemóvel".
+String _a11ySummary(AccessibilitySettings a) {
+  final parts = [
+    if (a.textScale != null) '${(a.textScale! * 100).round()}%',
+    if (a.highContrast) 'contraste',
+    if (a.reduceMotion) 'sem animações',
+  ];
+  return parts.isEmpty ? 'Do telemóvel' : parts.join(', ');
+}
+
 /// Tema de cor da app (Birthdayly+).
 Future<void> _pickAccent(BuildContext context, WidgetRef ref) async {
   if (!await requirePlus(context, ref, feature: 'Mudar o tema')) return;
@@ -619,9 +661,7 @@ Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
       child: RadioGroup<String>(
         groupValue: current?.languageCode ?? '',
         onChanged: (code) => Navigator.pop(ctx, (
-          code == null || code.isEmpty
-              ? null
-              : Translations.supportedLocales.firstWhere((l) => l.languageCode == code),
+          code == null || code.isEmpty ? null : Translations.supportedLocales.firstWhere((l) => l.languageCode == code),
         )),
         child: Column(
           mainAxisSize: MainAxisSize.min,

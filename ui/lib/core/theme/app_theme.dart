@@ -10,7 +10,9 @@ class AppTheme {
   static const radius = 16.0;
   static const radiusSmall = 12.0;
 
-  static ThemeData light({AppAccent accent = AppAccent.coral}) => _build(
+  static ThemeData light({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) => _build(
+    highContrast: highContrast,
+    reduceMotion: reduceMotion,
     brightness: Brightness.light,
     background: AppColors.background,
     foreground: AppColors.foreground,
@@ -19,10 +21,14 @@ class AppTheme {
     onPrimary: AppColors.primaryForeground,
     secondary: accent == AppAccent.coral ? AppColors.secondary : accent.gradient.last,
     error: AppColors.destructive,
-    palette: AppPalette.light.copyWith(brand: accent.brand),
+    palette: highContrast
+        ? AppPalette.light.copyWith(brand: accent.brand, mutedForeground: const Color(0xFF3F3431), border: const Color(0xFF8C7F7A))
+        : AppPalette.light.copyWith(brand: accent.brand),
   );
 
-  static ThemeData dark({AppAccent accent = AppAccent.coral}) => _build(
+  static ThemeData dark({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) => _build(
+    highContrast: highContrast,
+    reduceMotion: reduceMotion,
     brightness: Brightness.dark,
     background: AppColors.darkBackground,
     foreground: AppColors.darkForeground,
@@ -31,7 +37,9 @@ class AppTheme {
     onPrimary: AppColors.darkPrimaryForeground,
     secondary: accent == AppAccent.coral ? AppColors.darkSecondary : accent.gradient.last,
     error: AppColors.darkDestructive,
-    palette: AppPalette.dark.copyWith(brand: accent.brand),
+    palette: highContrast
+        ? AppPalette.dark.copyWith(brand: accent.brand, mutedForeground: const Color(0xFFE2D8D2), border: const Color(0x8CFFFFFF))
+        : AppPalette.dark.copyWith(brand: accent.brand),
   );
 
   /// Títulos editoriais em serifa, como no site de referência.
@@ -44,6 +52,8 @@ class AppTheme {
   );
 
   static ThemeData _build({
+    bool highContrast = false,
+    bool reduceMotion = false,
     required Brightness brightness,
     required Color background,
     required Color foreground,
@@ -101,6 +111,15 @@ class AppTheme {
         labelLarge: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600, fontSize: 15),
       ),
       extensions: [palette],
+      // Reduzir animações: as mudanças de ecrã passam a ser instantâneas.
+      pageTransitionsTheme: reduceMotion
+          ? const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.android: _NoTransitionsBuilder(),
+                TargetPlatform.iOS: _NoTransitionsBuilder(),
+              },
+            )
+          : null,
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: AppBarTheme(
         backgroundColor: background,
@@ -252,4 +271,18 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// Mudança de ecrã sem animação (acessibilidade: reduzir animações).
+class _NoTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => child;
 }

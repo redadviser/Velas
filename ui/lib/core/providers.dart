@@ -158,6 +158,47 @@ class ThemeModeController extends Notifier<ThemeMode> {
 
 final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
 
+/// Definições de acessibilidade, guardadas neste dispositivo. Somam-se às do
+/// telemóvel: [textScale] `null` = o tamanho de letra do sistema.
+typedef AccessibilitySettings = ({double? textScale, bool highContrast, bool reduceMotion});
+
+class AccessibilityController extends Notifier<AccessibilitySettings> {
+  static const _scaleKey = 'velas.a11y.textScale';
+  static const _contrastKey = 'velas.a11y.highContrast';
+  static const _motionKey = 'velas.a11y.reduceMotion';
+
+  /// Tamanhos que se podem escolher (o 1.0 é o da app).
+  static const scales = [0.9, 1.0, 1.15, 1.3, 1.5];
+
+  @override
+  AccessibilitySettings build() {
+    final p = ref.watch(sharedPrefsProvider);
+    return (
+      textScale: p.getDouble(_scaleKey),
+      highContrast: p.getBool(_contrastKey) ?? false,
+      reduceMotion: p.getBool(_motionKey) ?? false,
+    );
+  }
+
+  void setTextScale(double? v) {
+    state = (textScale: v, highContrast: state.highContrast, reduceMotion: state.reduceMotion);
+    final p = ref.read(sharedPrefsProvider);
+    v == null ? p.remove(_scaleKey) : p.setDouble(_scaleKey, v);
+  }
+
+  void setHighContrast(bool v) {
+    state = (textScale: state.textScale, highContrast: v, reduceMotion: state.reduceMotion);
+    ref.read(sharedPrefsProvider).setBool(_contrastKey, v);
+  }
+
+  void setReduceMotion(bool v) {
+    state = (textScale: state.textScale, highContrast: state.highContrast, reduceMotion: v);
+    ref.read(sharedPrefsProvider).setBool(_motionKey, v);
+  }
+}
+
+final accessibilityProvider = NotifierProvider<AccessibilityController, AccessibilitySettings>(AccessibilityController.new);
+
 /// Tema de cor escolhido (Birthdayly+), guardado neste dispositivo.
 class ThemeAccentController extends Notifier<AppAccent> {
   static const _key = 'velas.themeAccent';

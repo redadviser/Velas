@@ -17,6 +17,7 @@ import '../../data/models/chat_models.dart';
 import '../../data/models/group_models.dart';
 import 'chat_format.dart';
 import 'chat_widgets.dart';
+import 'safety.dart';
 import 'composer.dart';
 import 'media_panel.dart';
 import 'message_bubble.dart';
@@ -134,6 +135,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 onTap: () => Navigator.pop(ctx, 'discard'),
               ),
             ],
+            if (!mine && m.senderId != null && m.state == SendState.sent && !m.deleted)
+              ListTile(
+                leading: Icon(LucideIcons.flag, color: ctx.colors.error),
+                title: Text('Denunciar mensagem', style: TextStyle(color: ctx.colors.error)),
+                onTap: () => Navigator.pop(ctx, 'report'),
+              ),
             if (mine && m.state == SendState.sent)
               ListTile(
                 leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
@@ -172,6 +179,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           confirm: context.tr(Keys.commonDelete),
         );
         if (ok && mounted) await runGuarded(context, () => _chat.delete(m));
+      case 'report':
+        final known = ref.read(chatProvider(widget.conversationId)).conversation?.participants
+            .where((p) => p.user.userId == m.senderId)
+            .firstOrNull
+            ?.user;
+        await showReportSheet(context, ref, known ?? ChatUser(userId: m.senderId!, name: m.senderName), messageId: m.id);
       case 'react-more':
         final emoji = await _pickEmoji();
         if (emoji != null && mounted) await runGuarded(context, () => _chat.react(m, emoji));

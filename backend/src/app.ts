@@ -20,9 +20,11 @@ import { paymentsPublicRoutes, paymentsRoutes } from './modules/payments/payment
 import { giftsRoutes } from './modules/gifts/gifts.routes.js';
 import { groupsRoutes } from './modules/groups/groups.routes.js';
 import { invitePageRoutes } from './modules/invitations/invite-page.routes.js';
+import { legalRoutes } from './modules/legal/legal.routes.js';
 import { invitationsRoutes } from './modules/invitations/invitations.routes.js';
 import { messagesRoutes } from './modules/messages/messages.routes.js';
 import { peopleRoutes } from './modules/people/people.routes.js';
+import { safetyRoutes } from './modules/safety/safety.routes.js';
 import { syncRoutes } from './modules/sync/sync.routes.js';
 import { usersRoutes } from './modules/users/users.routes.js';
 
@@ -56,6 +58,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await authRoutes(app, services.auth);
   await filesRoutes(app, deps.storage);
   await invitePageRoutes(app, deps.config);
+  await legalRoutes(app, deps.config);
   await cardPageRoutes(app, services.cards, deps.config);
   await cardsPublicRoutes(app, services.cards);
   await birthdayRequestsPublicRoutes(app, services.birthdayRequests, deps.config);
@@ -85,6 +88,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await messagesRoutes(scope, services.messages);
     await cardsRoutes(scope, services.cards);
     await birthdayRequestsRoutes(scope, services.birthdayRequests);
+    await safetyRoutes(scope, services.safety);
     await groupsRoutes(scope, services.groups);
     await invitationsRoutes(scope, services.invitations);
     await friendsRoutes(scope, services.friends);

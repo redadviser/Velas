@@ -175,7 +175,7 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
 
   void _onEvent(ChatEvent e) {
     switch (e) {
-      case MessageReceived(:final message):
+      case MessageReceived(:final message) when !ref.read(blockedIdsProvider).contains(message.senderId):
         final list = state.value;
         final i = list?.indexWhere((c) => c.id == message.conversationId) ?? -1;
         if (list == null || i == -1) return _scheduleRefresh();
@@ -288,6 +288,49 @@ final unreadTotalProvider = Provider<int>(
 final groupUnreadProvider = Provider.family<int, String>(
   (ref, conversationId) =>
       ref.watch(conversationsProvider).value?.where((c) => c.id == conversationId).firstOrNull?.unreadCount ?? 0,
+);
+
+// ---------------------------------------------------------------------------
+// Bloqueados
+// ---------------------------------------------------------------------------
+
+/// Utilizadores que bloqueei (GET /blocks). As mensagens deles deixam de aparecer.
+class BlockedUsersController extends AsyncNotifier<List<ChatUser>> {
+  @override
+  Future<List<ChatUser>> build() async {
+    final api = ref.watch(apiClientProvider);
+    if (api == null || ref.watch(currentUserProvider.select((u) => u?.id)) == null) return const [];
+    final rows = (await api.get('/blocks')) as List;
+    return [
+      for (final r in rows.cast<Map>())
+        ChatUser(
+          userId: r['user_id'] as String,
+          name: r['display_name'] as String? ?? '',
+          username: r['username'] as String? ?? '',
+          photoUrl: r['photo_url'] as String?,
+        ),
+    ];
+  }
+
+  Future<void> block(ChatUser user) async {
+    await ref.read(apiClientProvider)!.post('/users/${user.userId}/block');
+    state = AsyncData([user, ...?state.value?.where((u) => u.userId != user.userId)]);
+    ref.invalidate(friendsProvider);
+    ref.invalidate(conversationsProvider);
+  }
+
+  Future<void> unblock(String userId) async {
+    await ref.read(apiClientProvider)!.delete('/users/$userId/block');
+    state = AsyncData([...?state.value?.where((u) => u.userId != userId)]);
+    ref.invalidate(conversationsProvider);
+  }
+}
+
+final blockedUsersProvider = AsyncNotifierProvider<BlockedUsersController, List<ChatUser>>(BlockedUsersController.new);
+
+/// Os ids dos bloqueados, para esconder as mensagens que chegam em tempo real.
+final blockedIdsProvider = Provider<Set<String>>(
+  (ref) => {for (final u in ref.watch(blockedUsersProvider).value ?? const <ChatUser>[]) u.userId},
 );
 
 // ---------------------------------------------------------------------------
@@ -517,7 +560,8 @@ class ChatController extends Notifier<ChatState> {
 
   void _onEvent(ChatEvent e) {
     switch (e) {
-      case MessageReceived(:final message) when message.conversationId == conversationId:
+      case MessageReceived(:final message)
+          when message.conversationId == conversationId && !ref.read(blockedIdsProvider).contains(message.senderId):
         state = state.copyWith(messages: mergeMessages(state.messages, [message]));
         if (message.senderId != _me.id) _scheduleRead();
       case MessageUpdated(:final message) when message.conversationId == conversationId:
@@ -732,6 +776,7 @@ final chatNotificationsProvider = Provider<void>((ref) {
     final m = e.message;
     final user = ref.read(currentUserProvider);
     if (user == null || m.senderId == user.id || m.deleted || !user.messageNotifications) return;
+    if (ref.read(blockedIdsProvider).contains(m.senderId)) return;
     if (ref.read(conversationsProvider.notifier).openConversationId == m.conversationId) return;
     final conv = ref.read(conversationsProvider).value?.where((c) => c.id == m.conversationId).firstOrNull;
     if (conv?.isMuted ?? false) return;

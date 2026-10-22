@@ -15,6 +15,7 @@ import 'chat_format.dart';
 import 'chat_widgets.dart';
 import 'conversations_list.dart';
 import 'friends_screen.dart';
+import 'safety.dart';
 
 /// Perfil de outra pessoa (ao tocar no avatar no chat): fotografia, nome e o
 /// estado da amizade — pedir, aceitar, cancelar ou enviar mensagem.
@@ -57,9 +58,24 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
     final online = p.online;
     final presence = u.userId == me ? null : ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
 
+    final blocked = ref.watch(blockedIdsProvider).contains(u.userId);
     Widget action;
     if (u.userId == me) {
       action = Pill(label: context.tr(Keys.profileSheetYou));
+    } else if (blocked) {
+      action = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Bloqueaste ${u.firstName}.', textAlign: TextAlign.center, style: TextStyle(color: muted)),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: _busy
+                ? null
+                : () => _run(() => ref.read(blockedUsersProvider.notifier).unblock(u.userId), success: 'Desbloqueaste ${u.firstName}.'),
+            child: const Text('Desbloquear'),
+          ),
+        ],
+      );
     } else if (isFriend) {
       action = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -191,6 +207,33 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
               ),
             const SizedBox(height: 20),
             action,
+            if (u.userId != me && ref.watch(apiClientProvider) != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      showReportSheet(context, ref, u);
+                    },
+                    style: TextButton.styleFrom(foregroundColor: muted),
+                    icon: const Icon(LucideIcons.flag, size: 16),
+                    label: const Text('Denunciar'),
+                  ),
+                  if (!blocked)
+                    TextButton.icon(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        if (await confirmBlock(context, ref, u)) navigator.pop();
+                      },
+                      style: TextButton.styleFrom(foregroundColor: context.colors.error),
+                      icon: const Icon(LucideIcons.ban, size: 16),
+                      label: const Text('Bloquear'),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

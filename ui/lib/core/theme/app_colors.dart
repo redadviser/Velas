@@ -124,13 +124,13 @@ class AppPalette extends ThemeExtension<AppPalette> {
   );
 
   @override
-  AppPalette copyWith({LinearGradient? brand}) => AppPalette(
+  AppPalette copyWith({LinearGradient? brand, Color? mutedForeground, Color? border}) => AppPalette(
     muted: muted,
-    mutedForeground: mutedForeground,
+    mutedForeground: mutedForeground ?? this.mutedForeground,
     accent: accent,
     accentForeground: accentForeground,
     success: success,
-    border: border,
+    border: border ?? this.border,
     card: card,
     softGradient: softGradient,
     brand: brand ?? this.brand,

@@ -48,6 +48,7 @@ export async function registerDocs(app: FastifyInstance) {
           description: 'Link (/b/TOKEN) onde qualquer pessoa deixa o seu aniversário, que entra na lista de quem pediu.',
         },
         { name: 'Prendas em grupo' },
+        { name: 'Segurança', description: 'Bloquear e denunciar utilizadores' },
         { name: 'Convites' },
         { name: 'Amigos', description: 'Pedidos de amizade e lista de amigos' },
         {

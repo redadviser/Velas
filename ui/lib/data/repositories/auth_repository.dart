@@ -60,4 +60,7 @@ abstract class AuthRepository {
 
   /// Experimentar o Birthdayly+ durante 30 dias (uma vez por conta).
   Future<void> startPlusTrial();
+
+  /// Aceitar a versão atual dos Termos e da Política de Privacidade.
+  Future<void> acceptTerms();
 }

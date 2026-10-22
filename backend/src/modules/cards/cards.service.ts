@@ -196,6 +196,9 @@ export class CardsService {
       const card = rows[0];
       if (!card) throw new HttpError(404, 'card_not_found');
       if (card.sender_id === userId) throw new HttpError(409, 'own_card');
+      if ((await c.query<{ b: boolean }>('select is_blocked($1, $2) as b', [userId, card.sender_id])).rows[0]?.b) {
+        throw new HttpError(403, 'blocked');
+      }
       if (card.recipient_id && card.recipient_id !== userId) throw new HttpError(409, 'card_claimed');
       if (!card.recipient_id) {
         await c.query(

@@ -2,6 +2,7 @@ import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
 import { hashPassword } from '../../core/passwords.js';
 import { imageType, type PhotoStorage } from '../../core/storage.js';
+import { acceptTermsIn } from '../auth/auth.service.js';
 import { defaultCategories, profileColumns, type NewUser, type Profile, type ProfilePatch } from './users.model.js';
 
 export class UsersService {
@@ -23,7 +24,7 @@ export class UsersService {
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
               p.message_notifications, p.message_previews, p.mbway_pay_phone,
               coalesce(p.plus_until > now(), false) as plus, p.plus_until,
-              not p.plus_trial_used as plus_trial_available, p.weekly_digest
+              not p.plus_trial_used as plus_trial_available, p.weekly_digest, u.terms_version
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
@@ -180,5 +181,71 @@ export class UsersService {
        on conflict (user_id) do update set plan = excluded.plan`,
       [userId, plan],
     );
+  }
+
+  /** Aceitar a versão atual dos Termos e da Política de Privacidade. */
+  async acceptTerms(userId: string): Promise<Profile> {
+    return tx(this.db, userId, async (c) => {
+      await acceptTermsIn(c, userId);
+      return this.profileIn(c, userId);
+    });
+  }
+
+  /**
+   * Direito de acesso e portabilidade (RGPD): tudo o que a Birthdayly guarda
+   * sobre a conta, num só documento JSON.
+   */
+  async exportData(userId: string): Promise<Record<string, unknown>> {
+    return tx(this.db, userId, async (c) => {
+      const q = async (sql: string) => (await c.query(sql, [userId])).rows;
+      const urlOf = (rows: Record<string, unknown>[], key: string) =>
+        rows.map(({ [key]: k, ...r }) => ({ ...r, ...(k ? { [key.replace(/_(key|path)$/, '_url')]: this.storage.urlOf(k as string) } : {}) }));
+      const profile = await this.profileIn(c, userId);
+      const account = (
+        await q('select email, created_at, email_verified, google_sub is not null as google_linked, terms_version, terms_accepted_at from users where id = $1')
+      )[0];
+      return {
+        exported_at: new Date().toISOString(),
+        account,
+        profile,
+        categories: await q('select id, name, color, sort from categories where user_id = $1 order by sort'),
+        people: urlOf(
+          await q(`select id, name, birth_day, birth_month, birth_year, relation, category_id, notes, gift_budget,
+                          reminder_days, reminder_hour, reminder_minute, linked_user_id, photo_path, created_at
+                   from people where user_id = $1 order by name`),
+          'photo_path',
+        ),
+        gift_ideas: await q(`select id, person_id, title, price, link, notes, purchased, purchased_at, created_at
+                             from gift_ideas where user_id = $1 order by created_at`),
+        messages: await q('select id, person_id, body, tone, updated_at from messages where user_id = $1'),
+        cards_sent: urlOf(
+          await q(`select id, person_id, recipient_name, body, via, media_kind, media_key, created_at, opened_at, claimed_at
+                   from greeting_cards where sender_id = $1 order by created_at`),
+          'media_key',
+        ),
+        cards_received: urlOf(
+          await q(`select c.id, p.display_name as from_name, c.body, c.media_kind, c.media_key, c.claimed_at as received_at
+                   from greeting_cards c join profiles p on p.id = c.sender_id where c.recipient_id = $1 order by c.claimed_at`),
+          'media_key',
+        ),
+        wall_photos: urlOf(await q('select id, year, caption, media_key, created_at from wall_photos where user_id = $1'), 'media_key'),
+        friends: await q(`select p.display_name, p.username, f.status, f.created_at
+                          from friendships f join profiles p on p.id = case when f.requester_id = $1 then f.addressee_id else f.requester_id end
+                          where $1 in (f.requester_id, f.addressee_id)`),
+        gift_groups: await q(`select g.id, g.title, g.celebrant_name, g.target_amount, g.purchased_at, m.display_name as my_name,
+                                     m.custom_amount as my_amount, m.paid_at as my_paid_at, g.created_by = $1 as admin
+                              from gift_groups g join group_members m on m.group_id = g.id and m.user_id = $1
+                              order by g.created_at`),
+        chat_messages_sent: await q(`select id, conversation_id, kind, body, created_at from chat_messages
+                                     where sender_id = $1 and deleted_at is null order by created_at`),
+        payments: await q(`select id, group_id, method, amount, fee, service_fee, status, created_at
+                           from payments where payer_id = $1 order by created_at`),
+        birthday_request_answers: await q(`select name, birth_day, birth_month, birth_year, status, created_at
+                                           from birthday_answers where user_id = $1 order by created_at`),
+        blocked_users: await q(`select p.display_name, p.username, b.created_at from user_blocks b
+                                join profiles p on p.id = b.blocked_id where b.blocker_id = $1`),
+        reports_made: await q('select reason, details, created_at, status from user_reports where reporter_id = $1'),
+      };
+    });
   }
 }

@@ -46,6 +46,21 @@ export async function usersRoutes(app: FastifyInstance, users: UsersService) {
   });
 
   app.post(
+    '/me/accept-terms',
+    { schema: doc({ tag, summary: 'Aceitar a versão atual dos Termos e da Política de Privacidade' }) },
+    (req) => users.acceptTerms(req.uid),
+  );
+
+  app.get(
+    '/me/export',
+    { schema: doc({ tag, summary: 'Exportar todos os meus dados (RGPD: acesso e portabilidade)' }) },
+    async (req, reply) =>
+      reply
+        .header('content-disposition', 'attachment; filename="birthdayly-dados.json"')
+        .send(await users.exportData(req.uid)),
+  );
+
+  app.post(
     '/me/plus/trial',
     { schema: doc({ tag, summary: 'Experimentar o Birthdayly+ durante 30 dias (uma vez por conta)' }) },
     (req) => users.startPlusTrial(req.uid),

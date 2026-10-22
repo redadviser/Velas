@@ -11,7 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/providers.dart';
 import '../../core/widgets/common.dart';
 import 'auth_widgets.dart';
-import 'register_screen.dart';
+import '../profile/legal.dart';
 
 /// Um destaque do carrossel de boas-vindas (fotografias em assets/images/welcome).
 class _Slide {
@@ -289,11 +289,19 @@ class _Actions extends StatelessWidget {
             TextSpan(
               style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12, height: 1.4),
               children: [
-                const TextSpan(text: 'Ao continuar com o Google, aceitas os '),
+                const TextSpan(
+                  text: 'Ao continuar com o Google, confirmas que tens $kMinimumAge anos ou mais e aceitas os ',
+                ),
                 TextSpan(
-                  text: 'Termos e a Política de Privacidade',
+                  text: 'Termos de Utilização',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                  recognizer: TapGestureRecognizer()..onTap = () => showPrivacySheet(context),
+                  recognizer: TapGestureRecognizer()..onTap = () => openTerms(context),
+                ),
+                const TextSpan(text: ' e a '),
+                TextSpan(
+                  text: 'Política de Privacidade',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  recognizer: TapGestureRecognizer()..onTap = () => openPrivacy(context),
                 ),
                 const TextSpan(text: '.'),
               ],

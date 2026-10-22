@@ -18,6 +18,7 @@ import '../../features/cards/wall_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/chat/chat_settings_screen.dart';
 import '../../features/chat/conversation_info_screen.dart';
+import '../../features/chat/safety.dart';
 import '../../features/chat/friends_screen.dart';
 import '../../features/gifts/gifts_screen.dart';
 import '../../features/groups/group_detail_screen.dart';
@@ -35,6 +36,8 @@ import '../../features/people/person_detail_screen.dart';
 import '../../features/people/person_form_screen.dart';
 import '../../features/profile/categories_screen.dart';
 import '../../features/profile/payment_details_screen.dart';
+import '../../features/profile/accessibility_screen.dart';
+import '../../features/profile/legal.dart';
 import '../../features/profile/plans_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
@@ -140,7 +143,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/friends', parentNavigatorKey: _rootKey, builder: (_, _) => const FriendsScreen()),
-      GoRoute(path: '/chat-settings', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatSettingsScreen()),
+      GoRoute(
+        path: '/chat-settings',
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const ChatSettingsScreen(),
+        routes: [
+          GoRoute(path: 'blocked', parentNavigatorKey: _rootKey, builder: (_, _) => const BlockedUsersScreen()),
+        ],
+      ),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
       GoRoute(path: '/people/requests', parentNavigatorKey: _rootKey, builder: (_, _) => const PendingAnswersScreen()),
       GoRoute(
@@ -195,6 +205,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
           GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
           GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
+          GoRoute(path: 'privacy', parentNavigatorKey: _rootKey, builder: (_, _) => const PrivacyRightsScreen()),
+          GoRoute(path: 'accessibility', parentNavigatorKey: _rootKey, builder: (_, _) => const AccessibilityScreen()),
         ],
       ),
     ],

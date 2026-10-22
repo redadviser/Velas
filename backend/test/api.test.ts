@@ -107,6 +107,8 @@ beforeAll(async () => {
     androidPackage: 'com.velas.app',
     playStoreUrl: 'https://play.google.com/store/apps/details?id=com.velas.app',
     giphyApiKey: 'giphy-test-key',
+    moderationEmail: 'moderacao@birthdayly.test',
+    legal: { entity: 'Eupasoft' },
   };
   app = await buildApp({
     config,
@@ -1367,6 +1369,140 @@ describe('Birthdayly+', () => {
     expect((await call('GET', '/wall/photos', { token: olga.access_token })).body).toEqual([]);
     expect((await call('DELETE', `/wall/photos/${added.json().id}`, { token: nuno.access_token })).status).toBe(204);
     expect((await call('GET', '/wall/photos', { token: nuno.access_token })).body).toEqual([]);
+  });
+});
+
+describe('bloquear e denunciar', () => {
+  let pia: Session;
+  let quim: Session;
+  let rute: Session;
+  const say = (s: Session, conv: string, body: string) =>
+    call('POST', `/conversations/${conv}/messages`, { token: s.access_token, body: { id: uuid(), kind: 'text', body } });
+
+  beforeAll(async () => {
+    pia = await signup('Pia', 'pia', 'pia@ex.pt');
+    quim = await signup('Quim', 'quim', 'quim@ex.pt');
+    rute = await signup('Rute', 'rute', 'rute@ex.pt');
+    const req = await call('POST', '/friends/requests', { token: quim.access_token, body: { user_id: pia.user.id } });
+    expect(req.body.result ?? req.body).toBeTruthy();
+    await call('POST', '/friends/requests', { token: pia.access_token, body: { user_id: quim.user.id } });
+  });
+
+  it('bloquear desfaz a amizade, esconde a conversa privada e as mensagens nos grupos', async () => {
+    const direct = (await call('POST', '/conversations/direct', { token: pia.access_token, body: { user_id: quim.user.id } })).body.id;
+    await say(quim, direct, 'Olá Pia');
+    // Um grupo com os três.
+    const groupId = uuid();
+    await call('PUT', `/groups/${groupId}`, {
+      token: pia.access_token,
+      body: { group: { title: 'Prenda da mãe', celebrant_name: 'Mãe', target_amount: 30 }, new_members: [{ id: uuid(), user_id: pia.user.id, display_name: 'Pia' }] },
+    });
+    const group = (await call('GET', '/groups', { token: pia.access_token })).body.find((g: { id: string }) => g.id === groupId);
+    for (const s of [quim, rute]) await call('POST', `/invite-codes/${group.invite_code}/join`, { token: s.access_token, body: {} });
+    await say(quim, group.conversation_id, 'Mensagem do Quim');
+    await say(rute, group.conversation_id, 'Mensagem da Rute');
+
+    expect((await call('POST', `/users/${quim.user.id}/block`, { token: pia.access_token })).status).toBe(204);
+    expect((await call('GET', '/friends', { token: pia.access_token })).body.friends).toEqual([]);
+    const convs = (await call('GET', '/conversations', { token: pia.access_token })).body.map((c: { id: string }) => c.id);
+    expect(convs).not.toContain(direct);
+    expect(convs).toContain(group.conversation_id);
+    const groupMsgs = (await call('GET', `/conversations/${group.conversation_id}/messages`, { token: pia.access_token })).body.messages;
+    expect(groupMsgs.map((m: { body: string }) => m.body)).toEqual(['Mensagem da Rute']);
+    // Os outros continuam a ver tudo.
+    expect((await call('GET', `/conversations/${group.conversation_id}/messages`, { token: rute.access_token })).body.messages).toHaveLength(2);
+
+    // Quem foi bloqueado não consegue pedir amizade nem escrever em privado.
+    expect((await call('POST', '/friends/requests', { token: quim.access_token, body: { user_id: pia.user.id } })).body.result).toBe('not_found');
+    expect((await say(quim, direct, 'Responde!')).body.error).toBe('not_friends');
+    expect((await call('GET', '/blocks', { token: pia.access_token })).body).toMatchObject([{ user_id: quim.user.id, display_name: 'Quim' }]);
+
+    // Desbloquear volta a mostrar as mensagens do grupo (a amizade não volta sozinha).
+    expect((await call('DELETE', `/users/${quim.user.id}/block`, { token: pia.access_token })).status).toBe(204);
+    expect((await call('GET', `/conversations/${group.conversation_id}/messages`, { token: pia.access_token })).body.messages).toHaveLength(2);
+    expect((await call('GET', '/blocks', { token: pia.access_token })).body).toEqual([]);
+  });
+
+  it('denunciar regista o motivo e a mensagem, avisa a equipa e pode bloquear logo', async () => {
+    const group = (await call('GET', '/groups', { token: rute.access_token })).body[0];
+    const msg = (await say(quim, group.conversation_id, 'Compra aqui seguidores baratos!!')).body;
+    const before = sent.length;
+    const report = await call('POST', `/users/${quim.user.id}/report`, {
+      token: rute.access_token,
+      body: { reason: 'spam', details: 'Manda publicidade no grupo', message_id: msg.id, block: true },
+    });
+    expect(report.status).toBe(204);
+    const { rows } = await db.query<{ reason: string; message_body: string; reporter_id: string }>(
+      'select reason, message_body, reporter_id from user_reports where reported_id = $1',
+      [quim.user.id],
+    );
+    expect(rows).toEqual([{ reason: 'spam', message_body: 'Compra aqui seguidores baratos!!', reporter_id: rute.user.id }]);
+    expect(sent.length).toBe(before + 1);
+    expect(sent.at(-1)).toMatchObject({ to: 'moderacao@birthdayly.test', subject: 'Denúncia na Birthdayly: Spam ou publicidade' });
+    expect(sent.at(-1)!.text).toContain('Mensagem: Compra aqui seguidores baratos!!');
+    expect((await call('GET', '/blocks', { token: rute.access_token })).body).toHaveLength(1);
+
+    // Não se denuncia a si próprio, nem com uma mensagem de outra pessoa.
+    expect((await call('POST', `/users/${rute.user.id}/report`, { token: rute.access_token, body: { reason: 'other' } })).status).toBe(422);
+    const other = await call('POST', `/users/${pia.user.id}/report`, { token: rute.access_token, body: { reason: 'spam', message_id: msg.id } });
+    expect(other.status).toBe(404);
+    expect((await call('POST', `/users/${pia.user.id}/report`, { token: rute.access_token, body: { reason: 'nada' } })).status).toBe(400);
+  });
+});
+
+describe('legal e RGPD', () => {
+  it('serve a política de privacidade, os termos e como apagar a conta', async () => {
+    for (const [path, title] of [
+      ['/legal/privacidade', 'Política de Privacidade'],
+      ['/legal/termos', 'Termos de Utilização'],
+      ['/legal/apagar-conta', 'Apagar a conta'],
+    ]) {
+      const page = await call('GET', path);
+      expect(page.status).toBe(200);
+      expect(page.raw.body).toContain(`<h1>${title}</h1>`);
+    }
+    expect((await call('GET', '/legal/privacidade')).raw.body).toContain('www.cnpd.pt');
+    const info = (await call('GET', '/legal/info')).body;
+    expect(info).toMatchObject({ terms_version: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), minimum_age: 16, entity: 'Eupasoft' });
+    expect(info.privacy_url).toBe('http://api.test/legal/privacidade');
+  });
+
+  it('regista a aceitação dos termos no registo e quando a versão muda', async () => {
+    const res = await call('POST', '/auth/signup', {
+      body: { name: 'Teresa', username: 'teresa', email: 'teresa@ex.pt', password: 'password1', accept_terms: true },
+    });
+    const version = (await call('GET', '/legal/info')).body.terms_version;
+    expect((await call('GET', '/me', { token: res.body.access_token })).body.terms_version).toBe(version);
+    // Contas antigas (sem aceitação) aceitam a versão atual quando abrem a app.
+    await db.query('update users set terms_version = null where id = $1', [res.body.user.id]);
+    expect((await call('GET', '/me', { token: res.body.access_token })).body.terms_version).toBeNull();
+    expect((await call('POST', '/me/accept-terms', { token: res.body.access_token })).body.terms_version).toBe(version);
+    // Google: conta nova com a aceitação.
+    googleTokens.set('tok-terms-0123456789abcdef', { sub: 'g-terms', email: 'ugo@gmail.com', emailVerified: true, name: 'Ugo' });
+    const g = await call('POST', '/auth/google', { body: { id_token: 'tok-terms-0123456789abcdef', accept_terms: true } });
+    expect((await call('GET', '/me', { token: g.body.access_token })).body.terms_version).toBe(version);
+  });
+
+  it('exporta todos os dados da conta, e só os dela', async () => {
+    const s = await signup('Vasco', 'vasco', 'vasco@ex.pt');
+    const other = await signup('Xana', 'xana', 'xana@ex.pt');
+    const pid = uuid();
+    await call('PUT', `/people/${pid}`, { token: s.access_token, body: { id: pid, name: 'Avó', birth_day: 1, birth_month: 6 } });
+    await call('PUT', `/gift-ideas/${uuid()}`, { token: s.access_token, body: { person_id: pid, title: 'Flores', price: 15, link: '', notes: '', purchased: false } });
+    await call('PUT', `/people/${uuid()}`, { token: other.access_token, body: { id: uuid(), name: 'Não é teu', birth_day: 2, birth_month: 2 } });
+
+    const exp = await app.inject({ method: 'GET', url: '/me/export', headers: { authorization: `Bearer ${s.access_token}` } });
+    expect(exp.statusCode).toBe(200);
+    expect(exp.headers['content-disposition']).toContain('birthdayly-dados.json');
+    const data = exp.json();
+    expect(data.account.email).toBe('vasco@ex.pt');
+    expect(data.people.map((p: { name: string }) => p.name)).toEqual(['Avó']);
+    expect(data.gift_ideas[0]).toMatchObject({ title: 'Flores', price: 15 });
+    for (const key of ['categories', 'messages', 'cards_sent', 'cards_received', 'wall_photos', 'friends', 'gift_groups', 'chat_messages_sent', 'payments', 'blocked_users', 'reports_made']) {
+      expect(Array.isArray(data[key])).toBe(true);
+    }
+    expect(JSON.stringify(data)).not.toContain('Não é teu');
+    expect(JSON.stringify(data)).not.toContain('password_hash');
   });
 });
 

@@ -31,6 +31,8 @@ export interface Profile {
   plus_trial_available: boolean;
   /** Resumo semanal dos aniversários (Birthdayly+). */
   weekly_digest: boolean;
+  /** Versão dos Termos que aceitou (null = ainda não aceitou nenhuma). */
+  terms_version: string | null;
 }
 
 /** Dados para criar uma conta (registo ou primeira entrada com Google). */

@@ -20,6 +20,7 @@ import { GroupsService } from './modules/groups/groups.service.js';
 import { InvitationsService } from './modules/invitations/invitations.service.js';
 import { MessagesService } from './modules/messages/messages.service.js';
 import { PeopleService } from './modules/people/people.service.js';
+import { SafetyService } from './modules/safety/safety.service.js';
 import { SyncService } from './modules/sync/sync.service.js';
 import { UsersService } from './modules/users/users.service.js';
 
@@ -71,6 +72,7 @@ export function createServices(deps: Deps) {
     chat,
     cards: new CardsService(db, storage, chat, hub),
     birthdayRequests: new BirthdayRequestsService(db, hub),
+    safety: new SafetyService(db, storage, hub, deps.mail, deps.config),
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
     payments,

@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/constants.dart';
 import '../../core/i18n/translations.dart';
+import '../../core/chat_providers.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
@@ -104,6 +105,27 @@ class ChatSettingsScreen extends ConsumerWidget {
               title: Text(context.tr(Keys.friendsTitle)),
               trailing: Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
               onTap: () => context.push('/friends'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(LucideIcons.ban),
+              title: const Text('Bloqueados'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if ((ref.watch(blockedUsersProvider).value ?? const []).isNotEmpty)
+                    Text(
+                      '${ref.watch(blockedUsersProvider).value!.length}',
+                      style: TextStyle(color: context.palette.mutedForeground),
+                    ),
+                  const SizedBox(width: 4),
+                  Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
+                ],
+              ),
+              onTap: () => context.push('/chat-settings/blocked'),
             ),
           ),
         ],

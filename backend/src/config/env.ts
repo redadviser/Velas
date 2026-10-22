@@ -66,6 +66,10 @@ export interface Config {
   /** Chave da API do GIPHY (pesquisa de GIFs e stickers no chat). Sem ela, a pesquisa fica desligada. */
   giphyApiKey?: string;
   payments?: PaymentsConfig;
+  /** Para onde vão as denúncias de utilizadores (MODERATION_EMAIL). Sem ele ficam só na base de dados. */
+  moderationEmail?: string;
+  /** Responsável pelos dados e contacto de apoio, nas páginas legais e na app. */
+  legal: { entity: string; email?: string };
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -106,6 +110,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     docs: env.API_DOCS !== 'false',
     giphyApiKey: env.GIPHY_API_KEY?.trim() || undefined,
     payments: loadPaymentsConfig(env),
+    moderationEmail: env.MODERATION_EMAIL?.trim() || undefined,
+    legal: {
+      entity: env.LEGAL_ENTITY?.trim() || 'Eupasoft',
+      email: env.SUPPORT_EMAIL?.trim() || undefined,
+    },
   };
 }
 

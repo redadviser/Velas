@@ -53,6 +53,7 @@ class UserProfile {
     this.plusUntil,
     this.plusTrialAvailable = true,
     this.weeklyDigest = false,
+    this.termsVersion,
   });
 
   final String id;
@@ -87,6 +88,9 @@ class UserProfile {
 
   /// Resumo semanal dos aniversários, à segunda-feira (Birthdayly+).
   final bool weeklyDigest;
+
+  /// Versão dos Termos e da Política de Privacidade que aceitou (null = nenhuma).
+  final String? termsVersion;
 
   /// Tem o Birthdayly+ agora.
   bool get isPlus => plusUntil != null && plusUntil!.isAfter(DateTime.now());
@@ -125,6 +129,7 @@ class UserProfile {
     DateTime? Function()? plusUntil,
     bool? plusTrialAvailable,
     bool? weeklyDigest,
+    String? termsVersion,
   }) => UserProfile(
     id: id,
     email: email,
@@ -146,6 +151,7 @@ class UserProfile {
     plusUntil: plusUntil != null ? plusUntil() : this.plusUntil,
     plusTrialAvailable: plusTrialAvailable ?? this.plusTrialAvailable,
     weeklyDigest: weeklyDigest ?? this.weeklyDigest,
+    termsVersion: termsVersion ?? this.termsVersion,
   );
 
   /// Campos que o próprio altera com PATCH /me (a fotografia vai à parte).
@@ -192,6 +198,7 @@ class UserProfile {
     plusUntil: j['plus_until'] == null ? null : DateTime.parse(j['plus_until'] as String).toLocal(),
     plusTrialAvailable: j['plus_trial_available'] as bool? ?? true,
     weeklyDigest: j['weekly_digest'] as bool? ?? false,
+    termsVersion: j['terms_version'] as String?,
   );
 }
 

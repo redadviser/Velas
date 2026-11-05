@@ -101,14 +101,14 @@ export function deletionRequestForm(): { body: string; script: string } {
     body: `<div class="panel">
 <h2>Pedir a eliminação</h2>
 <form id="del">
-<p>Indica o email associado à conta. Enviamos um link para confirmares a eliminação.</p>
+<p>Indique o email associado à conta. Enviaremos um link para confirmar a eliminação.</p>
 <label class="small" for="del-email">Email</label>
 <input class="field" id="del-email" name="email" type="email" placeholder="nome@exemplo.pt" autocomplete="email" maxlength="254" required>
 <input class="trap" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
 <p class="small" id="del-error" role="alert" hidden></p>
 <button class="btn" id="del-send" type="submit">Enviar link de confirmação</button>
 </form>
-<p id="del-done" role="status" hidden>Se este email tiver conta na Birthdayly, enviámos um link para confirmar a eliminação. Verifica a caixa de entrada e a pasta de spam.</p>
+<p id="del-done" role="status" hidden>Se este email estiver associado a uma conta Birthdayly, enviámos um link para confirmar a eliminação. Verifique a caixa de entrada e a pasta de spam.</p>
 </div>`,
     script: `
 var del = document.getElementById('del'), delSend = document.getElementById('del-send'), delError = document.getElementById('del-error');

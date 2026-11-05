@@ -1350,7 +1350,7 @@ describe('legal e RGPD', () => {
   it('serve a política de privacidade, os termos e como apagar a conta', async () => {
     for (const [path, title] of [
       ['/legal/termos', 'Termos de Utilização'],
-      ['/legal/apagar-conta', 'Apagar a conta'],
+      ['/legal/apagar-conta', 'Eliminar a conta'],
     ]) {
       const page = await call('GET', path);
       expect(page.status).toBe(200);

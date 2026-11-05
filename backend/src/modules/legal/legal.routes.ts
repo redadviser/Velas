@@ -23,7 +23,7 @@ export async function legalRoutes(app: FastifyInstance, config: Config) {
   const pages: [string, string, (c: LegalContact) => LegalDoc, LegalExtra?][] = [
     ['/legal/termos', 'Termos de Utilização', termsOfUse],
     // Com o formulário para pedir o apagamento sem a app.
-    ['/legal/apagar-conta', 'Apagar a conta', deleteAccountDoc, deletionRequestForm()],
+    ['/legal/apagar-conta', 'Eliminar a conta', deleteAccountDoc, deletionRequestForm()],
   ];
   for (const [path, summary, build, extra] of pages) {
     app.get(path, { schema: doc({ tag: 'Páginas', summary }) }, (_req, reply) =>
@@ -57,26 +57,27 @@ function longDate(iso: string): string {
 }
 
 export function legalPage(d: LegalDoc, c: LegalContact, extra?: LegalExtra): string {
-  const section = (s: LegalDoc['sections'][number]) =>
-    `<section><h2>${escapeHtml(s.title)}</h2>` +
+  const section = (s: LegalDoc['sections'][number], i: number) =>
+    `<section id="s${i + 1}"><h2>${escapeHtml(s.title)}</h2>` +
     (s.paragraphs ?? []).map((p) => `<p>${escapeHtml(p)}</p>`).join('') +
-    (s.bullets?.length ? `<ul>${s.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>` : '') +
+    (s.steps?.length ? `<ol class="steps">${s.steps.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ol>` : '') +
     '</section>';
   const links = [
     ['/legal/termos', 'Termos de Utilização'],
     [c.privacyUrl, 'Política de Privacidade'],
-    ['/legal/apagar-conta', 'Apagar a conta'],
+    ['/legal/apagar-conta', 'Eliminar a conta'],
     ...(c.email ? [[`mailto:${c.email}`, c.email]] : []),
   ];
   return docPage({
     title: `${d.title} · Birthdayly`,
-    eyebrow: 'Informação legal',
     heading: d.title,
-    meta: d.updated ? `Última atualização: ${longDate(d.updated)}` : undefined,
+    meta: d.updated ? `Versão de ${longDate(d.updated)}` : undefined,
+    numbered: d.numbered,
+    toc: d.sections.map((s) => s.title),
     body: (d.intro ? `<p class="lead">${escapeHtml(d.intro)}</p>` : '') + d.sections.map(section).join('') + (extra?.body ?? ''),
     footer:
       `<nav>${links.map(([href, label]) => `<a href="${escapeHtml(href!)}">${escapeHtml(label!)}</a>`).join('')}</nav>` +
-      `<div>© ${new Date().getFullYear()} ${escapeHtml(c.entity)}</div>`,
+      `<div>© ${new Date().getFullYear()} ${escapeHtml(c.entity)}${c.address ? ` · ${escapeHtml(c.address)}` : ''}</div>`,
     script: extra?.script,
   });
 }

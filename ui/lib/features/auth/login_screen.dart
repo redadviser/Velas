@@ -80,25 +80,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                FieldLabel(
-                  'Palavra-passe',
-                  trailing: GestureDetector(
-                    onTap: () => context.push('/forgot-password'),
-                    child: Text(
-                      'Esqueceste-te?',
-                      style: context.text.labelMedium?.copyWith(
-                        color: context.colors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
+                const FieldLabel('Palavra-passe'),
                 PasswordField(
                   controller: _password,
                   validator: (v) => (v == null || v.isEmpty) ? 'Indica a palavra-passe.' : null,
                   onSubmitted: (_) => _submit(),
                 ),
-                const SizedBox(height: 28),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot-password'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      textStyle: context.text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    child: const Text('Esqueceste-te da palavra-passe?'),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 LoadingButton(label: 'Entrar', loading: _loading, onPressed: _submit),
                 const GoogleAuthButton(),
               ],

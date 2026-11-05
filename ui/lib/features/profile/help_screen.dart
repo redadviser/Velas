@@ -48,7 +48,7 @@ const helpFaq = [
   ),
   (
     'Esqueci-me da palavra-passe.',
-    'No ecrã de entrada, toca em "Esqueceste-te?", ao lado da palavra-passe, e enviamos-te um link para criares outra.',
+    'No ecrã de entrada, toca em "Esqueceste-te da palavra-passe?" e enviamos-te um link para criares outra.',
   ),
   (
     'Como apago a minha conta?',

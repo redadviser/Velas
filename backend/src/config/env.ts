@@ -58,7 +58,7 @@ export interface Config {
   /** Para onde vão as denúncias de utilizadores (MODERATION_EMAIL). Sem ele ficam só na base de dados. */
   moderationEmail?: string;
   /** Responsável pelos dados e contacto de apoio, nas páginas legais e na app. */
-  legal: { entity: string; email?: string; privacyUrl: string };
+  legal: { entity: string; address?: string; email?: string; privacyUrl: string };
   /** Assinaturas do Birthdayly+ pelas lojas (Adapty). Sem ADAPTY_SECRET_KEY ficam desligadas. */
   adapty?: AdaptyConfig;
 }
@@ -103,6 +103,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     moderationEmail: env.MODERATION_EMAIL?.trim() || undefined,
     legal: {
       entity: env.LEGAL_ENTITY?.trim() || 'RedAdviser, Digital Solutions Lda.',
+      address: env.LEGAL_ADDRESS?.trim() || 'Rua Comandante Rodrigo Pinto Leite, 38, 4465-331 São Mamede de Infesta',
       email: env.SUPPORT_EMAIL?.trim() || 'webmaster@eupasoft.com',
       // A Política de Privacidade é a da empresa (uma só, no site dela).
       privacyUrl: env.PRIVACY_URL?.trim() || 'https://redadviser.com/?page_id=316',

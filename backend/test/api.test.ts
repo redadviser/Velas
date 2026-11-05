@@ -85,8 +85,8 @@ beforeAll(async () => {
     appScheme: 'com.eupasoft.velas',
     rateLimit: false,
     docs: true,
-    androidPackage: 'com.velas.app',
-    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.velas.app',
+    androidPackage: 'com.birthdayly.app',
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.birthdayly.app',
     giphyApiKey: 'giphy-test-key',
     moderationEmail: 'moderacao@birthdayly.test',
     legal: { entity: 'Eupasoft' },
@@ -420,7 +420,7 @@ describe('prendas em grupo', () => {
     expect(image.status).toBe(200);
     expect(image.raw.headers['content-type']).toBe('image/jpeg');
     expect(page.raw.body).toContain(`com.eupasoft.velas://app/join/${code}`);
-    expect(page.raw.body).toContain(`intent://app/join/${code}#Intent;scheme=com.eupasoft.velas;package=com.velas.app;S.browser_fallback_url=https%3A%2F%2Fplay.google.com`);
+    expect(page.raw.body).toContain(`intent://app/join/${code}#Intent;scheme=com.eupasoft.velas;package=com.birthdayly.app;S.browser_fallback_url=https%3A%2F%2Fplay.google.com`);
     expect(page.raw.body).toContain('Descarregar para Android');
     expect(page.raw.body).not.toContain('Descarregar para iPhone');
     expect(page.raw.body).not.toContain('Prenda da Mãe'); // não revela o grupo

@@ -94,7 +94,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     uploadDir: env.UPLOAD_DIR ?? './uploads',
     mail: loadMailConfig(env),
     appScheme: env.APP_SCHEME ?? 'com.eupasoft.velas',
-    androidPackage: env.ANDROID_PACKAGE ?? 'com.velas.app',
+    androidPackage: env.ANDROID_PACKAGE ?? 'com.birthdayly.app',
     appStoreUrl: env.APP_STORE_URL?.trim() || undefined,
     playStoreUrl: env.PLAY_STORE_URL?.trim() || undefined,
     rateLimit: env.RATE_LIMIT !== 'false',

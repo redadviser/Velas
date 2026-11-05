@@ -23,8 +23,8 @@ export class UsersService {
               u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
               p.message_notifications, p.message_previews,
-              coalesce(p.plus_active_until > now(), false) as plus, p.plus_active_until as plus_until, p.plan_source,
-              not p.plus_trial_used as plus_trial_available, p.weekly_digest, u.terms_version
+              coalesce(plan_until(p) > now(), false) as plus, plan_until(p) as plus_until, p.plan_source,
+              p.trial_until is null as plus_trial_available, p.weekly_digest, u.terms_version
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
@@ -102,9 +102,7 @@ export class UsersService {
   async startPlusTrial(userId: string): Promise<Profile> {
     return tx(this.db, userId, async (c) => {
       const { rowCount } = await c.query(
-        `update profiles set plus_until = greatest(coalesce(plus_until, now()), now()) + interval '30 days',
-                             plus_trial_used = true
-         where id = $1 and not plus_trial_used`,
+        `update profiles set trial_until = now() + interval '30 days' where id = $1 and trial_until is null`,
         [userId],
       );
       if (!rowCount) throw new HttpError(409, 'trial_used');

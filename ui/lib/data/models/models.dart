@@ -83,7 +83,7 @@ class UserProfile {
   /// Ainda pode experimentar o Birthdayly+ durante 30 dias.
   final bool plusTrialAvailable;
 
-  /// O plano foi posto à mão para testes (profiles.plan_source = 'debug'), não vem da loja.
+  /// O plano foi posto à mão para testes (profiles.plan_source 'plus' ou 'free'), não vem da loja.
   final bool planDebug;
 
   /// Resumo semanal dos aniversários, à segunda-feira (Birthdayly+).
@@ -195,7 +195,7 @@ class UserProfile {
     messagePreviews: j['message_previews'] as bool? ?? true,
     plusUntil: j['plus_until'] == null ? null : DateTime.parse(j['plus_until'] as String).toLocal(),
     plusTrialAvailable: j['plus_trial_available'] as bool? ?? true,
-    planDebug: j['plan_source'] == 'debug',
+    planDebug: (j['plan_source'] ?? 'store') != 'store',
     weeklyDigest: j['weekly_digest'] as bool? ?? false,
     termsVersion: j['terms_version'] as String?,
   );

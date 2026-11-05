@@ -27,8 +27,8 @@ export interface Profile {
   plus: boolean;
   /** Até quando tem o plano, venha de onde vier (loja, período experimental ou testes). */
   plus_until: string | null;
-  /** 'store' (o normal) ou 'debug' (plano posto à mão para testes; ver migrations/023_plan_source.sql). */
-  plan_source: 'store' | 'debug';
+  /** 'store' (o normal), ou 'plus' / 'free' postos à mão para testes (ver migrations/024_plan_columns.sql). */
+  plan_source: 'store' | 'plus' | 'free';
   plus_trial_available: boolean;
   /** Resumo semanal dos aniversários (Birthdayly+). */
   weekly_digest: boolean;

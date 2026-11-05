@@ -1206,12 +1206,12 @@ describe('Birthdayly+', () => {
     expect(full.locked_years).toEqual([]);
 
     // Sem o plano, os anos anteriores ficam escondidos.
-    await db.query('update profiles set plus_until = null where id = $1', [nuno.user.id]);
+    await db.query('update profiles set trial_until = null where id = $1', [nuno.user.id]);
     const free = (await call('GET', `/people/${personId}/history`, { token: nuno.access_token })).body;
     expect(free.years.map((y: { year: number }) => y.year)).toEqual([thisYear]);
     expect(free.locked_years).toEqual([thisYear - 2]);
     expect((await call('GET', `/people/${personId}/history`, { token: olga.access_token })).status).toBe(404);
-    await db.query(`update profiles set plus_until = now() + interval '30 days' where id = $1`, [nuno.user.id]);
+    await db.query(`update profiles set trial_until = now() + interval '30 days' where id = $1`, [nuno.user.id]);
   });
 
   it('fotografias do mural num álbum por ano', async () => {
@@ -1546,8 +1546,8 @@ describe('mensagens agendadas', () => {
 describe('Birthdayly+ pelas lojas (Adapty) e plan_source', () => {
   let rita: Session;
   const me = async () => (await call('GET', '/me', { token: rita.access_token })).body;
-  const plan = (source: 'store' | 'debug', debugUntil: Date | null = null) =>
-    db.query('update profiles set plan_source = $2, debug_plus_until = $3 where id = $1', [rita.user.id, source, debugUntil]);
+  const plan = (source: 'store' | 'plus' | 'free') =>
+    db.query('update profiles set plan_source = $2 where id = $1', [rita.user.id, source]);
 
   beforeAll(async () => {
     rita = await signup('Rita Loja', 'ritaloja', 'ritaloja@ex.pt');
@@ -1566,14 +1566,16 @@ describe('Birthdayly+ pelas lojas (Adapty) e plan_source', () => {
     expect((await db.query<{ ok: boolean }>('select has_plus($1) as ok', [rita.user.id])).rows[0]!.ok).toBe(true);
   });
 
-  it('em debug manda o plano posto à mão; voltar a store repõe o da loja', async () => {
+  it('para testes manda o plano posto à mão; voltar a store repõe o da loja', async () => {
     // Grátis só para testes, apesar da compra.
-    await plan('debug');
-    expect(await me()).toMatchObject({ plus: false, plus_until: null, plan_source: 'debug' });
-    // Plus a acabar daqui a uma hora (para testar a expiração).
-    const soon = new Date(Date.now() + 3600_000);
-    await plan('debug', soon);
-    expect(await me()).toMatchObject({ plus: true, plus_until: soon.toISOString() });
+    await plan('free');
+    expect(await me()).toMatchObject({ plus: false, plus_until: null, plan_source: 'free' });
+    expect((await db.query<{ ok: boolean }>('select has_plus($1) as ok', [rita.user.id])).rows[0]!.ok).toBe(false);
+    // Plus sem fim.
+    await plan('plus');
+    expect(await me()).toMatchObject({ plus: true, plus_until: '9999-12-31T00:00:00.000Z', plan_source: 'plus' });
+    // Outros valores não entram.
+    await expect(plan('4' as 'plus')).rejects.toThrow();
 
     await plan('store');
     expect(await me()).toMatchObject({ plus: true, plan_source: 'store', plus_until: storeAccess.get(rita.user.id)!.toISOString() });

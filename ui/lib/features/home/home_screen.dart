@@ -395,9 +395,13 @@ class _ReadyChip extends StatelessWidget {
             children: [
               Icon(ready ? LucideIcons.circleCheck : icon, size: 15, color: fg),
               const SizedBox(width: 6),
-              Text(
-                ready ? readyLabel : pendingLabel,
-                style: context.text.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w600),
+              Flexible(
+                child: Text(
+                  ready ? readyLabel : pendingLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),

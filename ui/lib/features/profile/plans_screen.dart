@@ -118,34 +118,142 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Planos')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 32),
         children: [
-          Text(
-            'O essencial é grátis para sempre. O Birthdayly+ junta extras para quem quer ir mais longe.',
-            style: context.text.bodyMedium?.copyWith(color: muted),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'O essencial é grátis para sempre. O Birthdayly+ junta extras para quem quer ir mais longe.',
+              style: context.text.bodyMedium?.copyWith(color: muted),
+            ),
           ),
           const SizedBox(height: 16),
-          _PlanCard(
-            name: 'Grátis',
-            price: '0 €',
-            badge: plus ? null : const Pill(label: 'O teu plano', dense: true),
-            features: _freeFeatures,
-          ),
-          const SizedBox(height: 16),
-          _PlusCard(
-            yearly: _yearly,
-            onPeriod: (y) => setState(() => _yearly = y),
-            current: plus,
-            action: plusAction,
+          _PlanCarousel(
+            cards: [
+              _PlusCard(
+                yearly: _yearly,
+                onPeriod: (y) => setState(() => _yearly = y),
+                current: plus,
+                action: plusAction,
+              ),
+              _PlanCard(
+                name: 'Grátis',
+                price: '0 €',
+                badge: plus ? null : const Pill(label: 'O teu plano', dense: true),
+                features: _freeFeatures,
+              ),
+            ],
           ),
           const SizedBox(height: 20),
-          Text(
-            'Pagar a tua parte de uma prenda em grupo dentro da app tem uma taxa de serviço de 0,39 € por pagamento. '
-            'Pagar por MB WAY diretamente a quem compra é sempre grátis.',
-            style: context.text.bodySmall?.copyWith(color: muted),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'As prendas em grupo pagam-se diretamente a quem compra (MB WAY, Revolut, PayPal ou em mão), sem custos.',
+              style: context.text.bodySmall?.copyWith(color: muted),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Os planos lado a lado, a deslizar na horizontal: cada cartão ocupa quase a
+/// largura toda (o seguinte espreita à direita), todos com a mesma altura, e o
+/// deslizar pára sempre num cartão.
+class _PlanCarousel extends StatefulWidget {
+  const _PlanCarousel({required this.cards});
+
+  final List<Widget> cards;
+
+  @override
+  State<_PlanCarousel> createState() => _PlanCarouselState();
+}
+
+class _PlanCarouselState extends State<_PlanCarousel> {
+  static const _gap = 12.0;
+  static const _side = 20.0;
+  final _scroll = ScrollController();
+  int _page = 0;
+  double _step = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      final page = (_scroll.offset / _step).round().clamp(0, widget.cards.length - 1);
+      if (page != _page) setState(() => _page = page);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// No fim de um deslize, acerta no cartão mais próximo.
+  bool _snap(ScrollEndNotification n) {
+    final target = (_scroll.offset / _step).round() * _step;
+    if ((target - _scroll.offset).abs() > 1) {
+      Future.microtask(
+        () => _scroll.animateTo(
+          target.clamp(0, _scroll.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final width = (box.maxWidth - _side * 2 - 28).clamp(240.0, 440.0);
+        _step = width + _gap;
+        return Column(
+          children: [
+            NotificationListener<ScrollEndNotification>(
+              onNotification: _snap,
+              child: SingleChildScrollView(
+                controller: _scroll,
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: _side),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (i, card) in widget.cards.indexed) ...[
+                        if (i > 0) const SizedBox(width: _gap),
+                        SizedBox(width: width, child: card),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < widget.cards.length; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == _page ? 18 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i == _page ? context.colors.primary : context.palette.border,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

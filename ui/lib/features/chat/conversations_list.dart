@@ -530,34 +530,37 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
   final action = await showModalBottomSheet<String>(
     context: context,
     builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text(ctx.tr(Keys.chatNewTitle), style: AppTheme.display(ctx, size: 22)),
-          ),
-          ListTile(
-            leading: const Icon(LucideIcons.gift),
-            title: Text(ctx.tr(Keys.chatNewGroup)),
-            subtitle: Text(ctx.tr(Keys.chatNewGroupHint)),
-            onTap: () => Navigator.pop(ctx, 'group'),
-          ),
-          if (chat)
-            ListTile(
-              leading: const Icon(LucideIcons.messageCircle),
-              title: Text(ctx.tr(Keys.chatNewDirect)),
-              onTap: () => Navigator.pop(ctx, 'direct'),
+      child: SingleChildScrollView(
+        // Desliza quando não cabe (letra grande).
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(ctx.tr(Keys.chatNewTitle), style: AppTheme.display(ctx, size: 22)),
             ),
-          if (supportsInvites)
             ListTile(
-              leading: const Icon(LucideIcons.ticket),
-              title: Text(ctx.tr(Keys.chatNewCode)),
-              onTap: () => Navigator.pop(ctx, 'code'),
+              leading: const Icon(LucideIcons.gift),
+              title: Text(ctx.tr(Keys.chatNewGroup)),
+              subtitle: Text(ctx.tr(Keys.chatNewGroupHint)),
+              onTap: () => Navigator.pop(ctx, 'group'),
             ),
-          const SizedBox(height: 8),
-        ],
+            if (chat)
+              ListTile(
+                leading: const Icon(LucideIcons.messageCircle),
+                title: Text(ctx.tr(Keys.chatNewDirect)),
+                onTap: () => Navigator.pop(ctx, 'direct'),
+              ),
+            if (supportsInvites)
+              ListTile(
+                leading: const Icon(LucideIcons.ticket),
+                title: Text(ctx.tr(Keys.chatNewCode)),
+                onTap: () => Navigator.pop(ctx, 'code'),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     ),
   );

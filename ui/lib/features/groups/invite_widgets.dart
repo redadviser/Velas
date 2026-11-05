@@ -314,17 +314,21 @@ class InviteCodeCard extends StatelessWidget {
                   children: [
                     Text('CÓDIGO DO GRUPO', style: context.text.labelSmall?.copyWith(color: muted, letterSpacing: 1.2)),
                     const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(width: 26),
-                        Text(
-                          InviteLinks.formatCode(code),
-                          style: AppTheme.display(context, size: 30).copyWith(letterSpacing: 4),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(LucideIcons.copy, size: 18, color: muted),
-                      ],
+                    // O código encolhe para caber (com letra grande não cabe a 30 pt).
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 26),
+                          Text(
+                            InviteLinks.formatCode(code),
+                            style: AppTheme.display(context, size: 30).copyWith(letterSpacing: 4),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(LucideIcons.copy, size: 18, color: muted),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 4),
                     GestureDetector(

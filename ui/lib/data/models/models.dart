@@ -49,7 +49,6 @@ class UserProfile {
     this.typingIndicator = true,
     this.messageNotifications = true,
     this.messagePreviews = true,
-    this.mbwayPayPhone = '',
     this.plusUntil,
     this.plusTrialAvailable = true,
     this.weeklyDigest = false,
@@ -76,9 +75,6 @@ class UserProfile {
 
   /// Mostrar o texto da mensagem na notificação.
   final bool messagePreviews;
-
-  /// Número MB WAY guardado para pagar dentro da app (E.164; privado). Vazio se não houver.
-  final String mbwayPayPhone;
 
   /// Birthdayly+ ativo até esta data (null = nunca teve).
   final DateTime? plusUntil;
@@ -125,7 +121,6 @@ class UserProfile {
     bool? typingIndicator,
     bool? messageNotifications,
     bool? messagePreviews,
-    String? mbwayPayPhone,
     DateTime? Function()? plusUntil,
     bool? plusTrialAvailable,
     bool? weeklyDigest,
@@ -147,7 +142,6 @@ class UserProfile {
     typingIndicator: typingIndicator ?? this.typingIndicator,
     messageNotifications: messageNotifications ?? this.messageNotifications,
     messagePreviews: messagePreviews ?? this.messagePreviews,
-    mbwayPayPhone: mbwayPayPhone ?? this.mbwayPayPhone,
     plusUntil: plusUntil != null ? plusUntil() : this.plusUntil,
     plusTrialAvailable: plusTrialAvailable ?? this.plusTrialAvailable,
     weeklyDigest: weeklyDigest ?? this.weeklyDigest,
@@ -169,7 +163,6 @@ class UserProfile {
     'typing_indicator': typingIndicator,
     'message_notifications': messageNotifications,
     'message_previews': messagePreviews,
-    'mbway_pay_phone': mbwayPayPhone.isEmpty ? null : mbwayPayPhone,
     'weekly_digest': weeklyDigest,
   };
 
@@ -194,7 +187,6 @@ class UserProfile {
     typingIndicator: j['typing_indicator'] as bool? ?? true,
     messageNotifications: j['message_notifications'] as bool? ?? true,
     messagePreviews: j['message_previews'] as bool? ?? true,
-    mbwayPayPhone: j['mbway_pay_phone'] as String? ?? '',
     plusUntil: j['plus_until'] == null ? null : DateTime.parse(j['plus_until'] as String).toLocal(),
     plusTrialAvailable: j['plus_trial_available'] as bool? ?? true,
     weeklyDigest: j['weekly_digest'] as bool? ?? false,

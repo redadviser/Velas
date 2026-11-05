@@ -17,8 +17,6 @@ import '../data/repositories/group_repository.dart';
 import '../services/notification_service.dart';
 import 'i18n/translations.dart';
 import 'theme/app_colors.dart';
-import '../data/api/api_payments_repository.dart';
-import '../data/repositories/payments_repository.dart';
 
 /// Substituídos em `main()` depois da inicialização assíncrona.
 final sharedPrefsProvider = Provider<SharedPreferences>((_) => throw UnimplementedError());
@@ -59,14 +57,6 @@ final appDataProvider = StreamProvider<AppData>((ref) async* {
 
 /// Atalho síncrono para os ecrãs: devolve sempre um [AppData].
 final dataProvider = Provider<AppData>((ref) => ref.watch(appDataProvider).value ?? AppData.empty);
-
-/// Pagamentos dentro da app (Stripe): só com servidor.
-final paymentsRepositoryProvider = Provider<PaymentsRepository?>((ref) {
-  final userId = ref.watch(currentUserProvider.select((u) => u?.id));
-  final api = ref.watch(apiClientProvider);
-  if (userId == null || api == null) return null;
-  return ApiPaymentsRepository(api);
-});
 
 /// Cartões de parabéns: só com servidor. Ver um cartão pelo link não precisa de sessão.
 final cardsRepositoryProvider = Provider<CardsRepository?>((ref) {

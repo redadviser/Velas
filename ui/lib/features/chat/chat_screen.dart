@@ -76,79 +76,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (m.state == SendState.sent)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (final e in quickReactions)
-                      _ReactionChoice(
-                        emoji: e,
-                        selected: m.reactionOf(_me) == e,
-                        onTap: () => Navigator.pop(ctx, 'react:$e'),
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (m.state == SendState.sent)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (final e in quickReactions)
+                        _ReactionChoice(
+                          emoji: e,
+                          selected: m.reactionOf(_me) == e,
+                          onTap: () => Navigator.pop(ctx, 'react:$e'),
+                        ),
+                      IconButton.filledTonal(
+                        tooltip: ctx.tr(Keys.chatActionMoreEmoji),
+                        onPressed: () => Navigator.pop(ctx, 'react-more'),
+                        icon: const Icon(LucideIcons.plus, size: 20),
                       ),
-                    IconButton.filledTonal(
-                      tooltip: ctx.tr(Keys.chatActionMoreEmoji),
-                      onPressed: () => Navigator.pop(ctx, 'react-more'),
-                      icon: const Icon(LucideIcons.plus, size: 20),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            if (m.state == SendState.sent)
-              ListTile(
-                leading: const Icon(LucideIcons.reply),
-                title: Text(ctx.tr(Keys.chatActionReply)),
-                onTap: () => Navigator.pop(ctx, 'reply'),
-              ),
-            if (mine && m.state == SendState.sent)
-              ListTile(
-                leading: const Icon(LucideIcons.eye),
-                title: Text(ctx.tr(Keys.chatActionWhoSaw)),
-                onTap: () => Navigator.pop(ctx, 'seen'),
-              ),
-            if (m.kind == MessageKind.text)
-              ListTile(
-                leading: const Icon(LucideIcons.copy),
-                title: Text(ctx.tr(Keys.chatActionCopy)),
-                onTap: () => Navigator.pop(ctx, 'copy'),
-              ),
-            if (canSave)
-              ListTile(
-                leading: const Icon(LucideIcons.sticker),
-                title: Text(ctx.tr(Keys.chatActionSaveSticker)),
-                onTap: () => Navigator.pop(ctx, 'sticker'),
-              ),
-            if (m.state == SendState.failed) ...[
-              ListTile(
-                leading: const Icon(LucideIcons.refreshCw),
-                title: Text(ctx.tr(Keys.chatActionRetry)),
-                onTap: () => Navigator.pop(ctx, 'retry'),
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.x),
-                title: Text(ctx.tr(Keys.chatActionDiscard)),
-                onTap: () => Navigator.pop(ctx, 'discard'),
-              ),
+              if (m.state == SendState.sent)
+                ListTile(
+                  leading: const Icon(LucideIcons.reply),
+                  title: Text(ctx.tr(Keys.chatActionReply)),
+                  onTap: () => Navigator.pop(ctx, 'reply'),
+                ),
+              if (mine && m.state == SendState.sent)
+                ListTile(
+                  leading: const Icon(LucideIcons.eye),
+                  title: Text(ctx.tr(Keys.chatActionWhoSaw)),
+                  onTap: () => Navigator.pop(ctx, 'seen'),
+                ),
+              if (m.kind == MessageKind.text)
+                ListTile(
+                  leading: const Icon(LucideIcons.copy),
+                  title: Text(ctx.tr(Keys.chatActionCopy)),
+                  onTap: () => Navigator.pop(ctx, 'copy'),
+                ),
+              if (canSave)
+                ListTile(
+                  leading: const Icon(LucideIcons.sticker),
+                  title: Text(ctx.tr(Keys.chatActionSaveSticker)),
+                  onTap: () => Navigator.pop(ctx, 'sticker'),
+                ),
+              if (m.state == SendState.failed) ...[
+                ListTile(
+                  leading: const Icon(LucideIcons.refreshCw),
+                  title: Text(ctx.tr(Keys.chatActionRetry)),
+                  onTap: () => Navigator.pop(ctx, 'retry'),
+                ),
+                ListTile(
+                  leading: const Icon(LucideIcons.x),
+                  title: Text(ctx.tr(Keys.chatActionDiscard)),
+                  onTap: () => Navigator.pop(ctx, 'discard'),
+                ),
+              ],
+              if (!mine && m.senderId != null && m.state == SendState.sent && !m.deleted)
+                ListTile(
+                  leading: Icon(LucideIcons.flag, color: ctx.colors.error),
+                  title: Text('Denunciar mensagem', style: TextStyle(color: ctx.colors.error)),
+                  onTap: () => Navigator.pop(ctx, 'report'),
+                ),
+              if (mine && m.state == SendState.sent)
+                ListTile(
+                  leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
+                  title: Text(ctx.tr(Keys.chatActionDeleteForAll), style: TextStyle(color: ctx.colors.error)),
+                  onTap: () => Navigator.pop(ctx, 'delete'),
+                ),
+              const SizedBox(height: 8),
             ],
-            if (!mine && m.senderId != null && m.state == SendState.sent && !m.deleted)
-              ListTile(
-                leading: Icon(LucideIcons.flag, color: ctx.colors.error),
-                title: Text('Denunciar mensagem', style: TextStyle(color: ctx.colors.error)),
-                onTap: () => Navigator.pop(ctx, 'report'),
-              ),
-            if (mine && m.state == SendState.sent)
-              ListTile(
-                leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
-                title: Text(ctx.tr(Keys.chatActionDeleteForAll), style: TextStyle(color: ctx.colors.error)),
-                onTap: () => Navigator.pop(ctx, 'delete'),
-              ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );

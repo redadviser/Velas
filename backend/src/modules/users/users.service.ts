@@ -22,7 +22,7 @@ export class UsersService {
               p.reminder_hour, p.reminder_minute, p.default_reminder_days, p.payment_methods,
               u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
-              p.message_notifications, p.message_previews, p.mbway_pay_phone,
+              p.message_notifications, p.message_previews,
               coalesce(p.plus_until > now(), false) as plus, p.plus_until,
               not p.plus_trial_used as plus_trial_available, p.weekly_digest, u.terms_version
        from profiles p join users u on u.id = p.id
@@ -238,8 +238,6 @@ export class UsersService {
                               order by g.created_at`),
         chat_messages_sent: await q(`select id, conversation_id, kind, body, created_at from chat_messages
                                      where sender_id = $1 and deleted_at is null order by created_at`),
-        payments: await q(`select id, group_id, method, amount, fee, service_fee, status, created_at
-                           from payments where payer_id = $1 order by created_at`),
         birthday_request_answers: await q(`select name, birth_day, birth_month, birth_year, status, created_at
                                            from birthday_answers where user_id = $1 order by created_at`),
         blocked_users: await q(`select p.display_name, p.username, b.created_at from user_blocks b

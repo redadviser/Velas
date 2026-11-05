@@ -186,21 +186,24 @@ class Pill extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: dense ? 8 : 10, vertical: dense ? 3 : 5),
       decoration: BoxDecoration(color: background ?? context.palette.muted, borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (leading != null) ...[
-            leading!,
-            const SizedBox(width: 5),
-          ] else if (icon != null) ...[
-            Icon(icon, size: dense ? 12 : 14, color: fg),
-            const SizedBox(width: 4),
+      // Um só Text (o ícone vai dentro): com pouco espaço corta com reticências
+      // em vez de transbordar, e continua a funcionar dentro de uma Row.
+      child: Text.rich(
+        TextSpan(
+          children: [
+            if (leading != null || icon != null) ...[
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: leading ?? Icon(icon, size: dense ? 12 : 14, color: fg),
+              ),
+              WidgetSpan(child: SizedBox(width: leading != null ? 5 : 4)),
+            ],
+            TextSpan(text: label),
           ],
-          Text(
-            label,
-            style: context.text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: dense ? 11 : 12),
-          ),
-        ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: dense ? 11 : 12),
       ),
     );
   }

@@ -76,21 +76,24 @@ class _ComposerState extends ConsumerState<Composer> {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(LucideIcons.images),
-              title: Text(ctx.tr(Keys.commonGallery)),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.camera),
-              title: Text(ctx.tr(Keys.commonCamera)),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            const SizedBox(height: 8),
-          ],
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(LucideIcons.images),
+                title: Text(ctx.tr(Keys.commonGallery)),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.camera),
+                title: Text(ctx.tr(Keys.commonCamera)),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

@@ -247,6 +247,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     ChatUser? match,
   }) => showModalBottomSheet<_SendAs>(
     context: context,
+    isScrollControlled: true,
     builder: (ctx) {
       Widget title(String text, {bool recommended = false}) => Row(
         children: [
@@ -267,33 +268,36 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         ),
         onTap: () => Navigator.pop(ctx, _SendAs.wall),
       );
+      // Desliza quando não cabe (letra grande).
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Como queres enviar?', style: AppTheme.display(ctx, size: 22)),
-            ),
-            if (match != null) wall,
-            ListTile(
-              leading: const Icon(LucideIcons.mailOpen),
-              title: title('Cartão de parabéns', recommended: match == null),
-              subtitle: Text(
-                '${person.firstName} abre a tua mensagem num cartão, mesmo sem a app, e pode responder-te na Birthdayly.',
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text('Como queres enviar?', style: AppTheme.display(ctx, size: 22)),
               ),
-              onTap: () => Navigator.pop(ctx, _SendAs.card),
-            ),
-            if (match == null && hasFriends) wall,
-            ListTile(
-              leading: const Icon(LucideIcons.messageSquareText),
-              title: const Text('Só o texto'),
-              subtitle: const Text('Envia a mensagem como texto normal.'),
-              onTap: () => Navigator.pop(ctx, _SendAs.text),
-            ),
-            const SizedBox(height: 8),
-          ],
+              if (match != null) wall,
+              ListTile(
+                leading: const Icon(LucideIcons.mailOpen),
+                title: title('Cartão de parabéns', recommended: match == null),
+                subtitle: Text(
+                  '${person.firstName} abre a tua mensagem num cartão, mesmo sem a app, e pode responder-te na Birthdayly.',
+                ),
+                onTap: () => Navigator.pop(ctx, _SendAs.card),
+              ),
+              if (match == null && hasFriends) wall,
+              ListTile(
+                leading: const Icon(LucideIcons.messageSquareText),
+                title: const Text('Só o texto'),
+                subtitle: const Text('Envia a mensagem como texto normal.'),
+                onTap: () => Navigator.pop(ctx, _SendAs.text),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       );
     },
@@ -415,10 +419,18 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                 ),
             ],
             const SizedBox(height: 12),
+            // "Enviar" à largura toda; "Copiar" e "Agendar" por baixo (cabem com letra grande).
+            FilledButton.icon(
+              onPressed: _text.text.trim().isEmpty ? null : () => _share(person),
+              icon: const Icon(LucideIcons.send, size: 18),
+              label: const Text('Enviar'),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
                     onPressed: _text.text.trim().isEmpty
                         ? null
                         : () async {
@@ -426,23 +438,16 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                             if (context.mounted) showMessage(context, 'Mensagem copiada.');
                           },
                     icon: const Icon(LucideIcons.copy, size: 18),
-                    label: const Text('Copiar'),
+                    label: const Text('Copiar', maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
                     onPressed: _text.text.trim().isEmpty || _saving ? null : () => _schedule(person),
                     icon: const Icon(LucideIcons.calendarClock, size: 18),
-                    label: const Text('Agendar'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _text.text.trim().isEmpty ? null : () => _share(person),
-                    icon: const Icon(LucideIcons.send, size: 18),
-                    label: const Text('Enviar'),
+                    label: const Text('Agendar', maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
               ],

@@ -58,22 +58,25 @@ Future<PickedCardMedia?> pickCardMedia(BuildContext context, CardMediaKind kind)
 Future<ImageSource?> _videoSource(BuildContext context) => showModalBottomSheet<ImageSource>(
   context: context,
   builder: (ctx) => SafeArea(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ListTile(
-          leading: const Icon(LucideIcons.video),
-          title: const Text('Gravar um vídeo'),
-          subtitle: const Text('Até 30 segundos'),
-          onTap: () => Navigator.pop(ctx, ImageSource.camera),
-        ),
-        ListTile(
-          leading: const Icon(LucideIcons.film),
-          title: const Text('Escolher da galeria'),
-          onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-        ),
-        const SizedBox(height: 8),
-      ],
+    child: SingleChildScrollView(
+      // Desliza quando não cabe (letra grande).
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(LucideIcons.video),
+            title: const Text('Gravar um vídeo'),
+            subtitle: const Text('Até 30 segundos'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(LucideIcons.film),
+            title: const Text('Escolher da galeria'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     ),
   ),
 );

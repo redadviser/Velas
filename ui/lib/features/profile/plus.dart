@@ -19,27 +19,30 @@ Future<bool> requirePlus(BuildContext context, WidgetRef ref, {required String f
   final choice = await showModalBottomSheet<String>(
     context: context,
     builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Center(child: PlusBadge(large: true)),
-            const SizedBox(height: 14),
-            Text('$feature é do Birthdayly+', textAlign: TextAlign.center, style: AppTheme.display(ctx, size: 22)),
-            const SizedBox(height: 8),
-            Text(
-              trial
-                  ? 'Experimenta todas as funcionalidades durante 30 dias, sem pagar nada.'
-                  : 'Vê o que o Birthdayly+ inclui e como ficar com ele.',
-              textAlign: TextAlign.center,
-              style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
-            ),
-            const SizedBox(height: 18),
-            if (trial) FilledButton(onPressed: () => Navigator.pop(ctx, 'trial'), child: const Text('Experimentar 30 dias grátis')),
-            TextButton(onPressed: () => Navigator.pop(ctx, 'plans'), child: const Text('Ver os planos')),
-          ],
+      child: SingleChildScrollView(
+        // Desliza quando não cabe (letra grande).
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(child: PlusBadge(large: true)),
+              const SizedBox(height: 14),
+              Text('$feature é do Birthdayly+', textAlign: TextAlign.center, style: AppTheme.display(ctx, size: 22)),
+              const SizedBox(height: 8),
+              Text(
+                trial
+                    ? 'Experimenta todas as funcionalidades durante 30 dias, sem pagar nada.'
+                    : 'Vê o que o Birthdayly+ inclui e como ficar com ele.',
+                textAlign: TextAlign.center,
+                style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
+              ),
+              const SizedBox(height: 18),
+              if (trial) FilledButton(onPressed: () => Navigator.pop(ctx, 'trial'), child: const Text('Experimentar 30 dias grátis')),
+              TextButton(onPressed: () => Navigator.pop(ctx, 'plans'), child: const Text('Ver os planos')),
+            ],
+          ),
         ),
       ),
     ),

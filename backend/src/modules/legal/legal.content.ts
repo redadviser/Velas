@@ -51,7 +51,7 @@ export function privacyPolicy(c: LegalContact): LegalDoc {
           'Aniversários que acrescentas: nome, data de nascimento, relação, categoria, fotografia, notas, ideias de presente, mensagens de parabéns e o histórico do que lhes deste ou escreveste.',
           'Contactos do telemóvel: só quando escolhes "Adicionar dos contactos", e só são enviados os contactos que escolhes acrescentar.',
           'Conteúdo social: amigos, conversas (texto, imagens, GIFs e stickers), cartões de parabéns (com fotografia, vídeo ou áudio, se os juntares), o teu mural e as fotografias do álbum.',
-          'Prendas em grupo e pagamentos: os grupos em que participas, os valores, quem pagou e o estado de cada pagamento. Os dados do cartão são tratados pela Stripe e nunca chegam aos nossos servidores. Guardamos o número MB WAY se pedires para o guardar.',
+          'Prendas em grupo: os grupos em que participas, os valores, quem já pagou a sua parte e os dados que indicas para receber (MB WAY, Revolut, PayPal ou Skrill), mostrados só aos membros dos teus grupos. Os pagamentos fazem-se diretamente entre as pessoas: a Birthdayly não recebe nem guarda dados de cartões ou de contas bancárias.',
           'Dados técnicos: o endereço IP e a hora dos pedidos (para segurança e para travar abusos), e se estás online, se não desligares essa opção.',
           'Denúncias e bloqueios que fazes, e as denúncias feitas sobre ti.',
         ],
@@ -59,10 +59,10 @@ export function privacyPolicy(c: LegalContact): LegalDoc {
       {
         title: '3. Para que usamos os dados e com que fundamento',
         bullets: [
-          'Para prestar o serviço que pedes (execução do contrato): lembrar aniversários, guardar os teus dados, as conversas, os cartões e as prendas em grupo, e processar os pagamentos.',
+          'Para prestar o serviço que pedes (execução do contrato): lembrar aniversários, guardar os teus dados, as conversas, os cartões e as prendas em grupo.',
           'Para manter a app segura (interesse legítimo): prevenir spam e abusos, limitar pedidos, analisar denúncias e aplicar bloqueios.',
           'Com o teu consentimento, que podes retirar a qualquer momento: notificações, acesso aos contactos, à câmara, ao microfone e às fotografias do telemóvel.',
-          'Para cumprir obrigações legais, por exemplo de faturação e contabilidade dos pagamentos.',
+          'Para cumprir obrigações legais, por exemplo de faturação, quando houver subscrições do Birthdayly+.',
         ],
         paragraphs: ['Não vendemos os teus dados nem os usamos para publicidade.'],
       },
@@ -70,7 +70,6 @@ export function privacyPolicy(c: LegalContact): LegalDoc {
         title: '4. Com quem partilhamos',
         bullets: [
           'Fornecedor de alojamento dos servidores, onde os dados ficam guardados.',
-          'Stripe, para os pagamentos dentro da app.',
           'Google, se escolheres entrar com o Google.',
           'GIPHY, que recebe o que pesquisas quando procuras GIFs ou stickers.',
           'O fornecedor de email, para mensagens como a recuperação da palavra-passe.',
@@ -91,7 +90,7 @@ export function privacyPolicy(c: LegalContact): LegalDoc {
       {
         title: '6. Quanto tempo guardamos',
         paragraphs: [
-          'Guardamos os dados enquanto tiveres conta. Ao apagares a conta apagamos todos os teus dados e ficheiros, exceto os registos de pagamentos que a lei nos obriga a guardar, e as denúncias pelo tempo necessário para as analisar.',
+          'Guardamos os dados enquanto tiveres conta. Ao apagares a conta apagamos todos os teus dados e ficheiros, exceto os registos de faturação que a lei nos obriga a guardar (quando houver subscrições) e as denúncias pelo tempo necessário para as analisar.',
           'Os links de pedido de aniversário expiram ao fim de 30 dias.',
         ],
       },
@@ -136,7 +135,7 @@ export function termsOfUse(c: LegalContact): LegalDoc {
       {
         title: '1. Quem pode usar',
         paragraphs: [
-          `Precisas de ter ${minimumAge} anos ou mais. Para receber pagamentos dentro da app, a Stripe pode exigir que sejas maior de idade.`,
+          `Precisas de ter ${minimumAge} anos ou mais.`,
         ],
       },
       {
@@ -169,10 +168,9 @@ export function termsOfUse(c: LegalContact): LegalDoc {
         ],
       },
       {
-        title: '6. Prendas em grupo e pagamentos',
+        title: '6. Prendas em grupo',
         paragraphs: [
-          'Os pagamentos dentro da app são processados pela Stripe e vão diretamente para quem compra a prenda. A Birthdayly não é parte na compra da prenda nem guarda o dinheiro do grupo.',
-          'Cada pagamento dentro da app tem uma taxa de serviço fixa, mostrada antes de pagares, além do custo do método de pagamento. Pagar por MB WAY diretamente a quem compra não tem custos da Birthdayly.',
+          'A Birthdayly ajuda a combinar a prenda e a saber quem já pagou, mas não movimenta dinheiro: cada membro paga a sua parte diretamente a quem compra a prenda (por exemplo por MB WAY, Revolut, PayPal ou em mão), sem custos da Birthdayly. A Birthdayly não é parte na compra da prenda nem guarda o dinheiro do grupo.',
           'Acertos e reembolsos entre membros de um grupo são da responsabilidade dos próprios membros.',
         ],
       },
@@ -220,7 +218,7 @@ export function deleteAccountDoc(c: LegalContact): LegalDoc {
       {
         title: 'O que é apagado',
         paragraphs: [
-          'O perfil, os aniversários, as ideias de presente, as mensagens, os cartões, as fotografias, as conversas privadas e os grupos que administras. Os registos de pagamentos são guardados apenas pelo tempo que a lei exige.',
+          'O perfil, os aniversários, as ideias de presente, as mensagens, os cartões, as fotografias, as conversas privadas e os grupos que administras. Os registos de faturação (quando houver subscrições) são guardados apenas pelo tempo que a lei exige.',
         ],
       },
     ],

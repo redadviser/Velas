@@ -13,8 +13,6 @@ import { ChatService } from './modules/chat/chat.service.js';
 import { StickersService } from './modules/chat/stickers.service.js';
 import { FriendsService } from './modules/friends/friends.service.js';
 import { GifsService } from './modules/gifs/gifs.service.js';
-import type { PaymentsGateway } from './modules/payments/gateway.js';
-import { PaymentsService } from './modules/payments/payments.service.js';
 import type { PushSender } from './modules/push/push.gateway.js';
 import { PushService, ReplyTokens } from './modules/push/push.service.js';
 import { GiftsService } from './modules/gifts/gifts.service.js';
@@ -36,8 +34,6 @@ export interface Deps {
   verifyGoogle: GoogleVerifier;
   /** Pedidos HTTP a serviços externos (GIPHY); substituído nos testes. */
   fetch?: typeof fetch;
-  /** Stripe (pagamentos na app); sem ele ficam desligados. Substituído nos testes. */
-  payments?: PaymentsGateway;
   /** Firebase Cloud Messaging (notificações push); sem ele não há push. Substituído nos testes. */
   push?: PushSender;
 }
@@ -54,14 +50,12 @@ export function createServices(deps: Deps) {
   const messages = new MessagesService(db);
   const hub = new RealtimeHub();
   const chat = new ChatService(db, storage, hub);
-  const payments = new PaymentsService(db, deps.config, deps.payments, hub);
   const groups = new GroupsService(db, storage, hub);
   const push = new PushService(db, deps.push, new ReplyTokens(deps.config.jwtSecret));
   push.isOnline = (userId) => hub.isOnline(userId);
   chat.onSent = (message, ids) => void push.chatMessage(message, ids).catch((e) => push.onError(e));
   const cards = new CardsService(db, storage, chat, hub);
   messages.scheduled = { cards, push, hub };
-  groups.inApp = { enabled: payments.enabled, fees: payments.fees, serviceFee: payments.serviceFee };
   // Mudar a privacidade da presença avisa logo quem a estava a ver.
   users.onUpdated = async (userId, patch) => {
     if (patch.show_presence !== undefined) await chat.announcePresence(userId);
@@ -84,7 +78,6 @@ export function createServices(deps: Deps) {
     safety: new SafetyService(db, storage, hub, deps.mail, deps.config),
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
-    payments,
     push,
   };
 }

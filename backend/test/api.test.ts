@@ -11,13 +11,12 @@ import { buildApp } from '../src/app.js';
 import { HttpError } from '../src/core/errors.js';
 import { AccessTokens } from '../src/modules/auth/tokens.js';
 import type { GoogleIdentity } from '../src/modules/auth/google.js';
-import { loadPaymentsConfig, type Config } from '../src/config/env.js';
+import type { Config } from '../src/config/env.js';
 import type { Mail } from '../src/core/mailer.js';
 import { migrate } from '../src/core/migrations.js';
 import { PhotoStorage } from '../src/core/storage.js';
 import type { Db } from '../src/core/database.js';
 import { GifsService } from '../src/modules/gifs/gifs.service.js';
-import type { GatewayStatus, PaymentsGateway } from '../src/modules/payments/gateway.js';
 import type { PushMessage, PushSender } from '../src/modules/push/push.gateway.js';
 import { createTestDb } from './pglite-pool.js';
 
@@ -46,44 +45,6 @@ const fakeGiphy: typeof fetch = async (input) => {
     }),
     { headers: { 'content-type': 'application/json' } },
   );
-};
-
-// Stripe falsa: guarda o que lhe pedem e responde como a verdadeira.
-const stripeCalls: { op: string; args: Record<string, unknown> }[] = [];
-const intentStatus = new Map<string, GatewayStatus>();
-const fakeStripe: PaymentsGateway = {
-  async createAccount(p) {
-    stripeCalls.push({ op: 'createAccount', args: p });
-    return { id: `acct_${p.userId.slice(0, 8)}` };
-  },
-  async onboardingLink(accountId, urls) {
-    stripeCalls.push({ op: 'onboardingLink', args: { accountId, ...urls } });
-    return `https://connect.stripe.test/setup/${accountId}`;
-  },
-  async accountReady() {
-    return true;
-  },
-  async startMbWay(p) {
-    stripeCalls.push({ op: 'startMbWay', args: p });
-    const id = `pi_${stripeCalls.length}`;
-    intentStatus.set(id, 'pending');
-    return { paymentIntentId: id, status: 'pending' };
-  },
-  async createCheckout(p) {
-    stripeCalls.push({ op: 'createCheckout', args: p });
-    return { sessionId: `cs_${stripeCalls.length}`, url: `https://checkout.stripe.test/${p.method}` };
-  },
-  async paymentIntentStatus(id) {
-    return { status: intentStatus.get(id) ?? 'pending' };
-  },
-  async checkoutStatus() {
-    return { status: 'pending' };
-  },
-  parseWebhook(raw, signature) {
-    if (signature !== 'assinatura-valida') throw new Error('invalid signature');
-    const e = JSON.parse(raw.toString()) as { type: string; data: { object: { id: string } } };
-    return { type: e.type, object: e.data.object };
-  },
 };
 
 // FCM falso: guarda as notificações; o token 'morto…' já não existe.
@@ -135,7 +96,6 @@ beforeAll(async () => {
       return identity;
     },
     fetch: fakeGiphy,
-    payments: fakeStripe,
     push: fakePush,
   });
 }, 60_000);
@@ -871,131 +831,6 @@ describe('fotografia do grupo e métodos de pagamento', () => {
   });
 });
 
-describe('pagamentos na app (Stripe)', () => {
-  it('quem compra liga a conta; MB WAY com número guardado; cartão pelo Checkout; webhook confirma', async () => {
-    const bia = await signup('Bia', 'bia', 'bia@ex.pt');
-    const caio = await signup('Caio', 'caio', 'caio@ex.pt');
-    const dani = await signup('Dani', 'dani', 'dani@ex.pt');
-    const groupId = uuid();
-    await call('PUT', `/groups/${groupId}`, {
-      token: bia.access_token,
-      body: { group: { title: 'Prenda da Rosa', celebrant_name: 'Rosa', target_amount: 40 }, new_members: [{ id: uuid(), user_id: bia.user.id, display_name: 'Bia' }] },
-    });
-    const code = (await call('GET', '/groups', { token: bia.access_token })).body.find((g: { id: string }) => g.id === groupId).invite_code;
-    await call('POST', `/invite-codes/${code}/join`, { token: caio.access_token, body: {} });
-    await call('POST', `/invite-codes/${code}/join`, { token: dani.access_token, body: {} });
-    const group = async (s: Session) => (await call('GET', '/groups', { token: s.access_token })).body.find((g: { id: string }) => g.id === groupId);
-    const memberOf = async (s: Session) => (await group(s)).group_members.find((m: { user_id: string }) => m.user_id === s.user.id);
-    const caioMember = await memberOf(caio);
-    const daniMember = await memberOf(dani);
-    const checkout = (s: Session, memberId: string, body: object) =>
-      call('POST', `/group-members/${memberId}/checkout`, { token: s.access_token, body });
-
-    // A Bia (quem compra) ainda não ligou a conta Stripe.
-    expect((await call('GET', `/groups/${groupId}/payee`, { token: caio.access_token })).body.in_app).toBeUndefined();
-    expect((await checkout(caio, caioMember.id, { method: 'card' })).body.error).toBe('payee_not_ready');
-    expect(await (await call('GET', '/me/payouts', { token: bia.access_token })).body).toMatchObject({ enabled: true, connected: false, ready: false });
-
-    const onboarding = await call('POST', '/me/payouts/onboarding', { token: bia.access_token });
-    expect(onboarding.body.url).toMatch(/^https:\/\/connect\.stripe\.test\/setup\/acct_/);
-    expect(stripeCalls.find((c) => c.op === 'onboardingLink')!.args).toMatchObject({ returnUrl: 'http://api.test/stripe/return' });
-    expect((await call('POST', '/me/payouts/refresh', { token: bia.access_token })).body).toMatchObject({ connected: true, ready: true });
-    const payee = (await call('GET', `/groups/${groupId}/payee`, { token: caio.access_token })).body;
-    expect(payee).toMatchObject({ in_app: true, in_app_fees: { card: { percent: 1.5, fixed: 0.25 } }, in_app_service_fee: 0.39 });
-
-    // Quem compra não paga a si próprio; um membro só paga a sua parte.
-    const biaMember = await memberOf(bia);
-    expect((await checkout(bia, biaMember.id, { method: 'card' })).body.error).toBe('is_buyer');
-    expect((await checkout(dani, caioMember.id, { method: 'card' })).status).toBe(404);
-
-    // MB WAY: sem número guardado tem de o indicar; pode guardá-lo para a próxima.
-    expect((await checkout(caio, caioMember.id, { method: 'mb_way' })).body.error).toBe('invalid_phone');
-    const mbway = await checkout(caio, caioMember.id, { method: 'mb_way', phone: '912 345 678', save_phone: true });
-    expect(mbway.status).toBe(200);
-    // 40 € a três: a Bia 13,34 €, o Caio e a Dani 13,33 €. A comissão da Stripe e a
-    // taxa de serviço (0,39 €) vão por cima: (13,33 + 0,25 + 0,39) / 0,985 = 14,19 €.
-    expect(mbway.body).toMatchObject({ method: 'mb_way', status: 'pending', amount: 13.33, fee: 0.86, service_fee: 0.39, total: 14.19, checkout_url: null });
-    // Quem compra recebe a parte inteira; a Birthdayly fica com o resto (Stripe + serviço).
-    expect(stripeCalls.at(-1)!.args).toMatchObject({ amountCents: 1419, transferCents: 1333, phone: '+351912345678', destination: expect.stringMatching(/^acct_/) });
-    expect((await call('GET', '/me', { token: caio.access_token })).body.mbway_pay_phone).toBe('+351912345678');
-    expect((await call('GET', `/payments/${mbway.body.id}`, { token: dani.access_token })).status).toBe(404);
-
-    // O Caio aprova na app MB WAY: a parte fica paga e confirmada.
-    intentStatus.set([...intentStatus.keys()].at(-1)!, 'succeeded');
-    expect((await call('GET', `/payments/${mbway.body.id}`, { token: caio.access_token })).body.status).toBe('succeeded');
-    expect(await memberOf(caio)).toMatchObject({ paid_method: 'mbway', confirmed_at: expect.any(String) });
-    expect((await checkout(caio, caioMember.id, { method: 'card' })).body.error).toBe('already_paid');
-
-    // Cartão: página da Stripe; o webhook confirma.
-    const card = await checkout(dani, daniMember.id, { method: 'card', locale: 'pt' });
-    expect(card.body).toMatchObject({ status: 'pending', checkout_url: 'https://checkout.stripe.test/card' });
-    expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'card', locale: 'pt', successUrl: 'http://api.test/pay/done', email: 'dani@ex.pt' });
-    const event = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: 'cs_x', payment_status: 'paid', metadata: { payment_id: card.body.id } } } });
-    const webhook = (signature: string) =>
-      app.inject({ method: 'POST', url: '/stripe/webhook', headers: { 'content-type': 'application/json', 'stripe-signature': signature }, payload: event });
-    expect((await webhook('falsa')).statusCode).toBe(400);
-    expect(await memberOf(dani)).toMatchObject({ confirmed_at: null });
-    expect((await webhook('assinatura-valida')).statusCode).toBe(200);
-    expect(await memberOf(dani)).toMatchObject({ paid_method: 'card', confirmed_at: expect.any(String) });
-    expect((await call('GET', `/payments/${card.body.id}`, { token: dani.access_token })).body.status).toBe('succeeded');
-
-    // Páginas para voltar à app.
-    const done = await call('GET', '/pay/done');
-    expect(done.raw.body).toContain('Pagamento concluído');
-    expect(done.raw.body).toContain('com.eupasoft.velas://app/payments');
-  });
-
-  it('pagamento a caminho: pago ao autorizar, confirmado quando chega, por pagar se falhar; sem IBAN', async () => {
-    const eli = await signup('Eli', 'eli', 'eli@ex.pt');
-    const fil = await signup('Fil', 'fil', 'fil@ex.pt');
-    const gui = await signup('Gui', 'gui', 'gui@ex.pt');
-    const groupId = uuid();
-    await call('PUT', `/groups/${groupId}`, {
-      token: eli.access_token,
-      body: { group: { title: 'Prenda do Zé', celebrant_name: 'Zé', target_amount: 30 }, new_members: [{ id: uuid(), user_id: eli.user.id, display_name: 'Eli' }] },
-    });
-    const code = (await call('GET', '/groups', { token: eli.access_token })).body.find((g: { id: string }) => g.id === groupId).invite_code;
-    for (const s of [fil, gui]) await call('POST', `/invite-codes/${code}/join`, { token: s.access_token, body: {} });
-    await call('POST', '/me/payouts/onboarding', { token: eli.access_token });
-    await call('POST', '/me/payouts/refresh', { token: eli.access_token });
-    const memberOf = async (s: Session) =>
-      (await call('GET', '/groups', { token: s.access_token })).body
-        .find((g: { id: string }) => g.id === groupId)
-        .group_members.find((m: { user_id: string }) => m.user_id === s.user.id);
-    const webhook = (type: string, object: object) =>
-      app.inject({
-        method: 'POST',
-        url: '/stripe/webhook',
-        headers: { 'content-type': 'application/json', 'stripe-signature': 'assinatura-valida' },
-        payload: JSON.stringify({ type, data: { object: { id: 'cs_y', ...object } } }),
-      });
-
-    for (const [payer, outcome] of [[fil, 'checkout.session.async_payment_succeeded'], [gui, 'checkout.session.async_payment_failed']] as const) {
-      const member = await memberOf(payer);
-      const pay = await call('POST', `/group-members/${member.id}/checkout`, { token: payer.access_token, body: { method: 'revolut_pay' } });
-      // 30 € a três = 10 €; (10 + 0,25 + 0,39) / (1 − 1,5%) = 10,81 €.
-      expect(pay.body).toMatchObject({ method: 'revolut_pay', amount: 10, fee: 0.81, service_fee: 0.39, total: 10.81 });
-      expect(stripeCalls.at(-1)!.args).toMatchObject({ method: 'revolut_pay', amountCents: 1081, transferCents: 1000 });
-
-      await webhook('checkout.session.completed', { payment_status: 'unpaid', metadata: { payment_id: pay.body.id } });
-      expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('processing');
-      expect(await memberOf(payer)).toMatchObject({ paid_method: 'revolut', paid_at: expect.any(String), confirmed_at: null });
-
-      await webhook(outcome, { metadata: { payment_id: pay.body.id } });
-      if (outcome.endsWith('succeeded')) {
-        expect(await memberOf(payer)).toMatchObject({ paid_method: 'revolut', confirmed_at: expect.any(String) });
-      } else {
-        expect(await memberOf(payer)).toMatchObject({ paid_at: null, paid_method: null, confirmed_at: null });
-        expect((await call('GET', `/payments/${pay.body.id}`, { token: payer.access_token })).body.status).toBe('failed');
-      }
-    }
-
-    // A transferência por IBAN (débito SEPA) deixou de existir.
-    const sepa = await call('POST', `/group-members/${(await memberOf(gui)).id}/checkout`, { token: gui.access_token, body: { method: 'sepa_debit' } });
-    expect(sepa.status).toBe(400);
-  });
-});
-
 describe('cartões de parabéns', () => {
   let rita: Session;
   let tomas: Session;
@@ -1511,7 +1346,7 @@ describe('legal e RGPD', () => {
     expect(data.account.email).toBe('vasco@ex.pt');
     expect(data.people.map((p: { name: string }) => p.name)).toEqual(['Avó']);
     expect(data.gift_ideas[0]).toMatchObject({ title: 'Flores', price: 15 });
-    for (const key of ['categories', 'messages', 'cards_sent', 'cards_received', 'wall_photos', 'friends', 'gift_groups', 'chat_messages_sent', 'payments', 'blocked_users', 'reports_made']) {
+    for (const key of ['categories', 'messages', 'cards_sent', 'cards_received', 'wall_photos', 'friends', 'gift_groups', 'chat_messages_sent', 'blocked_users', 'reports_made']) {
       expect(Array.isArray(data[key])).toBe(true);
     }
     expect(JSON.stringify(data)).not.toContain('Não é teu');
@@ -1529,12 +1364,6 @@ describe('sistema', () => {
       storage_persistent: expect.any(Boolean),
       upload_dir: uploadDir,
     });
-  });
-
-  it('a taxa de serviço dos pagamentos é 0,39 € por omissão e configurável', () => {
-    expect(loadPaymentsConfig({ STRIPE_SECRET_KEY: 'sk_test' })!.serviceFee).toBe(0.39);
-    expect(loadPaymentsConfig({ STRIPE_SECRET_KEY: 'sk_test', PAYMENTS_SERVICE_FEE: '0' })!.serviceFee).toBe(0);
-    expect(() => loadPaymentsConfig({ STRIPE_SECRET_KEY: 'sk_test', PAYMENTS_SERVICE_FEE: 'muito' })).toThrow(/PAYMENTS_SERVICE_FEE/);
   });
 
   it('sem pasta gravável, falha com um erro claro (e não um erro interno)', async () => {

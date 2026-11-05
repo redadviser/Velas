@@ -28,32 +28,35 @@ class ConversationInfoScreen extends ConsumerWidget {
     final choice = await showModalBottomSheet<_Mute>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(ctx.tr(Keys.chatInfoMute), style: AppTheme.display(ctx, size: 22)),
-            ),
-            for (final (option, key) in [
-              (_Mute.hours8, Keys.chatInfoMute8h),
-              (_Mute.week, Keys.chatInfoMute1w),
-              (_Mute.always, Keys.chatInfoMuteAlways),
-            ])
-              ListTile(
-                leading: const Icon(LucideIcons.bellOff),
-                title: Text(ctx.tr(key)),
-                onTap: () => Navigator.pop(ctx, option),
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(ctx.tr(Keys.chatInfoMute), style: AppTheme.display(ctx, size: 22)),
               ),
-            if (c.isMuted)
-              ListTile(
-                leading: const Icon(LucideIcons.bellRing),
-                title: Text(ctx.tr(Keys.chatInfoUnmute)),
-                onTap: () => Navigator.pop(ctx, _Mute.off),
-              ),
-            const SizedBox(height: 8),
-          ],
+              for (final (option, key) in [
+                (_Mute.hours8, Keys.chatInfoMute8h),
+                (_Mute.week, Keys.chatInfoMute1w),
+                (_Mute.always, Keys.chatInfoMuteAlways),
+              ])
+                ListTile(
+                  leading: const Icon(LucideIcons.bellOff),
+                  title: Text(ctx.tr(key)),
+                  onTap: () => Navigator.pop(ctx, option),
+                ),
+              if (c.isMuted)
+                ListTile(
+                  leading: const Icon(LucideIcons.bellRing),
+                  title: Text(ctx.tr(Keys.chatInfoUnmute)),
+                  onTap: () => Navigator.pop(ctx, _Mute.off),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

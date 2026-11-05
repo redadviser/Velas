@@ -18,15 +18,6 @@ enum PaymentMethod {
   /// Nome na língua da app (chaves `pay.method.<nome>`).
   String get label => tr('pay.method.$name');
 
-  /// O nome na API de pagamentos dentro da app (Stripe), se o método o permitir.
-  String? get inAppName => switch (this) {
-    PaymentMethod.card => 'card',
-    PaymentMethod.paypal => 'paypal',
-    PaymentMethod.mbway => 'mb_way',
-    PaymentMethod.revolut => 'revolut_pay',
-    PaymentMethod.skrill || PaymentMethod.cash => null,
-  };
-
   static PaymentMethod? tryParse(String? v) => PaymentMethod.values.where((m) => m.name == v).firstOrNull;
 }
 
@@ -39,9 +30,6 @@ class PaymentDetails {
     this.paypalUser = '',
     this.skrillEmail = '',
     this.acceptsCash = true,
-    this.inApp = false,
-    this.inAppFees = const {},
-    this.inAppServiceFee = 0,
   });
 
   final String mbwayPhone;
@@ -50,31 +38,7 @@ class PaymentDetails {
   final String skrillEmail;
   final bool acceptsCash;
 
-  /// Quem recebe ligou a conta Stripe: cartão, PayPal e MB WAY pagam-se dentro da
-  /// app (só nos dados de quem compra a prenda; não se guarda).
-  final bool inApp;
-
-  /// Comissão de cada método dentro da app (`card`, `paypal`, `mb_way`).
-  final Map<String, ({double percent, double fixed})> inAppFees;
-
-  /// Taxa de serviço da Birthdayly em cada pagamento dentro da app (euros).
-  final double inAppServiceFee;
-
   static const empty = PaymentDetails();
-
-  /// Este método paga-se dentro da app?
-  bool payInApp(PaymentMethod m) => inApp && m.inAppName != null;
-
-  /// A comissão (Stripe + taxa de serviço) somada a [amount] para quem recebe
-  /// ficar com [amount] (igual ao servidor, payments.model.ts).
-  ({double fee, double total}) withFee(PaymentMethod m, double amount) {
-    final f = inAppFees[m.inAppName];
-    if (f == null) return (fee: 0, total: amount);
-    final shareCents = (amount * 100).round();
-    final serviceCents = (inAppServiceFee * 100).round();
-    final totalCents = ((shareCents + (f.fixed * 100).round() + serviceCents) / (1 - f.percent / 100)).ceil();
-    return (fee: (totalCents - shareCents) / 100, total: totalCents / 100);
-  }
 
   bool get hasAnyDigital =>
       mbwayPhone.isNotEmpty || revolutTag.isNotEmpty || paypalUser.isNotEmpty || skrillEmail.isNotEmpty;
@@ -83,12 +47,11 @@ class PaymentDetails {
   bool get acceptsCard => revolutTag.isNotEmpty || paypalUser.isNotEmpty;
 
   bool accepts(PaymentMethod m) => switch (m) {
-    // Dentro da app não é preciso nenhum dado de quem recebe.
-    PaymentMethod.card => inApp || acceptsCard,
-    PaymentMethod.mbway => inApp || mbwayPhone.isNotEmpty,
-    PaymentMethod.paypal => inApp || paypalUser.isNotEmpty,
+    PaymentMethod.card => acceptsCard,
+    PaymentMethod.mbway => mbwayPhone.isNotEmpty,
+    PaymentMethod.paypal => paypalUser.isNotEmpty,
     PaymentMethod.skrill => skrillEmail.isNotEmpty,
-    PaymentMethod.revolut => inApp || revolutTag.isNotEmpty,
+    PaymentMethod.revolut => revolutTag.isNotEmpty,
     PaymentMethod.cash => acceptsCash,
   };
 
@@ -125,15 +88,6 @@ class PaymentDetails {
       paypalUser: j['paypal_user'] as String? ?? '',
       skrillEmail: j['skrill_email'] as String? ?? '',
       acceptsCash: j['accepts_cash'] as bool? ?? true,
-      inApp: j['in_app'] as bool? ?? false,
-      inAppServiceFee: (j['in_app_service_fee'] as num?)?.toDouble() ?? 0,
-      inAppFees: {
-        for (final MapEntry(:key, :value) in ((j['in_app_fees'] as Map?) ?? const {}).entries)
-          key as String: (
-            percent: ((value as Map)['percent'] as num).toDouble(),
-            fixed: (value['fixed'] as num).toDouble(),
-          ),
-      },
     );
   }
 }
@@ -154,17 +108,6 @@ class PaymentFormat {
       d.length == 9 ? '${d.substring(0, 3)} ${d.substring(3, 6)} ${d.substring(6)}' : d;
 
   static String cleanHandle(String input) => input.trim().replaceFirst(RegExp(r'^@'), '').replaceAll(' ', '');
-
-  /// Número para o MB WAY em E.164 (9 dígitos portugueses ganham o +351); `null` se inválido.
-  static String? toE164(String input) {
-    final pt = normalizePhone(input);
-    if (pt != null) return '+351$pt';
-    final d = input.replaceAll(RegExp(r'[\s\-()]'), '');
-    return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(d) ? d : null;
-  }
-
-  /// "+351912345678" → "912 345 678" (os números portugueses).
-  static String displayE164(String e164) => e164.startsWith('+351') ? displayPhone(e164.substring(4)) : e164;
 
   /// Email (Skrill), em minúsculas; `null` se não parecer um email.
   static String? normalizeEmail(String input) {

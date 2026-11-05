@@ -169,7 +169,7 @@ class ProfileScreen extends ConsumerWidget {
                 icon: LucideIcons.wallet,
                 title: context.tr(Keys.paymentsScreenTitle),
                 value: [
-                  if (user.mbwayPayPhone.isNotEmpty || user.payment.mbwayPhone.isNotEmpty) 'MB WAY',
+                  if (user.payment.mbwayPhone.isNotEmpty) 'MB WAY',
                   if (user.payment.revolutTag.isNotEmpty) 'Revolut',
                   if (user.payment.paypalUser.isNotEmpty) 'PayPal',
                 ].join(', ').ifEmpty('Por definir'),
@@ -203,7 +203,11 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SwitchListTile(
                 secondary: const Icon(LucideIcons.calendarRange, size: 20),
-                title: const Row(children: [Text('Resumo semanal'), SizedBox(width: 8), PlusBadge()]),
+                title: const Wrap(
+                  spacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [Text('Resumo semanal'), PlusBadge()],
+                ),
                 subtitle: const Text('À segunda-feira, os aniversários da semana'),
                 value: user.weeklyDigest && user.isPlus,
                 onChanged: (v) async {
@@ -498,27 +502,30 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(LucideIcons.images),
-              title: const Text('Escolher da galeria'),
-              onTap: () => Navigator.pop(ctx, 'gallery'),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.camera),
-              title: const Text('Tirar fotografia'),
-              onTap: () => Navigator.pop(ctx, 'camera'),
-            ),
-            if (hasPhoto)
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
-                title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
-                onTap: () => Navigator.pop(ctx, 'remove'),
+                leading: const Icon(LucideIcons.images),
+                title: const Text('Escolher da galeria'),
+                onTap: () => Navigator.pop(ctx, 'gallery'),
               ),
-            const SizedBox(height: 8),
-          ],
+              ListTile(
+                leading: const Icon(LucideIcons.camera),
+                title: const Text('Tirar fotografia'),
+                onTap: () => Navigator.pop(ctx, 'camera'),
+              ),
+              if (hasPhoto)
+                ListTile(
+                  leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
+                  title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
+                  onTap: () => Navigator.pop(ctx, 'remove'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -625,27 +632,30 @@ Future<void> _pickAccent(BuildContext context, WidgetRef ref) async {
   final picked = await showModalBottomSheet<AppAccent>(
     context: context,
     builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text('Tema', style: AppTheme.display(ctx, size: 22)),
-          ),
-          for (final a in AppAccent.values)
-            ListTile(
-              leading: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(gradient: a.brand, shape: BoxShape.circle),
-              ),
-              title: Text(a.label),
-              trailing: a == current ? Icon(LucideIcons.check, color: ctx.colors.primary) : null,
-              onTap: () => Navigator.pop(ctx, a),
+      child: SingleChildScrollView(
+        // Desliza quando não cabe (letra grande).
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Tema', style: AppTheme.display(ctx, size: 22)),
             ),
-          const SizedBox(height: 8),
-        ],
+            for (final a in AppAccent.values)
+              ListTile(
+                leading: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(gradient: a.brand, shape: BoxShape.circle),
+                ),
+                title: Text(a.label),
+                trailing: a == current ? Icon(LucideIcons.check, color: ctx.colors.primary) : null,
+                onTap: () => Navigator.pop(ctx, a),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     ),
   );
@@ -657,24 +667,27 @@ Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
   final picked = await showModalBottomSheet<(Locale?,)>(
     context: context,
     builder: (ctx) => SafeArea(
-      child: RadioGroup<String>(
-        groupValue: current?.languageCode ?? '',
-        onChanged: (code) => Navigator.pop(ctx, (
-          code == null || code.isEmpty ? null : Translations.supportedLocales.firstWhere((l) => l.languageCode == code),
-        )),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(ctx.tr(Keys.settingsLanguage), style: AppTheme.display(ctx, size: 22)),
-            ),
-            RadioListTile<String>(value: '', title: Text(ctx.tr(Keys.settingsLanguageSystem))),
-            for (final code in Translations.languageCodes)
-              RadioListTile<String>(value: code, title: Text(ctx.tr('language.$code'))),
-            const SizedBox(height: 8),
-          ],
+      child: SingleChildScrollView(
+        // Desliza quando não cabe (letra grande).
+        child: RadioGroup<String>(
+          groupValue: current?.languageCode ?? '',
+          onChanged: (code) => Navigator.pop(ctx, (
+            code == null || code.isEmpty ? null : Translations.supportedLocales.firstWhere((l) => l.languageCode == code),
+          )),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(ctx.tr(Keys.settingsLanguage), style: AppTheme.display(ctx, size: 22)),
+              ),
+              RadioListTile<String>(value: '', title: Text(ctx.tr(Keys.settingsLanguageSystem))),
+              for (final code in Translations.languageCodes)
+                RadioListTile<String>(value: code, title: Text(ctx.tr('language.$code'))),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     ),

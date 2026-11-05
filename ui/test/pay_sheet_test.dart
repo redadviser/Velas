@@ -89,7 +89,6 @@ void main() {
     await tester.tap(find.text('Já paguei por MB WAY'));
     await tester.pumpAndSettle();
     expect(result()?.method, PaymentMethod.mbway);
-    expect(result()?.paidInApp, isFalse);
     expect(tester.takeException(), isNull);
   });
 

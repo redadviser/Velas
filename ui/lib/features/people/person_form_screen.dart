@@ -107,27 +107,30 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
     final source = await showModalBottomSheet<Object>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(LucideIcons.image),
-              title: const Text('Escolher da galeria'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.camera),
-              title: const Text('Tirar fotografia'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            if (hasPhoto)
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
-                title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
-                onTap: () => Navigator.pop(ctx, 'remove'),
+                leading: const Icon(LucideIcons.image),
+                title: const Text('Escolher da galeria'),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
-            const SizedBox(height: 8),
-          ],
+              ListTile(
+                leading: const Icon(LucideIcons.camera),
+                title: const Text('Tirar fotografia'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              if (hasPhoto)
+                ListTile(
+                  leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
+                  title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
+                  onTap: () => Navigator.pop(ctx, 'remove'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

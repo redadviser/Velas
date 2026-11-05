@@ -128,8 +128,9 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
       );
     }
 
+    // Desliza quando não cabe (letra grande, telemóvel pequeno).
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(context).bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,

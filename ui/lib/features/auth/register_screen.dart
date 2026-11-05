@@ -99,8 +99,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return AuthScaffold(
       title: 'Cria a tua conta',
       subtitle: 'Leva menos de um minuto. Depois é só adicionar as pessoas de quem gostas.',
-      footer: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      // Wrap: com letra grande o botão passa para a linha de baixo.
+      footer: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text('Já tens conta?', style: TextStyle(color: muted)),
           TextButton(onPressed: () => context.pushReplacement('/login'), child: const Text('Iniciar sessão')),

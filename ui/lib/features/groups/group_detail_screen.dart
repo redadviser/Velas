@@ -41,46 +41,14 @@ class GroupDetailScreen extends ConsumerWidget {
   Future<void> _pay(BuildContext context, WidgetRef ref, GiftGroup g, GroupMember me) async {
     final payee = await ref.read(_payeeProvider(groupId).future);
     if (!context.mounted) return;
-    final payments = ref.read(paymentsRepositoryProvider);
-    final user = ref.read(currentUserProvider);
     final result = await showPaySheet(
       context,
       payeeName: g.buyer?.name ?? 'quem compra',
       amount: g.shareOf(me),
       payee: payee,
       reference: '${g.title} — ${me.name}',
-      // Pagar dentro da app (Stripe), quando quem compra ligou a conta.
-      inApp: payments == null || !payee.inApp
-          ? null
-          : InAppPay(
-              savedPhone: user?.mbwayPayPhone ?? '',
-              start: (m, {phone, savePhone = false}) async {
-                final p = await payments.checkout(
-                  me.id,
-                  method: m.inAppName!,
-                  phone: phone,
-                  savePhone: savePhone,
-                  locale: Translations.current.locale.languageCode,
-                );
-                // O número ficou associado à conta: o perfil local passa a sabê-lo.
-                if (savePhone && phone != null && user != null) {
-                  await ref
-                      .read(authRepositoryProvider)
-                      .updateProfile(user.copyWith(mbwayPayPhone: phone))
-                      .catchError((_) {});
-                }
-                return p;
-              },
-              poll: payments.status,
-            ),
     );
     if (result == null || !context.mounted) return;
-    if (result.paidInApp) {
-      // O servidor já marcou a parte como paga (e confirmada, se o dinheiro já chegou).
-      showMessage(context, context.tr(result.processing ? Keys.payInAppProcessing : Keys.payInAppSucceeded));
-      await _ctrl(ref).refresh().catchError((_) {});
-      return;
-    }
     final method = result.method;
     await runGuarded(
       context,
@@ -106,45 +74,48 @@ class GroupDetailScreen extends ConsumerWidget {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('${m.name} · ${Fmt.money(g.shareOf(m))}', style: AppTheme.display(ctx, size: 20)),
-              ),
-            ),
-            if (status != ContributionStatus.confirmed)
-              ListTile(
-                leading: const Icon(LucideIcons.circleCheck),
-                title: const Text('Confirmar que recebi'),
-                subtitle: Text(
-                  m.paidMethod == null ? 'Por exemplo, se pagou em mão' : 'Pagou por ${m.paidMethod!.label}',
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('${m.name} · ${Fmt.money(g.shareOf(m))}', style: AppTheme.display(ctx, size: 20)),
                 ),
-                onTap: () => Navigator.pop(ctx, 'confirm'),
               ),
-            if (status == ContributionStatus.confirmed)
-              ListTile(
-                leading: const Icon(LucideIcons.undo2),
-                title: const Text('Anular confirmação'),
-                onTap: () => Navigator.pop(ctx, 'unconfirm'),
-              ),
-            if (status == ContributionStatus.paid)
-              ListTile(
-                leading: const Icon(LucideIcons.circleX),
-                title: const Text('Não recebi — voltar a "por pagar"'),
-                onTap: () => Navigator.pop(ctx, 'reset'),
-              ),
-            if (status == ContributionStatus.pending)
-              ListTile(
-                leading: const Icon(LucideIcons.send),
-                title: Text('Lembrar ${m.name}'),
-                onTap: () => Navigator.pop(ctx, 'remind'),
-              ),
-            const SizedBox(height: 8),
-          ],
+              if (status != ContributionStatus.confirmed)
+                ListTile(
+                  leading: const Icon(LucideIcons.circleCheck),
+                  title: const Text('Confirmar que recebi'),
+                  subtitle: Text(
+                    m.paidMethod == null ? 'Por exemplo, se pagou em mão' : 'Pagou por ${m.paidMethod!.label}',
+                  ),
+                  onTap: () => Navigator.pop(ctx, 'confirm'),
+                ),
+              if (status == ContributionStatus.confirmed)
+                ListTile(
+                  leading: const Icon(LucideIcons.undo2),
+                  title: const Text('Anular confirmação'),
+                  onTap: () => Navigator.pop(ctx, 'unconfirm'),
+                ),
+              if (status == ContributionStatus.paid)
+                ListTile(
+                  leading: const Icon(LucideIcons.circleX),
+                  title: const Text('Não recebi — voltar a "por pagar"'),
+                  onTap: () => Navigator.pop(ctx, 'reset'),
+                ),
+              if (status == ContributionStatus.pending)
+                ListTile(
+                  leading: const Icon(LucideIcons.send),
+                  title: Text('Lembrar ${m.name}'),
+                  onTap: () => Navigator.pop(ctx, 'remind'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -343,7 +314,7 @@ class GroupDetailScreen extends ConsumerWidget {
                 buyer: buyer,
                 isMe: iAmBuyer,
                 payee: payee.value,
-                missingPayee: payee.hasValue && !payee.value!.inApp && !payee.value!.hasAnyDigital,
+                missingPayee: payee.hasValue && !payee.value!.hasAnyDigital,
                 // Quem compra (eu) já tem o _ReceivePrompt; o administrador indica os dados de quem não tem conta.
                 onAddPayment: isAdmin && buyer.userId == null ? () => context.push('/groups/${g.id}/edit') : null,
               ),
@@ -558,11 +529,12 @@ class _Header extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Wrap: com letra grande, "de X recebidos" passa para baixo.
+          Wrap(
+            spacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.end,
             children: [
               Text(Fmt.money(g.confirmedAmount), style: AppTheme.display(context, size: 30)),
-              const SizedBox(width: 6),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
@@ -813,32 +785,35 @@ class _GroupPhotoState extends ConsumerState<_GroupPhoto> {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(ctx.tr(Keys.groupPhotoChange), style: AppTheme.display(ctx, size: 22)),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.images),
-              title: Text(ctx.tr(Keys.commonGallery)),
-              onTap: () => Navigator.pop(ctx, 'gallery'),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.camera),
-              title: Text(ctx.tr(Keys.commonCamera)),
-              onTap: () => Navigator.pop(ctx, 'camera'),
-            ),
-            if (g.photoUrl != null)
-              ListTile(
-                leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
-                title: Text(ctx.tr(Keys.groupPhotoRemove), style: TextStyle(color: ctx.colors.error)),
-                onTap: () => Navigator.pop(ctx, 'remove'),
+        child: SingleChildScrollView(
+          // Desliza quando não cabe (letra grande).
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(ctx.tr(Keys.groupPhotoChange), style: AppTheme.display(ctx, size: 22)),
               ),
-            const SizedBox(height: 8),
-          ],
+              ListTile(
+                leading: const Icon(LucideIcons.images),
+                title: Text(ctx.tr(Keys.commonGallery)),
+                onTap: () => Navigator.pop(ctx, 'gallery'),
+              ),
+              ListTile(
+                leading: const Icon(LucideIcons.camera),
+                title: Text(ctx.tr(Keys.commonCamera)),
+                onTap: () => Navigator.pop(ctx, 'camera'),
+              ),
+              if (g.photoUrl != null)
+                ListTile(
+                  leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
+                  title: Text(ctx.tr(Keys.groupPhotoRemove), style: TextStyle(color: ctx.colors.error)),
+                  onTap: () => Navigator.pop(ctx, 'remove'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

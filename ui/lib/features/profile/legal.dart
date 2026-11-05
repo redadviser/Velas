@@ -87,7 +87,7 @@ Future<void> showPrivacySheet(BuildContext context) {
             ),
             (
               'Com quem partilhamos',
-              'Só com os serviços de que a app precisa (alojamento, pagamentos com a Stripe, entrar com o Google, GIFs do GIPHY e email) e com as pessoas a quem envias mensagens ou cartões.',
+              'Só com os serviços de que a app precisa (alojamento, entrar com o Google, GIFs do GIPHY e email) e com as pessoas a quem envias mensagens ou cartões.',
             ),
             (
               'Como os protegemos',
@@ -147,47 +147,50 @@ Future<void> showHelpSheet(BuildContext context, WidgetRef ref) async {
   await showModalBottomSheet<void>(
     context: context,
     builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Ajuda e contacto', style: AppTheme.display(ctx, size: 22)),
-            const SizedBox(height: 8),
-            Text(
-              email == null
-                  ? 'Ainda não há um email de apoio configurado. Tenta mais tarde.'
-                  : 'Dúvidas, problemas ou pedidos sobre os teus dados: escreve-nos para',
-              style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
-            ),
-            if (email != null) ...[
-              const SizedBox(height: 12),
-              AppCard(
-                padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-                child: Row(
-                  children: [
-                    Expanded(child: SelectableText(email, style: ctx.text.bodyLarge)),
-                    IconButton(
-                      tooltip: 'Copiar',
-                      icon: const Icon(LucideIcons.copy, size: 18),
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: email));
-                        if (ctx.mounted) showMessage(ctx, 'Email copiado.');
-                      },
-                    ),
-                  ],
+      child: SingleChildScrollView(
+        // Desliza quando não cabe (letra grande).
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Ajuda e contacto', style: AppTheme.display(ctx, size: 22)),
+              const SizedBox(height: 8),
+              Text(
+                email == null
+                    ? 'Ainda não há um email de apoio configurado. Tenta mais tarde.'
+                    : 'Dúvidas, problemas ou pedidos sobre os teus dados: escreve-nos para',
+                style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
+              ),
+              if (email != null) ...[
+                const SizedBox(height: 12),
+                AppCard(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+                  child: Row(
+                    children: [
+                      Expanded(child: SelectableText(email, style: ctx.text.bodyLarge)),
+                      IconButton(
+                        tooltip: 'Copiar',
+                        icon: const Icon(LucideIcons.copy, size: 18),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: email));
+                          if (ctx.mounted) showMessage(ctx, 'Email copiado.');
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: () =>
-                    launchUrl(Uri(scheme: 'mailto', path: email, query: 'subject=Birthdayly')).catchError((_) => false),
-                icon: const Icon(LucideIcons.mail, size: 18),
-                label: const Text('Escrever email'),
-              ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () =>
+                      launchUrl(Uri(scheme: 'mailto', path: email, query: 'subject=Birthdayly')).catchError((_) => false),
+                  icon: const Icon(LucideIcons.mail, size: 18),
+                  label: const Text('Escrever email'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     ),
@@ -237,7 +240,7 @@ class PrivacyRightsScreen extends ConsumerWidget {
           right(
             LucideIcons.download,
             'Acesso e portabilidade',
-            'Recebe um ficheiro com tudo o que guardamos sobre ti: perfil, aniversários, ideias, mensagens, cartões, grupos, conversas e pagamentos.',
+            'Recebe um ficheiro com tudo o que guardamos sobre ti: perfil, aniversários, ideias, mensagens, cartões, grupos e conversas.',
             action: 'Exportar os meus dados',
             onTap: () => exportMyData(context, ref),
           ),
@@ -251,7 +254,7 @@ class PrivacyRightsScreen extends ConsumerWidget {
           right(
             LucideIcons.trash2,
             'Apagamento',
-            'Eliminar a conta apaga todos os teus dados e ficheiros, exceto os registos de pagamentos que a lei obriga a guardar.',
+            'Eliminar a conta apaga todos os teus dados e ficheiros. É definitivo.',
           ),
           const SizedBox(height: 12),
           right(
@@ -310,62 +313,81 @@ class _TermsGateState extends ConsumerState<TermsGate> {
           child: Material(
             color: context.colors.surface,
             child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Spacer(),
-                    Icon(LucideIcons.fileCheck, size: 44, color: context.colors.primary),
-                    const SizedBox(height: 16),
-                    Text(
-                      firstTime ? 'Antes de continuares' : 'Atualizámos os nossos termos',
-                      textAlign: TextAlign.center,
-                      style: AppTheme.display(context, size: 26),
+              // Desliza quando não cabe (letra grande); senão, o texto fica ao centro e os botões em baixo.
+              child: LayoutBuilder(
+                builder: (context, box) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: box.maxHeight - 40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox.shrink(),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Icon(LucideIcons.fileCheck, size: 44, color: context.colors.primary),
+                            const SizedBox(height: 16),
+                            Text(
+                              firstTime ? 'Antes de continuares' : 'Atualizámos os nossos termos',
+                              textAlign: TextAlign.center,
+                              style: AppTheme.display(context, size: 26),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Para continuares a usar a Birthdayly, lê e aceita os Termos de Utilização e a Política de Privacidade.',
+                              textAlign: TextAlign.center,
+                              style: context.text.bodyMedium?.copyWith(color: muted),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () => openLegal(context, info.termsUrl),
+                              icon: const Icon(LucideIcons.fileText, size: 18),
+                              label: const Text('Termos de Utilização'),
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () => openLegal(context, info.privacyUrl),
+                              icon: const Icon(LucideIcons.shieldCheck, size: 18),
+                              label: const Text('Política de Privacidade'),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 16),
+                            CheckboxListTile(
+                              value: _checked,
+                              onChanged: (v) => setState(() => _checked = v ?? false),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                'Tenho $kMinimumAge anos ou mais e aceito os Termos e a Política de Privacidade.',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            LoadingButton(
+                              label: 'Aceitar e continuar',
+                              loading: _accepting,
+                              onPressed: !_checked
+                                  ? null
+                                  : () async {
+                                      setState(() => _accepting = true);
+                                      await runGuarded(context, () => ref.read(authRepositoryProvider).acceptTerms());
+                                      if (mounted) setState(() => _accepting = false);
+                                    },
+                            ),
+                            TextButton(
+                              onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                              child: const Text('Agora não (terminar sessão)'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Para continuares a usar a Birthdayly, lê e aceita os Termos de Utilização e a Política de Privacidade.',
-                      textAlign: TextAlign.center,
-                      style: context.text.bodyMedium?.copyWith(color: muted),
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: () => openLegal(context, info.termsUrl),
-                      icon: const Icon(LucideIcons.fileText, size: 18),
-                      label: const Text('Termos de Utilização'),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => openLegal(context, info.privacyUrl),
-                      icon: const Icon(LucideIcons.shieldCheck, size: 18),
-                      label: const Text('Política de Privacidade'),
-                    ),
-                    const Spacer(),
-                    CheckboxListTile(
-                      value: _checked,
-                      onChanged: (v) => setState(() => _checked = v ?? false),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Tenho $kMinimumAge anos ou mais e aceito os Termos e a Política de Privacidade.'),
-                    ),
-                    const SizedBox(height: 8),
-                    LoadingButton(
-                      label: 'Aceitar e continuar',
-                      loading: _accepting,
-                      onPressed: !_checked
-                          ? null
-                          : () async {
-                              setState(() => _accepting = true);
-                              await runGuarded(context, () => ref.read(authRepositoryProvider).acceptTerms());
-                              if (mounted) setState(() => _accepting = false);
-                            },
-                    ),
-                    TextButton(
-                      onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                      child: const Text('Agora não (terminar sessão)'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

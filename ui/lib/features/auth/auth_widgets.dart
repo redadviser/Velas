@@ -140,7 +140,8 @@ class LoadingButton extends StatelessWidget {
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(label),
+              // Com letra grande, o texto passa a duas linhas em vez de sair do botão.
+              Flexible(child: Text(label, textAlign: TextAlign.center)),
               if (icon != null) ...[const SizedBox(width: 8), Icon(icon, size: 18)],
             ],
           ),

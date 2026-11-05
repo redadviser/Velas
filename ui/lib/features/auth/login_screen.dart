@@ -45,8 +45,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return AuthScaffold(
       title: 'Bem-vindo de volta',
       subtitle: 'Inicia sessão para veres quem faz anos a seguir.',
-      footer: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      // Wrap: com letra grande o botão passa para a linha de baixo.
+      footer: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text('Ainda não tens conta?', style: TextStyle(color: context.palette.mutedForeground)),
           TextButton(onPressed: () => context.pushReplacement('/register'), child: const Text('Criar conta')),

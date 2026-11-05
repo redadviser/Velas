@@ -39,7 +39,7 @@ void main() {
     }
     expect(find.text('Transferência bancária'), findsNothing);
     expect(field(tester, 0), '912 345 678');
-    // Nada de "ligar conta Stripe".
+    // Recebe-se só pelos métodos indicados: nada de contas de pagamento.
     expect(find.textContaining('Stripe'), findsNothing);
   });
 

@@ -23,8 +23,6 @@ export interface Profile {
   typing_indicator: boolean;
   message_notifications: boolean;
   message_previews: boolean;
-  /** Número MB WAY guardado para pagar dentro da app (privado). */
-  mbway_pay_phone: string | null;
   /** Birthdayly+: ativo agora, até quando, e se ainda pode experimentar 30 dias grátis. */
   plus: boolean;
   plus_until: string | null;
@@ -69,7 +67,6 @@ export const profilePatchSchema = z
     typing_indicator: z.boolean(),
     message_notifications: z.boolean(),
     message_previews: z.boolean(),
-    mbway_pay_phone: phoneSchema.nullable(),
     weekly_digest: z.boolean(),
   })
   .partial();

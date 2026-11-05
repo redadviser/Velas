@@ -1,17 +1,5 @@
 import { existsSync } from 'node:fs';
 
-import { defaultFees, defaultServiceFee, type FeeTable } from '../modules/payments/payments.model.js';
-
-/** Pagamentos dentro da app (Stripe Connect). Sem STRIPE_SECRET_KEY ficam desligados. */
-export interface PaymentsConfig {
-  stripeSecretKey: string;
-  /** Segredo do webhook (Stripe → Developers → Webhooks), para confirmar os pagamentos. */
-  stripeWebhookSecret?: string;
-  fees: FeeTable;
-  /** Taxa de serviço da Birthdayly por pagamento, em euros (PAYMENTS_SERVICE_FEE; 0 desliga). */
-  serviceFee: number;
-}
-
 /** Ligação ao servidor PostgreSQL. */
 export interface DatabaseConfig {
   host: string;
@@ -65,7 +53,6 @@ export interface Config {
   docs: boolean;
   /** Chave da API do GIPHY (pesquisa de GIFs e stickers no chat). Sem ela, a pesquisa fica desligada. */
   giphyApiKey?: string;
-  payments?: PaymentsConfig;
   /** Para onde vão as denúncias de utilizadores (MODERATION_EMAIL). Sem ele ficam só na base de dados. */
   moderationEmail?: string;
   /** Responsável pelos dados e contacto de apoio, nas páginas legais e na app. */
@@ -109,31 +96,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     rateLimit: env.RATE_LIMIT !== 'false',
     docs: env.API_DOCS !== 'false',
     giphyApiKey: env.GIPHY_API_KEY?.trim() || undefined,
-    payments: loadPaymentsConfig(env),
     moderationEmail: env.MODERATION_EMAIL?.trim() || undefined,
     legal: {
       entity: env.LEGAL_ENTITY?.trim() || 'Eupasoft',
       email: env.SUPPORT_EMAIL?.trim() || undefined,
     },
   };
-}
-
-export function loadPaymentsConfig(env: NodeJS.ProcessEnv = process.env): PaymentsConfig | undefined {
-  const key = env.STRIPE_SECRET_KEY?.trim();
-  if (!key) return undefined;
-  let fees = defaultFees;
-  if (env.STRIPE_FEES?.trim()) {
-    try {
-      fees = { ...defaultFees, ...(JSON.parse(env.STRIPE_FEES) as Partial<FeeTable>) };
-    } catch {
-      throw new Error('STRIPE_FEES tem de ser JSON, ex.: {"card":{"percent":1.5,"fixed":0.25}}');
-    }
-  }
-  const serviceFee = env.PAYMENTS_SERVICE_FEE?.trim() ? Number(env.PAYMENTS_SERVICE_FEE) : defaultServiceFee;
-  if (!Number.isFinite(serviceFee) || serviceFee < 0 || serviceFee > 5) {
-    throw new Error('PAYMENTS_SERVICE_FEE tem de ser um valor em euros entre 0 e 5, ex.: 0.39');
-  }
-  return { stripeSecretKey: key, stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET?.trim() || undefined, fees, serviceFee };
 }
 
 export function loadMailConfig(env: NodeJS.ProcessEnv = process.env): MailConfig {

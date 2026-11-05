@@ -261,12 +261,13 @@ class LocalAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount() async {
+  Future<String?> requestAccountDeletion() async {
     final p = _current;
-    if (p == null) return;
+    if (p == null) return null;
     final users = _users..remove(p.email);
     await _saveUsers(users);
     await _prefs.remove('velas.local.data.${p.id}');
     await signOut();
+    return null;
   }
 }

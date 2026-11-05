@@ -5,13 +5,14 @@ import { HttpError } from '../../core/errors.js';
 import { doc } from '../../core/openapi.js';
 import { passwordSchema } from '../../core/validation.js';
 import { profilePatchSchema } from './users.model.js';
+import type { AccountDeletionService } from './account-deletion.service.js';
 import type { UsersService } from './users.service.js';
 
 const passwordBody = z.object({ password: passwordSchema });
 const plusInterestBody = z.object({ plan: z.enum(['monthly', 'yearly']) });
 
 /** Perfil e conta do utilizador autenticado. */
-export async function usersRoutes(app: FastifyInstance, users: UsersService) {
+export async function usersRoutes(app: FastifyInstance, users: UsersService, deletion: AccountDeletionService) {
   const tag = 'Perfil';
 
   app.get('/me', { schema: doc({ tag, summary: 'Perfil do utilizador' }) }, (req) => users.profile(req.uid));
@@ -82,8 +83,16 @@ export async function usersRoutes(app: FastifyInstance, users: UsersService) {
     },
   );
 
-  app.delete('/me', { schema: doc({ tag, summary: 'Apagar a conta e todos os dados' }) }, async (req, reply) => {
-    await users.deleteAccount(req.uid);
-    return reply.status(204).send();
-  });
+  // Não apaga logo: envia um email com o link para confirmar (ver account-deletion).
+  app.post(
+    '/me/deletion',
+    {
+      schema: doc({
+        tag,
+        summary: 'Pedir para apagar a conta (envia o email de confirmação)',
+        description: 'A conta e os dados só são apagados quando a pessoa abre o link do email e confirma. Devolve o email para onde foi.',
+      }),
+    },
+    async (req, reply) => reply.status(202).send(await deletion.request(req.uid)),
+  );
 }

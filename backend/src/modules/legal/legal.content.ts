@@ -1,5 +1,6 @@
 /**
- * Textos legais da Birthdayly: Política de Privacidade e Termos de Utilização.
+ * Textos legais da Birthdayly: Termos de Utilização e como apagar a conta. A
+ * Política de Privacidade é a da empresa, no site dela (LegalContact.privacyUrl).
  *
  * Mudar o conteúdo de forma relevante = mudar [termsVersion]: a app pede a
  * todos que aceitem a nova versão (ver migrations/019_legal.sql).
@@ -7,7 +8,7 @@
  * RASCUNHO escrito a partir do que a app faz; deve ser revisto por um jurista
  * antes do lançamento público.
  */
-export const termsVersion = '2026-10-22';
+export const termsVersion = '2026-11-05';
 
 /** Idade mínima para usar a app (confirmada no registo). */
 export const minimumAge = 16;
@@ -20,180 +21,88 @@ export interface LegalSection {
 
 export interface LegalDoc {
   title: string;
-  intro: string;
+  /** Parágrafo de abertura (opcional). */
+  intro?: string;
+  /** Data da versão (AAAA-MM-DD), mostrada como "Última atualização". */
+  updated?: string;
   sections: LegalSection[];
 }
 
-/** Quem é responsável e como contactar (LEGAL_ENTITY, SUPPORT_EMAIL). */
+/** Quem é responsável e como contactar (LEGAL_ENTITY, SUPPORT_EMAIL, PRIVACY_URL). */
 export interface LegalContact {
   entity: string;
   email?: string;
+  /** A Política de Privacidade (a da empresa, no site dela). */
+  privacyUrl: string;
 }
 
 const contactLine = (c: LegalContact) =>
   c.email ? `pelo email ${c.email}` : 'através da app (Perfil → Ajuda e contacto)';
 
-export function privacyPolicy(c: LegalContact): LegalDoc {
-  return {
-    title: 'Política de Privacidade',
-    intro:
-      'Esta política explica que dados a Birthdayly trata, para quê, com quem os partilha e quais são os teus direitos. ' +
-      'Escrevemo-la em linguagem simples.',
-    sections: [
-      {
-        title: '1. Quem é responsável',
-        paragraphs: [`O responsável pelo tratamento dos dados é ${c.entity}. Podes contactar-nos ${contactLine(c)}.`],
-      },
-      {
-        title: '2. Que dados tratamos',
-        bullets: [
-          'Conta: nome, email, username, palavra-passe (guardada cifrada, nunca em texto), telemóvel (opcional), fotografia de perfil e, se entrares com o Google, o identificador da tua conta Google.',
-          'Aniversários que acrescentas: nome, data de nascimento, relação, categoria, fotografia, notas, ideias de presente, mensagens de parabéns e o histórico do que lhes deste ou escreveste.',
-          'Contactos do telemóvel: só quando escolhes "Adicionar dos contactos", e só são enviados os contactos que escolhes acrescentar.',
-          'Conteúdo social: amigos, conversas (texto, imagens, GIFs e stickers), cartões de parabéns (com fotografia, vídeo ou áudio, se os juntares), o teu mural e as fotografias do álbum.',
-          'Prendas em grupo: os grupos em que participas, os valores, quem já pagou a sua parte e os dados que indicas para receber (MB WAY, Revolut, PayPal ou Skrill), mostrados só aos membros dos teus grupos. Os pagamentos fazem-se diretamente entre as pessoas: a Birthdayly não recebe nem guarda dados de cartões ou de contas bancárias.',
-          'Dados técnicos: o endereço IP e a hora dos pedidos (para segurança e para travar abusos), e se estás online, se não desligares essa opção.',
-          'Denúncias e bloqueios que fazes, e as denúncias feitas sobre ti.',
-        ],
-      },
-      {
-        title: '3. Para que usamos os dados e com que fundamento',
-        bullets: [
-          'Para prestar o serviço que pedes (execução do contrato): lembrar aniversários, guardar os teus dados, as conversas, os cartões e as prendas em grupo.',
-          'Para manter a app segura (interesse legítimo): prevenir spam e abusos, limitar pedidos, analisar denúncias e aplicar bloqueios.',
-          'Com o teu consentimento, que podes retirar a qualquer momento: notificações, acesso aos contactos, à câmara, ao microfone e às fotografias do telemóvel.',
-          'Para cumprir obrigações legais, por exemplo de faturação, quando houver subscrições do Birthdayly+.',
-        ],
-        paragraphs: ['Não vendemos os teus dados nem os usamos para publicidade.'],
-      },
-      {
-        title: '4. Com quem partilhamos',
-        bullets: [
-          'Fornecedor de alojamento dos servidores, onde os dados ficam guardados.',
-          'Google, se escolheres entrar com o Google.',
-          'GIPHY, que recebe o que pesquisas quando procuras GIFs ou stickers.',
-          'O fornecedor de email, para mensagens como a recuperação da palavra-passe.',
-          'Os outros utilizadores, só o que tu partilhas com eles: o teu perfil com amigos e membros dos teus grupos, as tuas mensagens nas conversas e os cartões que envias.',
-        ],
-        paragraphs: [
-          'Os links de cartões de parabéns e de pedido de aniversário funcionam como um segredo: quem tiver o link consegue ver o cartão ou deixar a data. Partilha-os só com quem queres.',
-          'Alguns destes serviços podem tratar dados fora do Espaço Económico Europeu. Nesses casos exigimos garantias adequadas, como as cláusulas contratuais-tipo aprovadas pela Comissão Europeia.',
-        ],
-      },
-      {
-        title: '5. Dados de outras pessoas',
-        paragraphs: [
-          'Os aniversários que acrescentas sobre familiares e amigos são guardados só para ti e não são mostrados a mais ninguém. Usa-os apenas para fins pessoais.',
-          'Quem deixa a sua data através de um link de pedido escolhe fazê-lo, e essa data só entra na lista de quem pediu se essa pessoa a aceitar.',
-        ],
-      },
-      {
-        title: '6. Quanto tempo guardamos',
-        paragraphs: [
-          'Guardamos os dados enquanto tiveres conta. Ao apagares a conta apagamos todos os teus dados e ficheiros, exceto os registos de faturação que a lei nos obriga a guardar (quando houver subscrições) e as denúncias pelo tempo necessário para as analisar.',
-          'Os links de pedido de aniversário expiram ao fim de 30 dias.',
-        ],
-      },
-      {
-        title: '7. Os teus direitos',
-        bullets: [
-          'Acesso e portabilidade: no Perfil, em "Exportar os meus dados", recebes um ficheiro com todos os teus dados.',
-          'Retificação: podes corrigir os teus dados a qualquer momento na app.',
-          'Apagamento: no Perfil, em "Eliminar conta". O apagamento é definitivo.',
-          'Oposição, limitação e retirar o consentimento: nas definições da app ou contactando-nos.',
-          'Queixa: podes apresentar reclamação à Comissão Nacional de Proteção de Dados (www.cnpd.pt).',
-        ],
-        paragraphs: [`Para exercer qualquer direito, contacta-nos ${contactLine(c)}. Respondemos no prazo de um mês.`],
-      },
-      {
-        title: '8. Menores',
-        paragraphs: [
-          `A Birthdayly destina-se a pessoas com ${minimumAge} anos ou mais. Se soubermos que uma conta pertence a alguém mais novo, apagamo-la.`,
-        ],
-      },
-      {
-        title: '9. Segurança',
-        paragraphs: [
-          'As comunicações são cifradas (HTTPS), as palavras-passe são guardadas cifradas, cada conta só acede aos seus dados e as fotografias são servidas por links temporários.',
-        ],
-      },
-      {
-        title: '10. Alterações',
-        paragraphs: [
-          `Esta é a versão de ${termsVersion}. Se a mudarmos de forma relevante, a app pede-te para aceitares a nova versão.`,
-        ],
-      },
-    ],
-  };
-}
-
 export function termsOfUse(c: LegalContact): LegalDoc {
+  const contact = c.email ? `pelo email ${c.email}` : 'através da app, em Perfil → Ajuda e contacto';
   return {
     title: 'Termos de Utilização',
-    intro: `Estes termos regem a utilização da Birthdayly, prestada por ${c.entity}. Ao criares conta ou ao continuares com o Google, aceitas estes termos e a Política de Privacidade.`,
+    updated: termsVersion,
     sections: [
       {
-        title: '1. Quem pode usar',
+        title: '1. Objeto',
         paragraphs: [
-          `Precisas de ter ${minimumAge} anos ou mais.`,
+          `Estes Termos regulam a utilização da aplicação Birthdayly, disponibilizada por ${c.entity.replace(/\.$/, '')}. Ao criar uma conta, o utilizador declara que leu e aceita estes Termos e a Política de Privacidade.`,
         ],
       },
       {
-        title: '2. A tua conta',
+        title: '2. Conta',
         paragraphs: [
-          'És responsável por manter a tua palavra-passe segura e pelo que é feito com a tua conta. Os dados que dás têm de ser verdadeiros.',
+          `A Birthdayly destina-se a maiores de ${minimumAge} anos. O utilizador compromete-se a indicar dados verdadeiros e é responsável pela confidencialidade da sua palavra-passe e por toda a atividade realizada na sua conta.`,
+          'A conta pode ser eliminada a qualquer momento em Perfil → Eliminar conta, com confirmação por email.',
         ],
       },
       {
-        title: '3. Utilização aceitável',
-        paragraphs: ['Não é permitido usar a Birthdayly para:'],
-        bullets: [
-          'assediar, ameaçar ou intimidar outras pessoas;',
-          'enviar spam, publicidade não pedida ou nomes e datas falsos pelos links de pedido;',
-          'partilhar conteúdo ilegal, violento, sexual explícito ou que incite ao ódio;',
-          'fazer-te passar por outra pessoa ou criar contas falsas;',
-          'tentar aceder a dados ou contas de outras pessoas, ou perturbar o funcionamento do serviço.',
+        title: '3. Utilização',
+        paragraphs: [
+          'A aplicação destina-se a uso pessoal e não comercial. Não é permitido utilizá-la para assediar ou ameaçar terceiros, enviar spam ou datas falsas através dos links de pedido, publicar conteúdo ilegal, ofensivo ou de cariz sexual, fazer-se passar por outra pessoa, ou tentar aceder a contas e dados alheios.',
+          'Os aniversários de terceiros que o utilizador regista são para seu uso pessoal e não devem ser partilhados para outros fins.',
         ],
       },
       {
-        title: '4. O teu conteúdo',
+        title: '4. Conteúdos',
         paragraphs: [
-          'O que escreves e envias continua a ser teu. Dás-nos apenas a autorização necessária para o guardar e mostrar a quem o destinas. És responsável pelo conteúdo que partilhas.',
+          'As mensagens, fotografias, vídeos e restantes conteúdos enviados continuam a pertencer ao utilizador, que é responsável pelos mesmos. O utilizador autoriza-nos apenas a guardá-los e a apresentá-los às pessoas a quem os dirige.',
+          'Qualquer utilizador pode ser bloqueado ou denunciado. Reservamo-nos o direito de remover conteúdos e de suspender ou eliminar contas que violem estes Termos.',
         ],
       },
       {
-        title: '5. Denúncias e moderação',
+        title: '5. Prendas em grupo',
         paragraphs: [
-          'Podes denunciar e bloquear qualquer utilizador. Analisamos as denúncias e podemos remover conteúdo e suspender ou apagar contas que não cumpram estes termos.',
+          'A funcionalidade de prendas em grupo serve apenas para organizar a compra. Os pagamentos são feitos diretamente entre os participantes, sem intervenção nem custos da Birthdayly, que não é parte na compra e não responde por acertos ou reembolsos entre membros do grupo.',
         ],
       },
       {
-        title: '6. Prendas em grupo',
+        title: '6. Birthdayly+',
         paragraphs: [
-          'A Birthdayly ajuda a combinar a prenda e a saber quem já pagou, mas não movimenta dinheiro: cada membro paga a sua parte diretamente a quem compra a prenda (por exemplo por MB WAY, Revolut, PayPal ou em mão), sem custos da Birthdayly. A Birthdayly não é parte na compra da prenda nem guarda o dinheiro do grupo.',
-          'Acertos e reembolsos entre membros de um grupo são da responsabilidade dos próprios membros.',
+          'O Birthdayly+ é uma subscrição mensal ou anual, adquirida e paga através da App Store ou do Google Play, com o preço indicado antes da compra. Renova-se automaticamente até ser cancelada nas definições de subscrições da respetiva loja, mantendo-se ativa até ao fim do período já pago. Os reembolsos seguem as regras da loja onde foi feita a compra.',
+          'Cada conta pode usar uma única vez o período experimental gratuito de 30 dias. Eliminar a conta não cancela a subscrição na loja.',
         ],
       },
       {
-        title: '7. Birthdayly+',
+        title: '7. Disponibilidade e responsabilidade',
         paragraphs: [
-          'O Birthdayly+ junta funcionalidades extra. O período experimental é gratuito, dura 30 dias e só pode ser usado uma vez por conta. Quando a subscrição estiver à venda, os preços e as condições são mostrados antes da compra.',
+          'Procuramos manter o serviço disponível e os lembretes pontuais, mas não garantimos o funcionamento ininterrupto da aplicação nem a entrega de todas as notificações, que depende também do telemóvel e dos serviços da Apple e da Google. Na medida permitida por lei, não respondemos por danos indiretos decorrentes da utilização da aplicação.',
         ],
       },
       {
-        title: '8. Disponibilidade e responsabilidade',
+        title: '8. Alterações',
         paragraphs: [
-          'Fazemos o possível para que a app funcione sem falhas, mas não garantimos que esteja sempre disponível nem que os lembretes cheguem sempre a tempo. Na medida permitida pela lei, não somos responsáveis por danos indiretos resultantes da utilização da app.',
+          'Podemos alterar estes Termos. Sempre que a alteração for relevante, a aplicação pede ao utilizador que aceite a nova versão antes de continuar.',
         ],
       },
       {
-        title: '9. Terminar',
-        paragraphs: ['Podes apagar a tua conta a qualquer momento no Perfil. Podemos suspender contas que violem estes termos.'],
-      },
-      {
-        title: '10. Lei aplicável e contacto',
+        title: '9. Reclamações e litígios',
         paragraphs: [
-          `Estes termos regem-se pela lei portuguesa. Para qualquer questão, contacta-nos ${contactLine(c)}. Versão de ${termsVersion}.`,
+          `Reclamações e pedidos de apoio podem ser enviados ${contact}. O utilizador pode ainda recorrer ao Livro de Reclamações Eletrónico (www.livroreclamacoes.pt).`,
+          'Em caso de litígio de consumo, o consumidor pode recorrer a uma entidade de resolução alternativa de litígios. A lista está disponível em www.consumidor.gov.pt.',
+          'Estes Termos regem-se pela lei portuguesa.',
         ],
       },
     ],
@@ -203,22 +112,29 @@ export function termsOfUse(c: LegalContact): LegalDoc {
 export function deleteAccountDoc(c: LegalContact): LegalDoc {
   return {
     title: 'Apagar a conta',
-    intro: 'Podes apagar a tua conta da Birthdayly e todos os dados associados a qualquer momento.',
+    intro:
+      'Podes apagar a tua conta da Birthdayly e todos os dados associados a qualquer momento. Para tua segurança, ' +
+      'enviamos primeiro um email com um link: a conta só é apagada quando abres o link e confirmas.',
     sections: [
       {
         title: 'Na app',
-        bullets: ['Abre a Birthdayly e vai ao Perfil.', 'Em "Privacidade e dados", toca em "Eliminar conta" e confirma.'],
+        bullets: [
+          'Abre a Birthdayly e vai ao Perfil.',
+          'Em "Privacidade e dados", toca em "Eliminar conta".',
+          'Recebes um email no endereço da conta. Abre o link (vale 24 horas) e confirma.',
+        ],
       },
       {
         title: 'Sem a app',
         paragraphs: [
-          `Se já não tiveres a app, pede o apagamento ${contactLine(c)}, a partir do email da conta. Tratamos o pedido no prazo de um mês.`,
+          `Escreve o email da conta no formulário abaixo e recebes o mesmo link de confirmação. Se não tiveres acesso a esse email, contacta-nos ${contactLine(c)}.`,
         ],
       },
       {
         title: 'O que é apagado',
         paragraphs: [
-          'O perfil, os aniversários, as ideias de presente, as mensagens, os cartões, as fotografias, as conversas privadas e os grupos que administras. Os registos de faturação (quando houver subscrições) são guardados apenas pelo tempo que a lei exige.',
+          'O perfil, os aniversários, as ideias de presente, as mensagens, os cartões, as fotografias, as conversas privadas e os grupos que administras, de forma definitiva. Os registos de faturação das subscrições são guardados apenas pelo tempo que a lei exige.',
+          'Apagar a conta não cancela uma subscrição do Birthdayly+: cancela-a na App Store ou no Google Play.',
         ],
       },
     ],

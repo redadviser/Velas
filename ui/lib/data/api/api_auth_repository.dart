@@ -201,10 +201,13 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount() async {
-    await _api.delete('/me');
-    await _api.clearSession();
-    await GoogleService.instance.signOut();
-    _set(null);
+  Future<String?> requestAccountDeletion() async {
+    try {
+      final json = ((await _api.post('/me/deletion')) as Map).cast<String, dynamic>();
+      return json['email'] as String;
+    } on ApiException catch (e) {
+      if (e.code == 'mail_failed') throw const AppException('Não foi possível enviar o email. Tenta outra vez daqui a pouco.');
+      rethrow;
+    }
   }
 }

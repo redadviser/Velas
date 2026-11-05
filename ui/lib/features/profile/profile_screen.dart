@@ -51,17 +51,35 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final online = ref.read(apiClientProvider) != null;
     final ok = await confirmDialog(
       context,
       title: 'Eliminar conta?',
-      message:
-          'Todos os aniversários, presentes e mensagens serão apagados de forma permanente. '
-          'Esta ação não pode ser desfeita.',
-      confirm: 'Eliminar conta',
+      message: online
+          ? 'Vamos enviar-te um email com um link. A conta e todos os aniversários, presentes e mensagens só são '
+                'apagados quando abrires o link e confirmares. Depois disso não é possível recuperar.'
+          : 'Todos os aniversários, presentes e mensagens serão apagados de forma permanente. '
+                'Esta ação não pode ser desfeita.',
+      confirm: online ? 'Enviar email' : 'Eliminar conta',
     );
-    if (ok && context.mounted) {
-      await runGuarded(context, () => ref.read(authRepositoryProvider).deleteAccount());
-    }
+    if (!ok || !context.mounted) return;
+    String? email;
+    final sent = await runGuarded(context, () async {
+      email = await ref.read(authRepositoryProvider).requestAccountDeletion();
+    });
+    if (!sent || email == null || !context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Vê o teu email', style: AppTheme.display(ctx, size: 22)),
+        content: Text(
+          'Enviámos um email para $email. Abre o link e confirma para eliminar a conta. '
+          'O link vale 24 horas; se não o encontrares, vê o spam.',
+          style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
+        ),
+        actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+      ),
+    );
   }
 
   @override
@@ -326,22 +344,16 @@ class ProfileScreen extends ConsumerWidget {
                 onTap: () => exportMyData(context, ref),
               ),
               _Tile(
-                icon: LucideIcons.scale,
-                title: 'Os teus direitos (RGPD)',
-                onTap: () => context.push('/profile/privacy'),
+                icon: LucideIcons.shieldCheck,
+                title: 'Política de Privacidade',
+                onTap: () => openLegal(context, LegalLinks.privacy),
               ),
-              if (ref.watch(apiClientProvider) != null) ...[
-                _Tile(
-                  icon: LucideIcons.shieldCheck,
-                  title: 'Política de Privacidade',
-                  onTap: () => openLegal(context, LegalLinks.privacy),
-                ),
+              if (ref.watch(apiClientProvider) != null)
                 _Tile(
                   icon: LucideIcons.fileText,
                   title: 'Termos de Utilização',
                   onTap: () => openLegal(context, LegalLinks.terms),
                 ),
-              ],
               _Tile(
                 icon: LucideIcons.trash2,
                 title: 'Eliminar conta',
@@ -353,7 +365,7 @@ class ProfileScreen extends ConsumerWidget {
           const _Group('Ajuda'),
           _Section(
             children: [
-              _Tile(icon: LucideIcons.lifeBuoy, title: 'Ajuda e contacto', onTap: () => showHelpSheet(context, ref)),
+              _Tile(icon: LucideIcons.lifeBuoy, title: 'Ajuda e contacto', onTap: () => context.push('/profile/help')),
               if (ref.watch(chatRepositoryProvider) != null)
                 _Tile(
                   icon: LucideIcons.ban,

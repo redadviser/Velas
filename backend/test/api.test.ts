@@ -89,7 +89,7 @@ beforeAll(async () => {
     playStoreUrl: 'https://play.google.com/store/apps/details?id=com.birthdayly.app',
     giphyApiKey: 'giphy-test-key',
     moderationEmail: 'moderacao@birthdayly.test',
-    legal: { entity: 'Eupasoft' },
+    legal: { entity: 'RedAdviser, Digital Solutions Lda.', email: 'webmaster@eupasoft.com', privacyUrl: 'https://redadviser.com/?page_id=316' },
     adapty: { secretKey: 'adapty-test', webhookAuth: 'segredo-do-webhook', accessLevel: 'premium' },
   };
   app = await buildApp({
@@ -440,12 +440,49 @@ describe('prendas em grupo', () => {
     expect((await call('POST', `/invite-codes/${code}/join`, { token: late.access_token, body: {} })).body.error).toBe('group_closed');
   });
 
-  it('eliminar a conta apaga os grupos de que é administrador', async () => {
-    expect((await call('DELETE', '/me', { token: admin.access_token })).status).toBe(204);
-    expect((await call('POST', '/auth/login', { body: { identifier: 'carla@ex.pt', password: 'password1' } })).status).toBe(401);
+  it('eliminar a conta: email primeiro, só apaga depois de confirmar na página do link', async () => {
+    const login = () => call('POST', '/auth/login', { body: { identifier: 'carla@ex.pt', password: 'password1' } });
+    const before = sent.length;
+    const asked = await call('POST', '/me/deletion', { token: admin.access_token });
+    expect(asked.status).toBe(202);
+    expect(asked.body).toEqual({ email: 'carla@ex.pt' });
+    const mail = sent.at(-1)!;
+    expect(sent.length).toBe(before + 1);
+    expect(mail).toMatchObject({ to: 'carla@ex.pt', subject: 'Birthdayly — confirmar a eliminação da conta' });
+    const token = /\/conta\/apagar\?token=([A-Za-z0-9_-]+)/.exec(mail.text)![1]!;
+    // Ainda nada foi apagado.
+    expect((await login()).status).toBe(200);
+
+    // Abrir o link mostra a confirmação (um GET não apaga: os leitores de email abrem links sozinhos).
+    const page = await call('GET', `/conta/apagar?token=${token}`);
+    expect(page.raw.body).toContain('carla@ex.pt');
+    expect(page.raw.body).toContain('Apagar a conta definitivamente');
+    expect((await login()).status).toBe(200);
+    expect((await call('GET', '/conta/apagar?token=nao-vale-nada-0123456789')).raw.body).toContain('Link expirado');
+
+    expect((await call('POST', '/account-deletion/confirm', { body: { token } })).status).toBe(204);
+    expect((await login()).status).toBe(401);
+    // O link só serve uma vez.
+    expect((await call('POST', '/account-deletion/confirm', { body: { token } })).body.error).toBe('invalid_deletion_token');
     expect((await call('GET', '/groups', { token: member.access_token })).body).toEqual([]);
     // Membro sai da conta: o grupo de outro administrador mantém-se.
     expect((await call('GET', '/me', { token: member.access_token })).status).toBe(200);
+  });
+
+  it('pedir o apagamento sem a app, pelo email (sem revelar se tem conta)', async () => {
+    const before = sent.length;
+    expect((await call('POST', '/account-deletion', { body: { email: 'ninguem@ex.pt' } })).status).toBe(204);
+    expect(sent.length).toBe(before);
+    // Robôs que preenchem o campo escondido não enviam nada.
+    expect((await call('POST', '/account-deletion', { body: { email: 'fabio@ex.pt', website: 'x' } })).status).toBe(204);
+    expect(sent.length).toBe(before);
+    expect((await call('POST', '/account-deletion', { body: { email: 'FABIO@ex.pt' } })).status).toBe(204);
+    expect(sent.at(-1)).toMatchObject({ to: 'fabio@ex.pt' });
+    expect(sent.at(-1)!.text).toContain('/conta/apagar?token=');
+    // Um pedido novo substitui o anterior: o primeiro link deixa de valer.
+    const first = /token=([A-Za-z0-9_-]+)/.exec(sent.at(-1)!.text)![1]!;
+    await call('POST', '/account-deletion', { body: { email: 'fabio@ex.pt' } });
+    expect((await call('POST', '/account-deletion/confirm', { body: { token: first } })).status).toBe(410);
   });
 });
 
@@ -1312,7 +1349,6 @@ describe('bloquear e denunciar', () => {
 describe('legal e RGPD', () => {
   it('serve a política de privacidade, os termos e como apagar a conta', async () => {
     for (const [path, title] of [
-      ['/legal/privacidade', 'Política de Privacidade'],
       ['/legal/termos', 'Termos de Utilização'],
       ['/legal/apagar-conta', 'Apagar a conta'],
     ]) {
@@ -1320,10 +1356,15 @@ describe('legal e RGPD', () => {
       expect(page.status).toBe(200);
       expect(page.raw.body).toContain(`<h1>${title}</h1>`);
     }
-    expect((await call('GET', '/legal/privacidade')).raw.body).toContain('www.cnpd.pt');
+    // A Política de Privacidade é uma só: a da empresa.
+    const privacy = await call('GET', '/legal/privacidade');
+    expect(privacy.status).toBe(301);
+    expect(privacy.raw.headers.location).toBe('https://redadviser.com/?page_id=316');
+    expect((await call('GET', '/legal/apagar-conta')).raw.body).toContain('pelo email webmaster@eupasoft.com');
+    expect((await call('GET', '/legal/apagar-conta')).raw.body).toContain('<form id="del">');
     const info = (await call('GET', '/legal/info')).body;
-    expect(info).toMatchObject({ terms_version: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), minimum_age: 16, entity: 'Eupasoft' });
-    expect(info.privacy_url).toBe('http://api.test/legal/privacidade');
+    expect(info).toMatchObject({ terms_version: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), minimum_age: 16, entity: 'RedAdviser, Digital Solutions Lda.', support_email: 'webmaster@eupasoft.com' });
+    expect(info.privacy_url).toBe('https://redadviser.com/?page_id=316');
   });
 
   it('regista a aceitação dos termos no registo e quando a versão muda', async () => {

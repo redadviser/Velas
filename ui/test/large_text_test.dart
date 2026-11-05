@@ -132,7 +132,7 @@ const loggedInRoutes = [
   '/profile',
   '/profile/payments',
   '/profile/plans',
-  '/profile/privacy',
+  '/profile/help',
   '/profile/accessibility',
   '/profile/categories',
   '/people/import?from=calendar',
@@ -158,7 +158,7 @@ const serverRoutes = [
   '/chat-settings/blocked',
   '/groups/g1',
   '/profile',
-  '/profile/privacy',
+  '/profile/help',
   '/people/requests',
 ];
 

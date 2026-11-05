@@ -55,8 +55,10 @@ abstract class AuthRepository {
   /// Muda a fotografia de perfil (já reduzida). `null` remove-a.
   Future<void> updatePhoto(Uint8List? bytes);
 
-  /// Elimina a conta e todos os dados associados (direito ao apagamento, RGPD).
-  Future<void> deleteAccount();
+  /// Pede para eliminar a conta e todos os dados (direito ao apagamento, RGPD).
+  /// Com servidor, não apaga logo: envia um email com um link para confirmar e
+  /// devolve o email. Sem servidor (modo local), apaga logo e devolve `null`.
+  Future<String?> requestAccountDeletion();
 
   /// Experimentar o Birthdayly+ durante 30 dias (uma vez por conta).
   Future<void> startPlusTrial();

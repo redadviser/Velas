@@ -37,7 +37,7 @@ import '../../features/people/person_form_screen.dart';
 import '../../features/profile/categories_screen.dart';
 import '../../features/profile/payment_details_screen.dart';
 import '../../features/profile/accessibility_screen.dart';
-import '../../features/profile/legal.dart';
+import '../../features/profile/help_screen.dart';
 import '../../features/profile/plans_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
@@ -211,7 +211,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
           GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
           GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
-          GoRoute(path: 'privacy', parentNavigatorKey: _rootKey, builder: (_, _) => const PrivacyRightsScreen()),
+          GoRoute(path: 'help', parentNavigatorKey: _rootKey, builder: (_, _) => const HelpScreen()),
           GoRoute(path: 'accessibility', parentNavigatorKey: _rootKey, builder: (_, _) => const AccessibilityScreen()),
         ],
       ),

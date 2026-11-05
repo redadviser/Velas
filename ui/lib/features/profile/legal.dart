@@ -22,11 +22,15 @@ typedef LegalInfo = ({String termsVersion, String? supportEmail, String privacyU
 
 String get _base => Env.apiUrl.replaceFirst(RegExp(r'/+$'), '');
 
-/// Os links das páginas legais (servidas pelo backend, também para as lojas).
+/// Os links das páginas legais: os Termos são servidos pelo backend; a
+/// Política de Privacidade é uma só, a da empresa (RedAdviser), no site dela.
 class LegalLinks {
   const LegalLinks._();
 
-  static String get privacy => '$_base/legal/privacidade';
+  static const privacy = 'https://redadviser.com/?page_id=316';
+
+  /// O email de apoio, enquanto o servidor não responde (GET /legal/info).
+  static const supportEmail = 'webmaster@eupasoft.com';
   static String get terms => '$_base/legal/termos';
 }
 
@@ -57,9 +61,8 @@ bool _online(BuildContext context) => ProviderScope.containerOf(context, listen:
 Future<void> openTerms(BuildContext context) =>
     _online(context) ? openLegal(context, LegalLinks.terms) : showPrivacySheet(context);
 
-/// A Política de Privacidade completa; sem servidor (modo local), o resumo.
-Future<void> openPrivacy(BuildContext context) =>
-    _online(context) ? openLegal(context, LegalLinks.privacy) : showPrivacySheet(context);
+/// A Política de Privacidade (no site da empresa).
+Future<void> openPrivacy(BuildContext context) => openLegal(context, LegalLinks.privacy);
 
 /// Resumo da privacidade em linguagem simples, com links para os documentos completos.
 Future<void> showPrivacySheet(BuildContext context) {
@@ -87,7 +90,7 @@ Future<void> showPrivacySheet(BuildContext context) {
             ),
             (
               'Com quem partilhamos',
-              'Só com os serviços de que a app precisa (alojamento, entrar com o Google, GIFs do GIPHY e email) e com as pessoas a quem envias mensagens ou cartões.',
+              'Só com os serviços de que a app precisa (alojamento, entrar com o Google, notificações, GIFs do GIPHY, email e, se subscreveres o Birthdayly+, a App Store ou o Google Play) e com as pessoas a quem envias mensagens ou cartões.',
             ),
             (
               'Como os protegemos',
@@ -104,11 +107,11 @@ Future<void> showPrivacySheet(BuildContext context) {
             Text(body, style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground)),
             const SizedBox(height: 16),
           ],
+          OutlinedButton(
+            onPressed: () => openLegal(ctx, LegalLinks.privacy),
+            child: const Text('Política de Privacidade completa'),
+          ),
           if (online) ...[
-            OutlinedButton(
-              onPressed: () => openLegal(ctx, LegalLinks.privacy),
-              child: const Text('Política de Privacidade completa'),
-            ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => openLegal(ctx, LegalLinks.terms),
@@ -137,150 +140,6 @@ Future<void> exportMyData(BuildContext context, WidgetRef ref) async {
       subject: 'Os meus dados — Birthdayly',
     ),
   );
-}
-
-/// Ajuda e contacto: o email de apoio, para copiar ou abrir no email.
-Future<void> showHelpSheet(BuildContext context, WidgetRef ref) async {
-  final info = await ref.read(legalInfoProvider.future).catchError((_) => null);
-  if (!context.mounted) return;
-  final email = info?.supportEmail;
-  await showModalBottomSheet<void>(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: SingleChildScrollView(
-        // Desliza quando não cabe (letra grande).
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Ajuda e contacto', style: AppTheme.display(ctx, size: 22)),
-              const SizedBox(height: 8),
-              Text(
-                email == null
-                    ? 'Ainda não há um email de apoio configurado. Tenta mais tarde.'
-                    : 'Dúvidas, problemas ou pedidos sobre os teus dados: escreve-nos para',
-                style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
-              ),
-              if (email != null) ...[
-                const SizedBox(height: 12),
-                AppCard(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-                  child: Row(
-                    children: [
-                      Expanded(child: SelectableText(email, style: ctx.text.bodyLarge)),
-                      IconButton(
-                        tooltip: 'Copiar',
-                        icon: const Icon(LucideIcons.copy, size: 18),
-                        onPressed: () async {
-                          await Clipboard.setData(ClipboardData(text: email));
-                          if (ctx.mounted) showMessage(ctx, 'Email copiado.');
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () =>
-                      launchUrl(Uri(scheme: 'mailto', path: email, query: 'subject=Birthdayly')).catchError((_) => false),
-                  icon: const Icon(LucideIcons.mail, size: 18),
-                  label: const Text('Escrever email'),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// Os direitos do RGPD em linguagem simples, com o que se pode fazer na app.
-class PrivacyRightsScreen extends ConsumerWidget {
-  const PrivacyRightsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final muted = context.palette.mutedForeground;
-    final online = ref.watch(apiClientProvider) != null;
-    Widget right(IconData icon, String title, String body, {String? action, VoidCallback? onTap}) => AppCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: context.colors.primary),
-              const SizedBox(width: 10),
-              Expanded(child: Text(title, style: context.text.titleSmall)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(body, style: context.text.bodyMedium?.copyWith(color: muted)),
-          if (action != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(onPressed: onTap, child: Text(action)),
-            ),
-        ],
-      ),
-    );
-    return Scaffold(
-      appBar: AppBar(title: const Text('Os teus direitos')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-        children: [
-          Text(
-            'O Regulamento Geral sobre a Proteção de Dados (RGPD) dá-te controlo sobre os teus dados. Na Birthdayly podes exercê-lo assim:',
-            style: context.text.bodyMedium?.copyWith(color: muted),
-          ),
-          const SizedBox(height: 16),
-          right(
-            LucideIcons.download,
-            'Acesso e portabilidade',
-            'Recebe um ficheiro com tudo o que guardamos sobre ti: perfil, aniversários, ideias, mensagens, cartões, grupos e conversas.',
-            action: 'Exportar os meus dados',
-            onTap: () => exportMyData(context, ref),
-          ),
-          const SizedBox(height: 12),
-          right(
-            LucideIcons.pencil,
-            'Retificação',
-            'Corrige o teu perfil e os aniversários a qualquer momento, diretamente na app.',
-          ),
-          const SizedBox(height: 12),
-          right(
-            LucideIcons.trash2,
-            'Apagamento',
-            'Eliminar a conta apaga todos os teus dados e ficheiros. É definitivo.',
-          ),
-          const SizedBox(height: 12),
-          right(
-            LucideIcons.shieldCheck,
-            'Oposição e consentimentos',
-            'Desliga as notificações, a presença online e as confirmações de leitura nas definições, e retira o acesso aos contactos, à câmara ou ao microfone nas definições do telemóvel.',
-          ),
-          const SizedBox(height: 12),
-          right(
-            LucideIcons.landmark,
-            'Reclamação',
-            'Se achares que os teus dados não estão a ser bem tratados, podes reclamar à Comissão Nacional de Proteção de Dados (www.cnpd.pt).',
-          ),
-          if (online) ...[
-            const SizedBox(height: 20),
-            OutlinedButton(
-              onPressed: () => openLegal(context, LegalLinks.privacy),
-              child: const Text('Ler a Política de Privacidade'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(onPressed: () => showHelpSheet(context, ref), child: const Text('Contactar-nos')),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 /// Bloqueia a app até a pessoa aceitar a versão atual dos Termos e da

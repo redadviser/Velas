@@ -24,6 +24,7 @@ import { SafetyService } from './modules/safety/safety.service.js';
 import type { AdaptyClient } from './modules/subscriptions/adapty.js';
 import { SubscriptionsService } from './modules/subscriptions/subscriptions.service.js';
 import { SyncService } from './modules/sync/sync.service.js';
+import { AccountDeletionService } from './modules/users/account-deletion.service.js';
 import { UsersService } from './modules/users/users.service.js';
 
 /** Infraestrutura partilhada (substituível nos testes). */
@@ -68,6 +69,7 @@ export function createServices(deps: Deps) {
     hub,
     auth: new AuthService(db, users, deps.tokens, deps.mail, deps.verifyGoogle, deps.config),
     users,
+    accountDeletion: new AccountDeletionService(db, users, deps.mail, deps.config),
     categories,
     people,
     gifts,

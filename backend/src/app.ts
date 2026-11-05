@@ -27,6 +27,7 @@ import { pushPublicRoutes, pushRoutes } from './modules/push/push.routes.js';
 import { subscriptionsPublicRoutes, subscriptionsRoutes } from './modules/subscriptions/subscriptions.routes.js';
 import { safetyRoutes } from './modules/safety/safety.routes.js';
 import { syncRoutes } from './modules/sync/sync.routes.js';
+import { accountDeletionPublicRoutes } from './modules/users/account-deletion.routes.js';
 import { usersRoutes } from './modules/users/users.routes.js';
 
 declare module 'fastify' {
@@ -69,6 +70,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await filesRoutes(app, deps.storage);
   await invitePageRoutes(app, deps.config);
   await legalRoutes(app, deps.config);
+  await accountDeletionPublicRoutes(app, services.accountDeletion);
   await cardPageRoutes(app, services.cards, deps.config);
   await cardsPublicRoutes(app, services.cards);
   await birthdayRequestsPublicRoutes(app, services.birthdayRequests, deps.config);
@@ -91,7 +93,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
       { parseAs: 'buffer', bodyLimit: PhotoStorage.maxBytes },
       (_req, body, done) => done(null, body),
     );
-    await usersRoutes(scope, services.users);
+    await usersRoutes(scope, services.users, services.accountDeletion);
     await syncRoutes(scope, services.sync);
     await peopleRoutes(scope, services.people);
     await categoriesRoutes(scope, services.categories);

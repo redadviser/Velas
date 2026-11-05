@@ -243,6 +243,11 @@ class LocalAuthRepository implements AuthRepository {
 
   /// No modo local o período experimental fica guardado no próprio dispositivo.
   @override
+  Future<void> syncPlus() async {
+    // Sem servidor não há compras na loja.
+  }
+
+  @override
   Future<void> startPlusTrial() async {
     final p = _current;
     if (p == null) return;

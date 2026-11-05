@@ -1,13 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../core/utils/birthday_utils.dart';
+import '../../services/plus_store.dart';
 import '../auth/auth_widgets.dart';
+import 'plus.dart';
 
 /// Preços do Birthdayly+ (ver o plano de negócio).
 class PlusPricing {
@@ -36,8 +41,9 @@ const _plusFeatures = [
   'Widgets no ecrã inicial e temas da app',
 ];
 
-/// Os planos: Grátis (o de todos) e Birthdayly+. A subscrição ainda não se
-/// vende; o botão regista o interesse (POST /me/plus-interest) para medir a procura.
+/// Os planos: Grátis (o de todos) e Birthdayly+. Com a loja ligada (Adapty),
+/// compra-se aqui, com o preço da loja, e o servidor confirma a compra. Sem
+/// ela, o botão regista o interesse (POST /me/plus-interest) para medir a procura.
 class PlansScreen extends ConsumerStatefulWidget {
   const PlansScreen({super.key});
 
@@ -62,6 +68,42 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     if (mounted) setState(() => _sending = false);
   }
 
+  /// Comprar na loja; o servidor confirma com o Adapty e o perfil passa a ter o plano.
+  Future<void> _buy(PlusStore store, StorePlan plan) async {
+    setState(() => _sending = true);
+    var bought = false;
+    final ok = await runGuarded(context, () async {
+      bought = await store.buy(plan);
+      if (bought) await ref.read(authRepositoryProvider).syncPlus();
+    });
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (ok && bought) showMessage(context, 'Bem-vindo ao Birthdayly+! 🎉');
+  }
+
+  Future<void> _restore(PlusStore store) async {
+    setState(() => _sending = true);
+    final ok = await runGuarded(context, () async {
+      await store.restore();
+      await ref.read(authRepositoryProvider).syncPlus();
+    });
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (!ok) return;
+    final plus = ref.read(currentUserProvider)?.isPlus ?? false;
+    showMessage(context, plus ? 'Compras restauradas.' : 'Não encontrámos o Birthdayly+ nesta conta da loja.');
+  }
+
+  /// As subscrições geridas pela loja (cancelar, mudar de plano).
+  Future<void> _manage() => launchUrl(
+    Uri.parse(
+      Platform.isIOS
+          ? 'https://apps.apple.com/account/subscriptions'
+          : 'https://play.google.com/store/account/subscriptions',
+    ),
+    mode: LaunchMode.externalApplication,
+  ).catchError((_) => false);
+
   Future<void> _notifyMe() async {
     final api = ref.read(apiClientProvider);
     if (api == null) return;
@@ -77,14 +119,51 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     final muted = context.palette.mutedForeground;
     final user = ref.watch(currentUserProvider);
     final plus = user?.isPlus ?? false;
+    final store = ref.watch(plusStoreProvider);
+    final storePlans = ref.watch(storePlansProvider);
+    final storePlan = storePlans.value?.where((p) => p.yearly == _yearly).firstOrNull;
     final Widget plusAction;
     if (plus) {
-      plusAction = Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      plusAction = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(LucideIcons.circleCheck, size: 18, color: context.colors.primary),
-          const SizedBox(width: 8),
-          Flexible(child: Text('Ativo até ${Fmt.fullDate(user!.plusUntil!)}.')),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.circleCheck, size: 18, color: context.colors.primary),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  user!.plusUntil!.year >= 9999
+                      ? 'Ativo para sempre.${user.planDebug ? ' (modo de testes)' : ''}'
+                      : 'Ativo até ${Fmt.fullDate(user.plusUntil!)}.${user.planDebug ? ' (modo de testes)' : ''}',
+                ),
+              ),
+            ],
+          ),
+          if (store != null && !user.planDebug)
+            TextButton(onPressed: _manage, child: const Text('Gerir subscrição')),
+        ],
+      );
+    } else if (store != null) {
+      plusAction = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (storePlan != null)
+            LoadingButton(
+              label: 'Assinar por ${storePlan.price}${_yearly ? '/ano' : '/mês'}',
+              loading: _sending,
+              onPressed: () => _buy(store, storePlan),
+            )
+          else
+            Text(
+              storePlans.isLoading ? 'A carregar os preços…' : 'O Birthdayly+ não está disponível de momento.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: muted),
+            ),
+          if (user?.plusTrialAvailable ?? false)
+            TextButton(onPressed: _sending ? null : _trial, child: const Text('Experimentar 30 dias grátis')),
+          TextButton(onPressed: _sending ? null : () => _restore(store), child: const Text('Restaurar compras')),
         ],
       );
     } else if (user?.plusTrialAvailable ?? false) {
@@ -135,6 +214,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 onPeriod: (y) => setState(() => _yearly = y),
                 current: plus,
                 action: plusAction,
+                storePlans: storePlans.value ?? const [],
+                forSale: store != null,
               ),
               _PlanCard(
                 name: 'Grátis',
@@ -330,17 +411,39 @@ class _PlanBody extends StatelessWidget {
 
 /// O cartão do Birthdayly+, com a moldura no gradiente da marca.
 class _PlusCard extends StatelessWidget {
-  const _PlusCard({required this.yearly, required this.onPeriod, required this.action, this.current = false});
+  const _PlusCard({
+    required this.yearly,
+    required this.onPeriod,
+    required this.action,
+    this.current = false,
+    this.storePlans = const [],
+    this.forSale = false,
+  });
 
   final bool yearly;
   final bool current;
   final ValueChanged<bool> onPeriod;
   final Widget action;
 
+  /// Os preços da loja (na moeda do telemóvel); sem eles, os de referência.
+  final List<StorePlan> storePlans;
+
+  /// À venda na loja (o selo deixa de dizer "Em breve").
+  final bool forSale;
+
   @override
   Widget build(BuildContext context) {
-    final price = yearly ? PlusPricing.yearly : PlusPricing.monthly;
     String euros(double v) => '${v.toStringAsFixed(2).replaceAll('.', ',')} €';
+    final monthlyPlan = storePlans.where((p) => !p.yearly).firstOrNull;
+    final yearlyPlan = storePlans.where((p) => p.yearly).firstOrNull;
+    final storePlan = yearly ? yearlyPlan : monthlyPlan;
+    final priceText = storePlan?.price ?? euros(yearly ? PlusPricing.yearly : PlusPricing.monthly);
+    // Quanto se poupa no anual face a 12 meses (com os preços da loja, se houver os dois).
+    final saving = monthlyPlan != null && yearlyPlan != null && monthlyPlan.amount > 0
+        ? ((1 - yearlyPlan.amount / (monthlyPlan.amount * 12)) * 100).round()
+        : storePlans.isEmpty
+        ? PlusPricing.yearlySavingPercent
+        : null;
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(gradient: context.palette.brand, borderRadius: BorderRadius.circular(22)),
@@ -362,12 +465,20 @@ class _PlusCard extends StatelessWidget {
             const SizedBox(height: 16),
             _PlanBody(
               name: 'Birthdayly+',
-              price: euros(price),
+              price: priceText,
               period: yearly ? '/ano' : '/mês',
-              note: yearly
+              note: !yearly
+                  ? null
+                  : storePlans.isEmpty
                   ? 'Equivale a ${euros(PlusPricing.yearly / 12)}/mês · poupas ${PlusPricing.yearlySavingPercent}%'
+                  : saving != null && saving > 0
+                  ? 'Poupas $saving% face ao mensal'
                   : null,
-              badge: Pill(label: current ? 'O teu plano' : 'Em breve', dense: true),
+              badge: current
+                  ? const Pill(label: 'O teu plano', dense: true)
+                  : forSale
+                  ? null
+                  : const Pill(label: 'Em breve', dense: true),
               features: _plusFeatures,
             ),
             const SizedBox(height: 8),

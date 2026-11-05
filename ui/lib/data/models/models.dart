@@ -51,6 +51,7 @@ class UserProfile {
     this.messagePreviews = true,
     this.plusUntil,
     this.plusTrialAvailable = true,
+    this.planDebug = false,
     this.weeklyDigest = false,
     this.termsVersion,
   });
@@ -81,6 +82,9 @@ class UserProfile {
 
   /// Ainda pode experimentar o Birthdayly+ durante 30 dias.
   final bool plusTrialAvailable;
+
+  /// O plano foi posto à mão para testes (profiles.plan_source = 'debug'), não vem da loja.
+  final bool planDebug;
 
   /// Resumo semanal dos aniversários, à segunda-feira (Birthdayly+).
   final bool weeklyDigest;
@@ -123,6 +127,7 @@ class UserProfile {
     bool? messagePreviews,
     DateTime? Function()? plusUntil,
     bool? plusTrialAvailable,
+    bool? planDebug,
     bool? weeklyDigest,
     String? termsVersion,
   }) => UserProfile(
@@ -144,6 +149,7 @@ class UserProfile {
     messagePreviews: messagePreviews ?? this.messagePreviews,
     plusUntil: plusUntil != null ? plusUntil() : this.plusUntil,
     plusTrialAvailable: plusTrialAvailable ?? this.plusTrialAvailable,
+    planDebug: planDebug ?? this.planDebug,
     weeklyDigest: weeklyDigest ?? this.weeklyDigest,
     termsVersion: termsVersion ?? this.termsVersion,
   );
@@ -189,6 +195,7 @@ class UserProfile {
     messagePreviews: j['message_previews'] as bool? ?? true,
     plusUntil: j['plus_until'] == null ? null : DateTime.parse(j['plus_until'] as String).toLocal(),
     plusTrialAvailable: j['plus_trial_available'] as bool? ?? true,
+    planDebug: j['plan_source'] == 'debug',
     weeklyDigest: j['weekly_digest'] as bool? ?? false,
     termsVersion: j['terms_version'] as String?,
   );

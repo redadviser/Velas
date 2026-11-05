@@ -184,6 +184,12 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> syncPlus() async {
+    final json = ((await _api.post('/me/plus/sync')) as Map).cast<String, dynamic>();
+    _set(_profile(json), json);
+  }
+
+  @override
   Future<void> startPlusTrial() async {
     try {
       final json = ((await _api.post('/me/plus/trial')) as Map).cast<String, dynamic>();

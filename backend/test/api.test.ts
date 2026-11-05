@@ -18,6 +18,7 @@ import { PhotoStorage } from '../src/core/storage.js';
 import type { Db } from '../src/core/database.js';
 import { GifsService } from '../src/modules/gifs/gifs.service.js';
 import type { PushMessage, PushSender } from '../src/modules/push/push.gateway.js';
+import type { AdaptyClient } from '../src/modules/subscriptions/adapty.js';
 import { createTestDb } from './pglite-pool.js';
 
 const secret = 'test-secret-with-at-least-32-characters!!';
@@ -57,6 +58,14 @@ const fakePush: PushSender = {
   },
 };
 
+// Adapty falso: até quando cada utilizador tem o plano na loja.
+const storeAccess = new Map<string, Date | null>();
+const fakeAdapty: AdaptyClient = {
+  async accessUntil(userId) {
+    return storeAccess.get(userId) ?? null;
+  },
+};
+
 // JPEG mínimo (só os bytes iniciais interessam à validação).
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
 
@@ -81,6 +90,7 @@ beforeAll(async () => {
     giphyApiKey: 'giphy-test-key',
     moderationEmail: 'moderacao@birthdayly.test',
     legal: { entity: 'Eupasoft' },
+    adapty: { secretKey: 'adapty-test', webhookAuth: 'segredo-do-webhook', accessLevel: 'premium' },
   };
   app = await buildApp({
     config,
@@ -97,6 +107,7 @@ beforeAll(async () => {
     },
     fetch: fakeGiphy,
     push: fakePush,
+    adapty: fakeAdapty,
   });
 }, 60_000);
 
@@ -1529,5 +1540,68 @@ describe('mensagens agendadas', () => {
     expect(await app.jobs.sendScheduledMessages()).toBe(1);
     expect(await message()).toMatchObject({ send_error: 'not_friends' });
     expect(pushes.filter((p) => p.token === ruiPhone).at(-1)!.message.data.type).toBe('scheduled_failed');
+  });
+});
+
+describe('Birthdayly+ pelas lojas (Adapty) e plan_source', () => {
+  let rita: Session;
+  const me = async () => (await call('GET', '/me', { token: rita.access_token })).body;
+  const plan = (source: 'store' | 'debug', debugUntil: Date | null = null) =>
+    db.query('update profiles set plan_source = $2, debug_plus_until = $3 where id = $1', [rita.user.id, source, debugUntil]);
+
+  beforeAll(async () => {
+    rita = await signup('Rita Loja', 'ritaloja', 'ritaloja@ex.pt');
+  });
+
+  it('depois de comprar na loja, o servidor confirma com o Adapty', async () => {
+    expect(await me()).toMatchObject({ plus: false, plus_until: null, plan_source: 'store' });
+    // Ainda sem compra: nada muda.
+    expect((await call('POST', '/me/plus/sync', { token: rita.access_token })).body.plus).toBe(false);
+
+    const renewal = new Date(Date.now() + 365 * 86400_000);
+    storeAccess.set(rita.user.id, renewal);
+    const synced = await call('POST', '/me/plus/sync', { token: rita.access_token });
+    expect(synced.body).toMatchObject({ plus: true, plus_until: renewal.toISOString() });
+    // As funcionalidades do plano passam a funcionar (has_plus no servidor).
+    expect((await db.query<{ ok: boolean }>('select has_plus($1) as ok', [rita.user.id])).rows[0]!.ok).toBe(true);
+  });
+
+  it('em debug manda o plano posto à mão; voltar a store repõe o da loja', async () => {
+    // Grátis só para testes, apesar da compra.
+    await plan('debug');
+    expect(await me()).toMatchObject({ plus: false, plus_until: null, plan_source: 'debug' });
+    // Plus a acabar daqui a uma hora (para testar a expiração).
+    const soon = new Date(Date.now() + 3600_000);
+    await plan('debug', soon);
+    expect(await me()).toMatchObject({ plus: true, plus_until: soon.toISOString() });
+
+    await plan('store');
+    expect(await me()).toMatchObject({ plus: true, plan_source: 'store', plus_until: storeAccess.get(rita.user.id)!.toISOString() });
+  });
+
+  it('o webhook do Adapty volta a perguntar o estado (renovações, expirações, reembolsos)', async () => {
+    const hook = (body: object, auth = 'segredo-do-webhook') =>
+      app.inject({ method: 'POST', url: '/adapty/webhook', headers: { authorization: auth }, payload: body });
+    // Verificação ao gravar no dashboard: {} e espera 2xx com JSON.
+    const check = await hook({});
+    expect(check.statusCode).toBe(200);
+    expect(check.json()).toEqual({});
+    expect((await hook({}, 'errado')).statusCode).toBe(401);
+
+    // Expirou na loja: o webhook não traz o estado, o servidor pergunta.
+    storeAccess.set(rita.user.id, new Date(Date.now() - 1000));
+    expect((await hook({ event_type: 'subscription_expired', customer_user_id: rita.user.id, event_properties: {} })).statusCode).toBe(200);
+    expect((await me()).plus).toBe(false);
+    // Utilizadores anónimos ou desconhecidos são ignorados.
+    expect((await hook({ event_type: 'subscription_renewed', customer_user_id: null })).statusCode).toBe(200);
+    expect((await hook({ event_type: 'subscription_renewed', customer_user_id: 'nao-e-um-id' })).statusCode).toBe(200);
+  });
+
+  it('o período experimental continua a contar com a loja', async () => {
+    const ana = await signup('Ana Trial', 'anatrial', 'anatrial@ex.pt');
+    const trial = await call('POST', '/me/plus/trial', { token: ana.access_token });
+    expect(trial.body.plus).toBe(true);
+    // Sem compra na loja, a sincronização não tira o período experimental.
+    expect((await call('POST', '/me/plus/sync', { token: ana.access_token })).body.plus).toBe(true);
   });
 });

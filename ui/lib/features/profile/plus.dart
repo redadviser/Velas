@@ -7,9 +7,29 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
+import '../../services/plus_store.dart';
 
 /// A conta tem o Birthdayly+ agora.
 final isPlusProvider = Provider<bool>((ref) => ref.watch(currentUserProvider)?.isPlus ?? false);
+
+/// Comprar o Birthdayly+ na loja: com servidor (é ele que confirma a compra) e
+/// com o Adapty configurado. Substituído nos testes.
+final plusStoreProvider = Provider<PlusStore?>(
+  (ref) => ref.watch(apiClientProvider) != null && AdaptyStore.available ? AdaptyStore.instance : null,
+);
+
+/// Os planos à venda na loja, com o preço do telemóvel (vazio sem loja).
+final storePlansProvider = FutureProvider.autoDispose<List<StorePlan>>((ref) async {
+  final store = ref.watch(plusStoreProvider);
+  return store == null ? const [] : store.plans();
+});
+
+/// A conta no Adapty acompanha a sessão (é por ela que o servidor confirma as compras).
+final storeIdentityProvider = Provider<void>((ref) {
+  if (ref.watch(plusStoreProvider) == null) return;
+  final userId = ref.watch(currentUserProvider.select((u) => u?.id));
+  userId == null ? AdaptyStore.instance.logout() : AdaptyStore.instance.identify(userId);
+});
 
 /// Antes de uma funcionalidade do Birthdayly+: com o plano, segue (`true`);
 /// sem ele, explica o que é e oferece os 30 dias grátis ou os planos.

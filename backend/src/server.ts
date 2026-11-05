@@ -11,6 +11,7 @@ import { PhotoStorage } from './core/storage.js';
 import { googleVerifier } from './modules/auth/google.js';
 import { AccessTokens } from './modules/auth/tokens.js';
 import { FcmSender, loadServiceAccount } from './modules/push/push.gateway.js';
+import { AdaptyApi } from './modules/subscriptions/adapty.js';
 
 async function main() {
   loadDotEnv();
@@ -30,6 +31,7 @@ async function main() {
     mail: (m) => mailer(m),
     verifyGoogle: googleVerifier(config.googleClientIds),
     push: firebase ? new FcmSender(firebase) : undefined,
+    adapty: config.adapty ? new AdaptyApi(config.adapty) : undefined,
   };
 
   const app = await buildApp(deps, { logger: { level: process.env.LOG_LEVEL ?? 'info' } });
@@ -55,6 +57,7 @@ async function main() {
   }
   if (config.googleClientIds.length === 0) app.log.warn('GOOGLE_CLIENT_IDS vazio: o login com Google está desativado.');
   if (!firebase) app.log.warn('FIREBASE_SERVICE_ACCOUNT vazio: as notificações push estão desligadas.');
+  if (!config.adapty) app.log.warn('ADAPTY_SECRET_KEY vazio: as compras do Birthdayly+ estão desligadas.');
 
   // Mensagens de parabéns agendadas: vê a cada minuto se há alguma para publicar.
   const scheduler = setInterval(() => {

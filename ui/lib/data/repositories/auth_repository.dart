@@ -61,6 +61,10 @@ abstract class AuthRepository {
   /// Experimentar o Birthdayly+ durante 30 dias (uma vez por conta).
   Future<void> startPlusTrial();
 
+  /// Depois de comprar ou restaurar o Birthdayly+ na loja: o servidor confirma
+  /// com o Adapty e o perfil passa a ter o plano.
+  Future<void> syncPlus();
+
   /// Aceitar a versão atual dos Termos e da Política de Privacidade.
   Future<void> acceptTerms();
 }

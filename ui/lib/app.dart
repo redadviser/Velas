@@ -8,6 +8,7 @@ import 'core/providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/profile/legal.dart';
+import 'features/profile/plus.dart';
 import 'services/home_widget_sync.dart';
 
 class VelasApp extends ConsumerWidget {
@@ -18,6 +19,7 @@ class VelasApp extends ConsumerWidget {
     ref.watch(notificationSyncProvider);
     ref.watch(chatNotificationsProvider);
     ref.watch(pushRegistrationProvider);
+    ref.watch(storeIdentityProvider);
     ref.watch(dataSyncProvider);
     ref.watch(homeWidgetSyncProvider);
     final router = ref.watch(routerProvider);

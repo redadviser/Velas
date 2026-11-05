@@ -24,6 +24,7 @@ import { invitationsRoutes } from './modules/invitations/invitations.routes.js';
 import { messagesRoutes } from './modules/messages/messages.routes.js';
 import { peopleRoutes } from './modules/people/people.routes.js';
 import { pushPublicRoutes, pushRoutes } from './modules/push/push.routes.js';
+import { subscriptionsPublicRoutes, subscriptionsRoutes } from './modules/subscriptions/subscriptions.routes.js';
 import { safetyRoutes } from './modules/safety/safety.routes.js';
 import { syncRoutes } from './modules/sync/sync.routes.js';
 import { usersRoutes } from './modules/users/users.routes.js';
@@ -72,6 +73,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   await cardsPublicRoutes(app, services.cards);
   await birthdayRequestsPublicRoutes(app, services.birthdayRequests, deps.config);
   await pushPublicRoutes(app, services.push, services.chat);
+  await subscriptionsPublicRoutes(app, services.subscriptions, deps.config.adapty);
   // Tempo real: a autenticação é a primeira mensagem da ligação.
   await realtimeRoutes(app, services.hub, deps.tokens, {
     typing: (uid, cid) => services.chat.typing(uid, cid),
@@ -104,6 +106,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await chatRoutes(scope, services.chat, services.stickers);
     await gifsRoutes(scope, services.gifs);
     await pushRoutes(scope, services.push);
+    await subscriptionsRoutes(scope, services.subscriptions);
   });
 
   return app;

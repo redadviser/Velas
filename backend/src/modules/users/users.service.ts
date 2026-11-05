@@ -23,7 +23,7 @@ export class UsersService {
               u.password_hash is not null as has_password, u.google_sub is not null as google_linked,
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
               p.message_notifications, p.message_previews,
-              coalesce(p.plus_until > now(), false) as plus, p.plus_until,
+              coalesce(p.plus_active_until > now(), false) as plus, p.plus_active_until as plus_until, p.plan_source,
               not p.plus_trial_used as plus_trial_available, p.weekly_digest, u.terms_version
        from profiles p join users u on u.id = p.id
        where p.id = $1`,

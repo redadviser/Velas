@@ -7,6 +7,8 @@ import 'package:aniversarios/data/api/api_client.dart';
 import 'package:aniversarios/data/models/models.dart';
 import 'package:aniversarios/data/repositories/auth_repository.dart';
 import 'package:aniversarios/features/profile/plans_screen.dart';
+import 'package:aniversarios/features/profile/plus.dart';
+import 'package:aniversarios/services/plus_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -20,9 +22,13 @@ const me = UserProfile(id: 'me', email: 'eu@ex.pt', name: 'Eu');
 
 class FakeAuth implements AuthRepository {
   var trials = 0;
+  var syncs = 0;
 
   @override
   Future<void> startPlusTrial() async => trials++;
+
+  @override
+  Future<void> syncPlus() async => syncs++;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(invocation.memberName.toString());
@@ -97,4 +103,72 @@ void main() {
     expect(find.text('Vais ser dos primeiros a saber.'), findsOneWidget);
     expect(prefs.getString('velas.plusInterest.me'), 'monthly');
   });
+
+  testWidgets('com a loja: preços da loja, comprar e restaurar confirmam no servidor', (tester) async {
+    tester.view.physicalSize = const Size(1400, 3000);
+    tester.view.devicePixelRatio = 2.5;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = FakeAuth();
+    final store = FakeStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWithValue(me),
+          sharedPrefsProvider.overrideWithValue(prefs),
+          authRepositoryProvider.overrideWithValue(auth),
+          plusStoreProvider.overrideWithValue(store),
+        ],
+        child: MaterialApp(theme: AppTheme.light(), home: const PlansScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // O preço vem da loja (moeda do telemóvel), e o selo já não diz "Em breve".
+    expect(find.text('Assinar por 21,99 €/ano'), findsOneWidget);
+    expect(find.textContaining('Poupas 26%'), findsOneWidget); // 1 − 21,99 ÷ (2,49 × 12)
+    expect(find.text('Em breve'), findsNothing);
+
+    await tester.tap(find.text('Mensal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Assinar por 2,49 €/mês'));
+    await tester.pumpAndSettle();
+    expect(store.bought, ['plus_monthly']);
+    expect(auth.syncs, 1);
+    expect(find.textContaining('Bem-vindo ao Birthdayly+'), findsOneWidget);
+
+    // Desistir na loja não chama o servidor.
+    store.cancel = true;
+    await tester.tap(find.text('Assinar por 2,49 €/mês'));
+    await tester.pumpAndSettle();
+    expect(auth.syncs, 1);
+
+    await tester.tap(find.text('Restaurar compras'));
+    await tester.pumpAndSettle();
+    expect(store.restores, 1);
+    expect(auth.syncs, 2);
+  });
+}
+
+class FakeStore implements PlusStore {
+  final bought = <String>[];
+  var restores = 0;
+  var cancel = false;
+
+  @override
+  Future<List<StorePlan>> plans() async => [
+    (id: 'plus_monthly', yearly: false, price: '2,49 €', amount: 2.49, product: 'm'),
+    (id: 'plus_yearly', yearly: true, price: '21,99 €', amount: 21.99, product: 'y'),
+  ];
+
+  @override
+  Future<bool> buy(StorePlan plan) async {
+    if (cancel) return false;
+    bought.add(plan.id);
+    return true;
+  }
+
+  @override
+  Future<void> restore() async => restores++;
 }

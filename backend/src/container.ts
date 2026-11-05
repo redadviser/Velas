@@ -21,6 +21,8 @@ import { InvitationsService } from './modules/invitations/invitations.service.js
 import { MessagesService } from './modules/messages/messages.service.js';
 import { PeopleService } from './modules/people/people.service.js';
 import { SafetyService } from './modules/safety/safety.service.js';
+import type { AdaptyClient } from './modules/subscriptions/adapty.js';
+import { SubscriptionsService } from './modules/subscriptions/subscriptions.service.js';
 import { SyncService } from './modules/sync/sync.service.js';
 import { UsersService } from './modules/users/users.service.js';
 
@@ -36,6 +38,8 @@ export interface Deps {
   fetch?: typeof fetch;
   /** Firebase Cloud Messaging (notificações push); sem ele não há push. Substituído nos testes. */
   push?: PushSender;
+  /** Adapty (Birthdayly+ comprado nas lojas); sem ele as compras ficam desligadas. Substituído nos testes. */
+  adapty?: AdaptyClient;
 }
 
 export type Services = ReturnType<typeof createServices>;
@@ -79,5 +83,6 @@ export function createServices(deps: Deps) {
     stickers: new StickersService(db, storage),
     gifs: new GifsService(deps.config.giphyApiKey, deps.fetch),
     push,
+    subscriptions: new SubscriptionsService(db, users, hub, deps.adapty),
   };
 }

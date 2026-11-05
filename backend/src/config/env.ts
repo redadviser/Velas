@@ -1,5 +1,7 @@
 import { existsSync } from 'node:fs';
 
+import { loadAdaptyConfig, type AdaptyConfig } from '../modules/subscriptions/adapty.js';
+
 /** Ligação ao servidor PostgreSQL. */
 export interface DatabaseConfig {
   host: string;
@@ -57,6 +59,8 @@ export interface Config {
   moderationEmail?: string;
   /** Responsável pelos dados e contacto de apoio, nas páginas legais e na app. */
   legal: { entity: string; email?: string };
+  /** Assinaturas do Birthdayly+ pelas lojas (Adapty). Sem ADAPTY_SECRET_KEY ficam desligadas. */
+  adapty?: AdaptyConfig;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -101,6 +105,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       entity: env.LEGAL_ENTITY?.trim() || 'Eupasoft',
       email: env.SUPPORT_EMAIL?.trim() || undefined,
     },
+    adapty: loadAdaptyConfig(env),
   };
 }
 

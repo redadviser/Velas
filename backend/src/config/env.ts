@@ -51,7 +51,10 @@ export interface Config {
   playStoreUrl?: string;
   /** Limites de pedidos por IP nas rotas de autenticação (desligar só em testes). */
   rateLimit: boolean;
-  /** Swagger UI em /docs e especificação OpenAPI em /docs/json. */
+  /**
+   * Swagger UI em /docs e especificação OpenAPI em /docs/json. Só com
+   * API_DOCS=true: num servidor público, o mapa da API só ajuda quem a ataca.
+   */
   docs: boolean;
   /** Chave da API do GIPHY (pesquisa de GIFs e stickers no chat). Sem ela, a pesquisa fica desligada. */
   giphyApiKey?: string;
@@ -98,7 +101,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     appStoreUrl: env.APP_STORE_URL?.trim() || undefined,
     playStoreUrl: env.PLAY_STORE_URL?.trim() || undefined,
     rateLimit: env.RATE_LIMIT !== 'false',
-    docs: env.API_DOCS !== 'false',
+    docs: env.API_DOCS === 'true',
     giphyApiKey: env.GIPHY_API_KEY?.trim() || undefined,
     moderationEmail: env.MODERATION_EMAIL?.trim() || undefined,
     legal: {

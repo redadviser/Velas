@@ -39,7 +39,10 @@ declare module 'fastify' {
 
 export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   const services = createServices(deps);
-  const app = Fastify({ trustProxy: true, ...options });
+  // Um proxy à frente (o nginx do CapRover): req.ip é o IP que ele viu. Com
+  // `true` o IP era o primeiro do X-Forwarded-For, que o cliente escreve, e
+  // mudá-lo a cada pedido contornava os limites de pedidos.
+  const app = Fastify({ trustProxy: (_address, hop) => hop === 0, ...options });
   services.push.onError = (e) => app.log.warn({ err: e }, 'push: envio falhou');
   app.decorate('jobs', { sendScheduledMessages: () => services.messages.sendDue() });
   app.setErrorHandler(errorHandler);

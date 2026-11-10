@@ -3,6 +3,7 @@ import type { CategoriesService } from '../categories/categories.service.js';
 import type { GiftsService } from '../gifts/gifts.service.js';
 import type { MessagesService } from '../messages/messages.service.js';
 import type { PeopleService } from '../people/people.service.js';
+import type { SpecialDatesService } from '../special-dates/special-dates.service.js';
 import type { Snapshot } from './sync.model.js';
 
 /** Carregamento inicial da app: tudo num só pedido e numa só transação. */
@@ -13,6 +14,7 @@ export class SyncService {
     private readonly people: PeopleService,
     private readonly gifts: GiftsService,
     private readonly messages: MessagesService,
+    private readonly specialDates: SpecialDatesService,
   ) {}
 
   snapshot(userId: string): Promise<Snapshot> {
@@ -21,6 +23,7 @@ export class SyncService {
       people: await this.people.listIn(c, userId),
       gift_ideas: await this.gifts.listIn(c, userId),
       messages: await this.messages.listIn(c, userId),
+      special_dates: await this.specialDates.listIn(c, userId),
     }));
   }
 }

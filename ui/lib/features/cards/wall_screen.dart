@@ -157,7 +157,7 @@ class _WallCard extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(0, 12, 8, 4),
             child: Text(
               card.body,
-              style: AppTheme.display(context, size: 17).copyWith(fontWeight: FontWeight.w400, height: 1.5),
+              style: AppTheme.display(context, size: 17, weight: FontWeight.w500).copyWith(height: 1.5),
             ),
           ),
           Align(

@@ -52,7 +52,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
         padding: EdgeInsets.fromLTRB(20, 16, _chatsTab && chat ? 8 : 20, 12),
         child: Row(
           children: [
-            Expanded(child: Text('Presentes', style: AppTheme.display(context, size: 30))),
+            Expanded(child: Text('Prendas', style: AppTheme.display(context, size: 30))),
             if (_chatsTab && chat)
               IconButton(
                 tooltip: context.tr(Keys.chatFriendsTooltip),
@@ -73,9 +73,12 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
           ],
         ),
       ),
+      const Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 14), child: _StatsBanner()),
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             _Tab(
               label: context.tr(Keys.chatTab),
@@ -83,12 +86,10 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
               selected: _chatsTab,
               onTap: () => setState(() => _chatsTab = true),
             ),
-            const SizedBox(width: 20),
             _Tab(label: 'Ideias', selected: !_chatsTab, onTap: () => setState(() => _chatsTab = false)),
           ],
         ),
       ),
-      const Divider(height: 1),
     ];
 
     return Scaffold(
@@ -196,36 +197,43 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: selected ? context.colors.primary : Colors.transparent, width: 2.5)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: context.text.titleSmall?.copyWith(
-                fontSize: 15,
-                color: selected ? context.colors.onSurface : context.palette.mutedForeground,
-              ),
-            ),
-            if (badge > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(color: context.colors.primary, borderRadius: BorderRadius.circular(99)),
-                child: Text(
-                  '$badge',
-                  style: TextStyle(color: context.colors.onPrimary, fontSize: 11, fontWeight: FontWeight.w700),
+    // Pílula como os filtros do resto da app: escolhida = tinta cheia.
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? context.colors.onSurface : context.palette.card,
+        shape: StadiumBorder(side: BorderSide(color: selected ? Colors.transparent : context.palette.border)),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const StadiumBorder(),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: context.text.titleSmall?.copyWith(
+                    fontSize: 14,
+                    color: selected ? context.colors.surface : context.palette.mutedForeground,
+                  ),
                 ),
-              ),
-            ],
-          ],
+                if (badge > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(color: context.colors.primary, borderRadius: BorderRadius.circular(99)),
+                    child: Text(
+                      '$badge',
+                      style: TextStyle(color: context.colors.onPrimary, fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -300,6 +308,55 @@ class _PersonGroup extends ConsumerWidget {
             const SizedBox(height: 4),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Resumo das prendas em grupo em curso, em violeta.
+class _StatsBanner extends ConsumerWidget {
+  const _StatsBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = (ref.watch(groupsProvider).value ?? const []).where((g) => g.purchasedAt == null).toList();
+    final collected = active.fold<double>(0, (a, g) => a + g.confirmedAmount);
+    final ideas = ref.watch(dataProvider).gifts.where((g) => !g.purchased).length;
+
+    Widget stat(String value, String label) => Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(value, maxLines: 1, style: AppTheme.display(context, size: 24, color: Colors.white)),
+          ),
+          Text(label, style: context.text.labelSmall?.copyWith(color: Colors.white)),
+        ],
+      ),
+    );
+    Widget divider() => Container(
+      width: 1,
+      height: 36,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      color: Colors.white.withValues(alpha: 0.3),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(21),
+        gradient: const LinearGradient(colors: [Color(0xFF6650CC), Color(0xFF7A63DA)]),
+      ),
+      child: Row(
+        children: [
+          stat('${active.length}', active.length == 1 ? 'grupo ativo' : 'grupos ativos'),
+          divider(),
+          stat(Fmt.money(collected), 'reunidos'),
+          divider(),
+          stat('$ideas', ideas == 1 ? 'ideia guardada' : 'ideias guardadas'),
+        ],
       ),
     );
   }

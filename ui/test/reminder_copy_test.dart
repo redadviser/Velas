@@ -44,4 +44,34 @@ void main() {
     expect(ReminderCopy.route('3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90'), '/person/3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90');
     expect(ReminderCopy.route('outra:coisa'), isNull);
   });
+
+  test('datas especiais: anos quando se sabe o ano e leva à lista das datas', () {
+    final wedding = SpecialDate(
+      id: 's1', title: 'Casamento dos avós', kind: SpecialDateKind.wedding, day: 3, month: 5, year: 1977,
+      createdAt: DateTime(2026),
+    );
+    final today = ReminderCopy.special(wedding, daysBefore: 0, date: date, years: 50);
+    expect(today.title, 'Hoje: Casamento dos avós');
+    expect(today.body, 'Um dia para assinalar. Fazem 50 anos.');
+    expect(ReminderCopy.special(wedding, daysBefore: 1, date: date, years: 1).body, endsWith('Faz 1 ano.'));
+    expect(ReminderCopy.special(wedding, daysBefore: 7, date: date).body, isNot(contains('anos')));
+    expect(ReminderCopy.route(today.payload), '/special');
+  });
+
+  test('plano: aniversários e datas especiais por ordem, só no futuro, à hora do perfil', () {
+    final profile = UserProfile(id: 'me', email: 'eu@ex.pt', name: 'Eu', defaultReminderDays: const [0, 1], reminderHour: 9);
+    final data = AppData(
+      people: [ana],
+      specialDates: [SpecialDate(id: 's1', title: 'Namoro', day: 10, month: 5, reminderDays: const [7], createdAt: DateTime(2026))],
+    );
+    final plan = ReminderCopy.plan(data, profile, DateTime(2026, 5, 2, 12));
+    // A véspera da Ana (2 de maio às 9:00) já passou; o dia 3 e o namoro ficam.
+    expect(plan.take(2).map((p) => (p.when, p.person?.id ?? p.special!.id)), [
+      (DateTime(2026, 5, 3, 9), 'p1'),
+      (DateTime(2026, 5, 3, 9, 0), 's1'),
+    ]);
+    expect(plan.every((p) => p.when.isAfter(DateTime(2026, 5, 2, 12))), isTrue);
+    expect(ReminderCopy.copyFor(plan.first, data).payload, 'message:p1');
+    expect(ReminderCopy.copyFor(plan[1], data).payload, 'special:s1');
+  });
 }

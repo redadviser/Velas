@@ -32,7 +32,7 @@ export async function invitePageRoutes(app: FastifyInstance, config: Config) {
     if (!codePattern.test(raw)) {
       return reply.status(404).send(
         htmlPage({
-          title: 'Birthdayly — convite inválido',
+          title: 'Birthdayly: convite inválido',
           body: '<h1>Convite inválido</h1><p>Este link não é válido. Pede um novo a quem te convidou.</p>',
         }),
       );

@@ -73,7 +73,7 @@ const clientMessage = z.discriminatedUnion('type', [
 ]);
 
 export interface RealtimeHandlers {
-  /** "Está a escrever…" — o serviço do chat valida o acesso e reencaminha. */
+  /** "Está a escrever…": o serviço do chat valida o acesso e reencaminha. */
   typing(userId: string, conversationId: string): Promise<void>;
   /** A pessoa ficou online ou offline (avisa amigos e quem partilha conversas). */
   presence?(userId: string, online: boolean): Promise<void>;
@@ -91,7 +91,7 @@ const authTimeoutMs = 10_000;
 const heartbeatMs = 25_000;
 
 /**
- * GET /ws — a app abre a ligação e envia `{ "type": "auth", "token": "<access token>" }`
+ * GET /ws: a app abre a ligação e envia `{ "type": "auth", "token": "<access token>" }`
  * (o token não vai no URL, para não ficar nos logs). Depois recebe os
  * [RealtimeEvent] e pode enviar `typing`. Os dados continuam a ser lidos e
  * escritos pela API REST; isto só avisa que há novidades.

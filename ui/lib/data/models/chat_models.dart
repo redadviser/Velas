@@ -205,7 +205,8 @@ class ChatMessage {
     return _emojiOnly.hasMatch(t);
   }
 
-  // ignore: valid_regexps — o analisador não conhece \p{Extended_Pictographic}, mas o Dart suporta.
+  // O analisador não conhece \p{Extended_Pictographic}, mas o Dart suporta.
+  // ignore: valid_regexps
   static final _emojiOnly = RegExp(r'^(?:\p{Extended_Pictographic}|‍|️|[\u{1F3FB}-\u{1F3FF}]|\s)+$', unicode: true);
 
   /// Resumo de uma linha (lista de conversas, respostas).

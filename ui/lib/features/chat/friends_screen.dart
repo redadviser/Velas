@@ -107,14 +107,19 @@ class FriendsScreen extends ConsumerWidget {
                           onPressed: () => runGuarded(context, () => ctrl.respond(r, accept: false)),
                           icon: Icon(LucideIcons.x, color: muted),
                         ),
-                        FilledButton(
-                          onPressed: () => runGuarded(
-                            context,
-                            () => ctrl.respond(r, accept: true),
-                            success: context.tr(Keys.friendsResultAccepted, {'name': r.user.firstName}),
+                        Flexible(
+                          child: FilledButton(
+                            onPressed: () => runGuarded(
+                              context,
+                              () => ctrl.respond(r, accept: true),
+                              success: context.tr(Keys.friendsResultAccepted, {'name': r.user.firstName}),
+                            ),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(64, 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                            ),
+                            child: Text(context.tr(Keys.commonAccept), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ),
-                          style: FilledButton.styleFrom(minimumSize: const Size(88, 40)),
-                          child: Text(context.tr(Keys.commonAccept)),
                         ),
                       ],
                     ),

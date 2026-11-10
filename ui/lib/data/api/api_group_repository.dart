@@ -7,7 +7,7 @@ import '../repositories/group_repository.dart';
 import 'api_client.dart';
 
 /// As regras de acesso (quem vê o grupo, quem pode alterar o quê) estão no
-/// servidor — ver backend/src/modules/groups e backend/migrations.
+/// servidor, ver backend/src/modules/groups e backend/migrations.
 class ApiGroupRepository implements GroupRepository {
   ApiGroupRepository(this._api);
 

@@ -102,7 +102,7 @@ export async function authRoutes(app: FastifyInstance, auth: AuthService) {
 function resetPage(appLink: string): string {
   const link = escapeHtml(appLink);
   return htmlPage({
-    title: 'Birthdayly — nova palavra-passe',
+    title: 'Birthdayly: nova palavra-passe',
     body: `<h1>Nova palavra-passe</h1><p>A abrir a app Birthdayly…</p>
 <a class="btn primary" href="${link}">Abrir a app</a>
 <p class="small">Abre este link no telemóvel onde tens a app instalada.</p>`,

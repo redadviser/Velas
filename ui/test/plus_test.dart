@@ -51,7 +51,7 @@ void main() {
     final d = ReminderCopy.weeklyDigest(people, monday)!;
     expect(d.title, '🎂 Esta semana fazem anos 2 pessoas');
     expect(d.body, 'Ana (quarta), Rui (sábado).');
-    expect(ReminderCopy.route(d.payload), '/agenda');
+    expect(ReminderCopy.route(d.payload), '/people');
     expect(ReminderCopy.weeklyDigest([people.last], monday), isNull);
   });
 

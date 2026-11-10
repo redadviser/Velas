@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/birthday_utils.dart';
 import '../../core/utils/text.dart';
 import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
@@ -48,12 +49,6 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'fab-people',
-        onPressed: () => context.push('/person/new'),
-        icon: const Icon(LucideIcons.userPlus, size: 20),
-        label: const Text('Adicionar'),
-      ),
       body: SafeArea(
         bottom: false,
         child: DataGate(
@@ -146,6 +141,10 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     ),
                   ),
                 ),
+                if (data.people.isNotEmpty)
+                  const SliverToBoxAdapter(
+                    child: Padding(padding: EdgeInsets.fromLTRB(20, 6, 20, 8), child: _CollectBanner()),
+                  ),
                 if (data.people.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
@@ -193,12 +192,35 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     padding: const EdgeInsets.only(bottom: 100),
                     sliver: SliverList.builder(
                       itemCount: people.length,
-                      itemBuilder: (context, i) => PersonTile(
-                        person: people[i],
-                        data: data,
-                        showDate: _sort == _Sort.upcoming,
-                        onTap: () => context.push('/person/${people[i].id}'),
-                      ),
+                      itemBuilder: (context, i) {
+                        final p = people[i];
+                        final tile = PersonTile(
+                          person: p,
+                          data: data,
+                          showDate: _sort == _Sort.upcoming,
+                          onTap: () => context.push('/person/${p.id}'),
+                        );
+                        // Por ordem de aniversário, um separador por mês.
+                        final next = p.nextBirthday();
+                        final prev = i == 0 ? null : people[i - 1].nextBirthday();
+                        if (_sort != _Sort.upcoming || (prev?.month == next.month && prev?.year == next.year)) {
+                          return tile;
+                        }
+                        final label = Fmt.monthName(next.month).toUpperCase();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(22, 14, 20, 2),
+                              child: Text(
+                                next.year == BirthdayUtils.today().year ? label : '$label ${next.year}',
+                                style: AppTheme.eyebrow(context),
+                              ),
+                            ),
+                            tile,
+                          ],
+                        );
+                      },
                     ),
                   ),
               ],
@@ -280,6 +302,49 @@ class _PendingBanner extends StatelessWidget {
             ),
           ),
           Icon(LucideIcons.chevronRight, size: 18, color: fg),
+        ],
+      ),
+    );
+  }
+}
+
+/// Convite a pedir datas por link, como no design de referência.
+class _CollectBanner extends ConsumerWidget {
+  const _CollectBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final violet = context.colors.secondary;
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: context.palette.violetSoft, borderRadius: BorderRadius.circular(18)),
+      child: Row(
+        children: [
+          IconBadge(icon: LucideIcons.link, background: violet.withValues(alpha: 0.18), foreground: violet),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Faltam-te algumas datas?', style: context.text.titleSmall),
+                Text(
+                  'Pede aos teus amigos por link.',
+                  style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: () => shareBirthdayRequest(context, ref),
+            style: FilledButton.styleFrom(
+              backgroundColor: violet,
+              foregroundColor: context.colors.onSecondary,
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+            ),
+            child: const Text('Criar link'),
+          ),
         ],
       ),
     );

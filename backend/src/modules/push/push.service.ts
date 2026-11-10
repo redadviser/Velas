@@ -103,8 +103,8 @@ export class PushService {
     await Promise.all(
       rows.map(async (t) => {
         try {
-          const result = await sender.send(t.token, t.platform, await build(t.user_id, t.lang));
-          if (result === 'unregistered') await this.db.query('delete from push_tokens where token = $1', [t.token]);
+          const outcome = await sender.send(t.token, t.platform, await build(t.user_id, t.lang));
+          if (outcome === 'unregistered') await this.db.query('delete from push_tokens where token = $1', [t.token]);
         } catch (e) {
           this.onError(e);
         }

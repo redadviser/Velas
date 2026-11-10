@@ -5,7 +5,7 @@ import '../repositories/data_repository.dart';
 import 'api_client.dart';
 
 /// Persistência na API. O isolamento entre utilizadores é garantido no
-/// servidor — ver backend/src/modules (people, categories, gifts, messages).
+/// servidor, ver backend/src/modules (people, categories, gifts, messages).
 class ApiDataRepository extends CachedDataRepository {
   ApiDataRepository(this._api);
 
@@ -25,6 +25,7 @@ class ApiDataRepository extends CachedDataRepository {
       people: _list(j['people']).map(_person).toList(),
       gifts: _list(j['gift_ideas']).map(GiftIdea.fromJson).toList(),
       messages: _list(j['messages']).map(BirthdayMessage.fromJson).toList(),
+      specialDates: _list(j['special_dates']).map(SpecialDate.fromJson).toList(),
     );
   }
 
@@ -87,4 +88,10 @@ class ApiDataRepository extends CachedDataRepository {
 
   @override
   Future<void> removeMessage(String id) => _api.delete('/messages/$id');
+
+  @override
+  Future<void> persistSpecialDate(SpecialDate date) => _api.put('/special-dates/${date.id}', date.toJson());
+
+  @override
+  Future<void> removeSpecialDate(String id) => _api.delete('/special-dates/$id');
 }

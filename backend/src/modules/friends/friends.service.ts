@@ -66,7 +66,7 @@ export class FriendsService {
   /** Pedir amizade. Se a outra pessoa já me tinha pedido, fica aceite. */
   async request(userId: string, otherId: string): Promise<FriendRequestResult> {
     if (otherId === userId) return 'self';
-    const result = await tx(this.db, userId, async (c): Promise<FriendRequestResult> => {
+    const outcome = await tx(this.db, userId, async (c): Promise<FriendRequestResult> => {
       if (!(await c.query('select 1 from profiles where id = $1', [otherId])).rowCount) return 'not_found';
       // Com um bloqueio (de qualquer dos lados) é como se a conta não existisse.
       if ((await c.query<{ b: boolean }>('select is_blocked($1, $2) as b', [userId, otherId])).rows[0]?.b) return 'not_found';
@@ -86,8 +86,8 @@ export class FriendsService {
       await c.query('insert into friendships (requester_id, addressee_id) values ($1, $2)', [userId, otherId]);
       return 'sent';
     });
-    if (result === 'sent' || result === 'accepted') this.hub.send([userId, otherId], { type: 'friends' });
-    return result;
+    if (outcome === 'sent' || outcome === 'accepted') this.hub.send([userId, otherId], { type: 'friends' });
+    return outcome;
   }
 
   /** Aceitar ou recusar um pedido recebido. */

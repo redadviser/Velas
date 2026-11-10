@@ -173,6 +173,17 @@ class GroupCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              IconBadge(
+                icon: g.purchasedAt != null ? LucideIcons.packageCheck : LucideIcons.gift,
+                size: 48,
+                background: Theme.of(context).brightness == Brightness.dark
+                    ? context.palette.muted
+                    : const Color(0xFFF4EADC),
+                foreground: Theme.of(context).brightness == Brightness.dark
+                    ? context.colors.onSurface
+                    : const Color(0xFF7A570C),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,18 +204,14 @@ class GroupCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 6,
-              color: context.palette.success,
-              backgroundColor: context.palette.muted,
-            ),
-          ),
+          SoftProgress(value: ratio, semanticsLabel: 'Valor recebido'),
           const SizedBox(height: 6),
           Text(
-            '${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}',
+            [
+              '${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}',
+              if (g.purchasedAt == null && g.pendingCount > 0)
+                g.pendingCount == 1 ? 'falta 1 pagamento' : 'faltam ${g.pendingCount} pagamentos',
+            ].join(' · '),
             style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
           ),
         ],

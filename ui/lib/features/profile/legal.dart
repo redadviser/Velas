@@ -137,7 +137,7 @@ Future<void> exportMyData(BuildContext context, WidgetRef ref) async {
     ShareParams(
       files: [XFile.fromData(bytes!, name: 'birthdayly-dados.json', mimeType: 'application/json')],
       fileNameOverrides: const ['birthdayly-dados.json'],
-      subject: 'Os meus dados — Birthdayly',
+      subject: 'Birthdayly: os meus dados',
     ),
   );
 }

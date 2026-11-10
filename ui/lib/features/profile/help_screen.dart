@@ -150,15 +150,15 @@ class HelpScreen extends ConsumerWidget {
             () => _mail(
               context,
               email,
-              'Birthdayly — problema',
-              'O que aconteceu:\n\n\nO que estavas a fazer:\n\n\n—\nTelemóvel: $_device',
+              'Birthdayly: problema',
+              'O que aconteceu:\n\n\nO que estavas a fazer:\n\n\n---\nTelemóvel: $_device',
             ),
           ),
           action(
             LucideIcons.messageCircleQuestion,
             'Outra dúvida ou sugestão',
             'Respondemos por email.',
-            () => _mail(context, email, 'Birthdayly — dúvida'),
+            () => _mail(context, email, 'Birthdayly: dúvida'),
           ),
           action(
             LucideIcons.messageSquareWarning,
@@ -212,7 +212,7 @@ class HelpScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
-                _mail(context, email, 'Birthdayly — reclamação');
+                _mail(context, email, 'Birthdayly: reclamação');
               },
               icon: const Icon(LucideIcons.mail, size: 18),
               label: const Text('Escrever-nos'),

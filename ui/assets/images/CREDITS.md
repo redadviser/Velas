@@ -1,6 +1,6 @@
 # Fotografias do ecrã de boas-vindas (`welcome/`)
 
-Todas do [Pexels](https://www.pexels.com) — licença Pexels: uso gratuito,
+Todas do [Pexels](https://www.pexels.com), licença Pexels: uso gratuito,
 incluindo comercial, sem atribuição obrigatória (https://www.pexels.com/license/).
 
 | Ficheiro      | Origem                                                                                              |

@@ -774,7 +774,7 @@ typedef ShowChatNotification =
 final showChatNotificationProvider = Provider<ShowChatNotification>((_) => NotificationService.instance.showChatMessage);
 
 /// Mostra uma notificação quando chega uma mensagem e não se está nessa
-/// conversa — salvo se estiver silenciada ou desligada nas definições.
+/// conversa, salvo se estiver silenciada ou desligada nas definições.
 /// Por agora só com a app aberta (o push fica para o Firebase).
 final chatNotificationsProvider = Provider<void>((ref) {
   final sub = _events(ref).listen((e) {

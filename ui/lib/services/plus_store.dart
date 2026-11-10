@@ -78,8 +78,8 @@ class AdaptyStore implements PlusStore {
   @override
   Future<bool> buy(StorePlan plan) async {
     try {
-      final result = await Adapty().makePurchase(product: plan.product as AdaptyPaywallProduct);
-      return switch (result) {
+      final purchase = await Adapty().makePurchase(product: plan.product as AdaptyPaywallProduct);
+      return switch (purchase) {
         AdaptyPurchaseResultSuccess() => true,
         AdaptyPurchaseResultUserCancelled() => false,
         AdaptyPurchaseResultPending() => throw const AppException(

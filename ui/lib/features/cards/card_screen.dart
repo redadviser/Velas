@@ -153,11 +153,11 @@ class _CardBody extends StatelessWidget {
             children: [
               Text(
                 card.body,
-                style: AppTheme.display(context, size: 18).copyWith(fontWeight: FontWeight.w400, height: 1.55),
+                style: AppTheme.display(context, size: 18, weight: FontWeight.w500).copyWith(height: 1.55),
               ),
               const SizedBox(height: 12),
               Text(
-                '— ${card.senderName}',
+                'De ${card.senderName}',
                 textAlign: TextAlign.right,
                 style: context.text.bodyMedium?.copyWith(color: muted, fontStyle: FontStyle.italic),
               ),

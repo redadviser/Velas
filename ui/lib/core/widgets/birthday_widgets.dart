@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../data/models/models.dart';
 import '../theme/app_colors.dart';
@@ -37,16 +38,25 @@ class PersonAvatar extends StatelessWidget {
         ? NetworkImage(url)
         : FileImage(File(url));
 
+    final tone = AppColors.swatches.indexOf(color);
+    final (bg, fg) = isDark
+        ? (
+            Color.alphaBlend(color.withValues(alpha: 0.28), context.palette.card),
+            Color.lerp(color, Colors.white, 0.45)!,
+          )
+        : tone >= 0
+        ? AppColors.tones[tone]
+        : (
+            Color.alphaBlend(color.withValues(alpha: 0.16), context.palette.card),
+            Color.lerp(color, Colors.black, 0.45)!,
+          );
+
     Widget initials() => Container(
       alignment: Alignment.center,
-      color: Color.alphaBlend(color.withValues(alpha: isDark ? 0.28 : 0.16), context.palette.card),
+      color: bg,
       child: Text(
         person.initials,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: size * 0.36,
-          color: isDark ? Color.lerp(color, Colors.white, 0.35) : Color.lerp(color, Colors.black, 0.25),
-        ),
+        style: GoogleFonts.nunito(fontWeight: FontWeight.w900, fontSize: size * 0.32, color: fg),
       ),
     );
 

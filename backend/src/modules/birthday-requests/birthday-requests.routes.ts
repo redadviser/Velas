@@ -78,7 +78,7 @@ export async function birthdayRequestsPublicRoutes(app: FastifyInstance, request
     if (owner && !owner.open) {
       return reply.status(410).send(
         htmlPage({
-          title: 'Birthdayly — link fechado',
+          title: 'Birthdayly: link fechado',
           body: '<h1>Este link já não aceita respostas</h1><p>Pede um novo a quem to enviou.</p>',
         }),
       );
@@ -86,7 +86,7 @@ export async function birthdayRequestsPublicRoutes(app: FastifyInstance, request
     if (!parsed.success || !owner) {
       return reply.status(404).send(
         htmlPage({
-          title: 'Birthdayly — link inválido',
+          title: 'Birthdayly: link inválido',
           body: '<h1>Link inválido</h1><p>Este link já não funciona. Pede um novo a quem to enviou.</p>',
         }),
       );

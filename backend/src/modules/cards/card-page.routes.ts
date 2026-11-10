@@ -31,7 +31,7 @@ export async function cardPageRoutes(app: FastifyInstance, cards: CardsService, 
     if (!card) {
       return reply.status(404).send(
         htmlPage({
-          title: 'Birthdayly — cartão não encontrado',
+          title: 'Birthdayly: cartão não encontrado',
           body: '<h1>Cartão não encontrado</h1><p>Este link não é válido ou o cartão foi apagado por quem o enviou.</p>',
         }),
       );
@@ -87,7 +87,7 @@ export function cardPage(card: CardPreview, config: Config, preview?: LinkPrevie
 <h1>Parabéns, ${escapeHtml(card.recipient_name)}! 🎉</h1>
 ${cardMedia(card)}
 <blockquote class="quote">${escapeHtml(card.body)}</blockquote>
-<p class="from">— ${sender}</p>
+<p class="from">De ${sender}</p>
 <p class="small">Agradece a mensagem de ${sender} na Birthdayly: fica guardada e podem conversar.</p>
 <a class="btn primary" id="open" href="${escapeHtml(appLink)}">Responder na app</a>
 ${store(config.appStoreUrl, 'Descarregar para iPhone', 'ios')}

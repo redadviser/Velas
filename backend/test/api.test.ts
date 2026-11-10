@@ -272,6 +272,29 @@ describe('dados pessoais', () => {
     expect((await call('GET', '/data', { token: a.access_token })).body.people).toHaveLength(1);
   });
 
+  it('guarda datas especiais, ligadas ou não a uma pessoa, só para o dono', async () => {
+    const dateId = uuid();
+    const saved = await call('PUT', `/special-dates/${dateId}`, {
+      token: a.access_token,
+      body: { title: 'Casamento dos avós', kind: 'wedding', day: 18, month: 5, year: 1972, person_id: personId, reminder_days: [7] },
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body).toMatchObject({ kind: 'wedding', day: 18, month: 5, year: 1972, person_id: personId, reminder_days: [7] });
+    expect((await call('PUT', `/special-dates/${uuid()}`, { token: a.access_token, body: { title: 'Dia da Mãe', day: 3, month: 5 } })).body.kind).toBe('other');
+    expect((await call('PUT', `/special-dates/${uuid()}`, { token: a.access_token, body: { title: 'X', kind: 'festa', day: 1, month: 1 } })).status).toBe(400);
+
+    // B não liga a uma pessoa de A, não sobrescreve nem apaga a data de A.
+    expect((await call('PUT', `/special-dates/${uuid()}`, { token: b.access_token, body: { title: 'X', day: 1, month: 1, person_id: personId } })).status).toBe(403);
+    expect((await call('PUT', `/special-dates/${dateId}`, { token: b.access_token, body: { title: 'X', day: 1, month: 1 } })).status).toBe(404);
+    await call('DELETE', `/special-dates/${dateId}`, { token: b.access_token });
+    expect((await call('GET', '/data', { token: b.access_token })).body.special_dates).toEqual([]);
+
+    const mine = (await call('GET', '/data', { token: a.access_token })).body.special_dates;
+    expect(mine.map((d: { title: string }) => d.title)).toEqual(['Dia da Mãe', 'Casamento dos avós']);
+    expect((await call('DELETE', `/special-dates/${dateId}`, { token: a.access_token })).status).toBe(204);
+    expect((await call('GET', '/data', { token: a.access_token })).body.special_dates).toHaveLength(1);
+  });
+
   it('carrega fotografias e serve-as por URL assinado', async () => {
     const res = await call('PUT', `/people/${personId}/photo`, { token: a.access_token, raw: jpeg });
     expect(res.status).toBe(200);
@@ -448,7 +471,7 @@ describe('prendas em grupo', () => {
     expect(asked.body).toEqual({ email: 'carla@ex.pt' });
     const mail = sent.at(-1)!;
     expect(sent.length).toBe(before + 1);
-    expect(mail).toMatchObject({ to: 'carla@ex.pt', subject: 'Birthdayly — confirmar a eliminação da conta' });
+    expect(mail).toMatchObject({ to: 'carla@ex.pt', subject: 'Birthdayly: confirmar a eliminação da conta' });
     const token = /\/conta\/apagar\?token=([A-Za-z0-9_-]+)/.exec(mail.text)![1]!;
     // Ainda nada foi apagado.
     expect((await login()).status).toBe(200);
@@ -483,6 +506,68 @@ describe('prendas em grupo', () => {
     const first = /token=([A-Za-z0-9_-]+)/.exec(sent.at(-1)!.text)![1]!;
     await call('POST', '/account-deletion', { body: { email: 'fabio@ex.pt' } });
     expect((await call('POST', '/account-deletion/confirm', { body: { token: first } })).status).toBe(410);
+  });
+});
+
+describe('festas surpresa', () => {
+  let host: Session;
+  let guest: Session;
+  let outsider: Session;
+  const partyId = uuid();
+
+  beforeAll(async () => {
+    host = await signup('Filipa', 'filipa_festa', 'filipa.festa@ex.pt');
+    guest = await signup('Gonçalo', 'goncalo_festa', 'goncalo.festa@ex.pt');
+    outsider = await signup('Hugo', 'hugo_festa', 'hugo.festa@ex.pt');
+  });
+
+  it('cria a festa com quem a criou a ir; só os convidados a veem', async () => {
+    const res = await call('PUT', `/parties/${partyId}`, {
+      token: host.access_token,
+      body: { title: 'Festa do Pedro', celebrant_name: 'Pedro', starts_at: '2026-05-24T19:30:00.000Z', place: 'Lisboa' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.guests).toMatchObject([{ user_id: host.user.id, rsvp: 'yes', username: 'filipa_festa' }]);
+    expect(res.body.invite_code).toMatch(/^[0-9A-F]{10}$/);
+    expect((await call('GET', '/parties', { token: outsider.access_token })).body).toEqual([]);
+    expect((await call('PUT', `/parties/${partyId}`, { token: outsider.access_token, body: { title: 'X', celebrant_name: 'X' } })).status).toBe(403);
+    expect((await call('PUT', `/parties/${partyId}/tasks/${uuid()}`, { token: outsider.access_token, body: { title: 'X' } })).status).toBe(404);
+
+    const joined = await call('POST', '/parties/join', { token: guest.access_token, body: { code: res.body.invite_code.toLowerCase() } });
+    expect(joined.status).toBe(200);
+    expect(joined.body.guests.find((g: { user_id: string }) => g.user_id === guest.user.id).rsvp).toBe('pending');
+    expect((await call('POST', '/parties/join', { token: guest.access_token, body: { code: 'NAOEXISTE' } })).status).toBe(404);
+  });
+
+  it('respostas, convidados sem conta e tarefas por papel', async () => {
+    expect((await call('PUT', `/parties/${partyId}/rsvp`, { token: guest.access_token, body: { rsvp: 'maybe' } })).status).toBe(200);
+    expect((await call('PUT', `/parties/${partyId}/rsvp`, { token: guest.access_token, body: { rsvp: 'talvez' } })).status).toBe(400);
+    expect((await call('POST', `/parties/${partyId}/guests`, { token: guest.access_token, body: { name: 'Tia Rosa' } })).status).toBe(403);
+    const withAunt = await call('POST', `/parties/${partyId}/guests`, { token: host.access_token, body: { name: 'Tia Rosa' } });
+    const aunt = withAunt.body.guests.find((g: { display_name: string }) => g.display_name === 'Tia Rosa');
+    expect(aunt).toMatchObject({ user_id: null, rsvp: 'pending' });
+
+    // O convidado cria e conclui uma tarefa; o responsável tem de ser da festa.
+    const taskId = uuid();
+    const task = await call('PUT', `/parties/${partyId}/tasks/${taskId}`, { token: guest.access_token, body: { title: 'Bolo', assignee_id: aunt.id } });
+    expect(task.body.tasks).toMatchObject([{ id: taskId, title: 'Bolo', assignee_id: aunt.id, done: false }]);
+    expect((await call('PUT', `/parties/${partyId}/tasks/${uuid()}`, { token: guest.access_token, body: { title: 'X', assignee_id: uuid() } })).status).toBe(400);
+    const done = await call('PUT', `/parties/${partyId}/tasks/${taskId}`, { token: host.access_token, body: { title: 'Bolo', assignee_id: aunt.id, done: true } });
+    expect(done.body.tasks[0].done).toBe(true);
+
+    // O convidado não tira outros nem quem criou; pode sair.
+    expect((await call('DELETE', `/party-guests/${aunt.id}`, { token: guest.access_token })).status).toBe(403);
+    const hostGuest = done.body.guests.find((g: { user_id: string }) => g.user_id === host.user.id);
+    expect((await call('DELETE', `/party-guests/${hostGuest.id}`, { token: host.access_token })).status).toBe(403);
+    const me = done.body.guests.find((g: { user_id: string }) => g.user_id === guest.user.id);
+    expect((await call('DELETE', `/party-guests/${me.id}`, { token: guest.access_token })).status).toBe(204);
+    expect((await call('GET', '/parties', { token: guest.access_token })).body).toEqual([]);
+
+    // Só quem criou apaga.
+    await call('DELETE', `/parties/${partyId}`, { token: guest.access_token });
+    expect((await call('GET', '/parties', { token: host.access_token })).body).toHaveLength(1);
+    expect((await call('DELETE', `/parties/${partyId}`, { token: host.access_token })).status).toBe(204);
+    expect((await call('GET', '/parties', { token: host.access_token })).body).toEqual([]);
   });
 });
 

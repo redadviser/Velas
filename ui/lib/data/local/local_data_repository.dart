@@ -48,6 +48,7 @@ class LocalDataRepository extends CachedDataRepository {
       categories: list('categories').map(PersonCategory.fromJson).toList()..sort((a, b) => a.sort.compareTo(b.sort)),
       gifts: list('gift_ideas').map(GiftIdea.fromJson).toList(),
       messages: list('messages').map(BirthdayMessage.fromJson).toList(),
+      specialDates: list('special_dates').map(SpecialDate.fromJson).toList(),
     );
   }
 
@@ -120,4 +121,8 @@ class LocalDataRepository extends CachedDataRepository {
   Future<void> persistMessage(BirthdayMessage message) => _write(current);
   @override
   Future<void> removeMessage(String id) => _write(current);
+  @override
+  Future<void> persistSpecialDate(SpecialDate date) => _write(current);
+  @override
+  Future<void> removeSpecialDate(String id) => _write(current);
 }

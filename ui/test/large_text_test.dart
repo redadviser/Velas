@@ -59,14 +59,15 @@ class FakeAuth implements AuthRepository {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(invocation.memberName.toString());
 }
 
-/// As letras da app (Plus Jakarta Sans e Fraunces, em test/fonts, as mesmas
-/// que o google_fonts descarrega) com o nome que o tema pede para cada peso.
+/// As letras da app (DM Sans e Nunito, as de assets/google_fonts) com o nome
+/// que o tema pede para cada peso.
 Future<void> loadFonts() async {
+  const names = {400: 'Regular', 500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black'};
   final families = <String, String>{};
   for (final w in FontWeight.values) {
-    final file = w.value.clamp(400, 800);
-    families[GoogleFonts.plusJakartaSans(fontWeight: w).fontFamily!] = 'test/fonts/PlusJakartaSans-$file.ttf';
-    families[GoogleFonts.fraunces(fontWeight: w).fontFamily!] = 'test/fonts/Fraunces-$file.ttf';
+    final file = names[w.value.clamp(400, 900)];
+    families[GoogleFonts.dmSans(fontWeight: w).fontFamily!] = 'assets/google_fonts/DMSans-$file.ttf';
+    families[GoogleFonts.nunito(fontWeight: w).fontFamily!] = 'assets/google_fonts/Nunito-$file.ttf';
   }
   for (final MapEntry(key: family, value: path) in families.entries) {
     final bytes = File(path).readAsBytes().then(ByteData.sublistView);
@@ -75,6 +76,26 @@ Future<void> loadFonts() async {
 }
 
 final now = DateTime.now();
+
+/// Festa local com nomes compridos, um convidado sem conta e tarefas.
+final _party = {
+  'id': 'x1',
+  'created_by': 'me',
+  'title': 'Jantar surpresa dos trinta anos no restaurante do costume',
+  'celebrant_name': 'Maria Constança Vasconcelos',
+  'starts_at': now.add(const Duration(days: 9)).toUtc().toIso8601String(),
+  'place': 'Rua das Flores, 123, Porto (entrada pelas traseiras)',
+  'notes': 'Levem velas. Ninguém diz nada!',
+  'invite_code': 'ABCDEF1234',
+  'guests': [
+    {'id': 'g1', 'user_id': 'me', 'display_name': 'Margarida Albuquerque', 'username': 'margarida.albuquerque', 'rsvp': 'yes'},
+    {'id': 'g2', 'user_id': null, 'display_name': 'Tia Rosa Maria de Albuquerque e Castro', 'username': null, 'rsvp': 'maybe'},
+  ],
+  'tasks': [
+    {'id': 't1', 'title': 'Encomendar o bolo de chocolate com frutos vermelhos', 'assignee_id': 'g2', 'done': false},
+    {'id': 't2', 'title': 'Balões', 'assignee_id': null, 'done': true},
+  ],
+};
 Person person(String id, String name, int inDays, {int? year, String? category, String notes = ''}) {
   final d = now.add(Duration(days: inDays));
   return Person(
@@ -108,6 +129,10 @@ final data = AppData(
     GiftIdea(id: 'g1', personId: 'p1', title: 'Livro de receitas tradicionais portuguesas', price: 24.9, createdAt: DateTime(2026)),
     GiftIdea(id: 'g2', personId: 'p2', title: 'Bilhetes para o concerto', price: 120, createdAt: DateTime(2026)),
   ],
+  specialDates: [
+    SpecialDate(id: 's1', title: 'Aniversário de casamento dos avós maternos', kind: SpecialDateKind.wedding, day: now.day, month: now.month, year: 1975, personId: 'p1', createdAt: DateTime(2026)),
+    SpecialDate(id: 's2', title: 'Dia da Mãe', kind: SpecialDateKind.family, day: 3, month: 5, createdAt: DateTime(2026)),
+  ],
   messages: [
     BirthdayMessage(
       id: 'm1',
@@ -122,7 +147,12 @@ final data = AppData(
 
 const loggedInRoutes = [
   '/home',
-  '/agenda',
+  '/special',
+  '/notifications',
+  '/parties',
+  '/parties/new',
+  '/parties/x1',
+  '/parties/x1/edit',
   '/people',
   '/gifts',
   '/person/p1',
@@ -130,6 +160,11 @@ const loggedInRoutes = [
   '/person/new',
   '/person/p1/edit',
   '/profile',
+  '/profile/account',
+  '/profile/reminders',
+  '/profile/preferences',
+  '/profile/privacy',
+  '/profile/support',
   '/profile/payments',
   '/profile/plans',
   '/profile/help',
@@ -378,6 +413,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'velas.a11y.textScale': scale,
       'velas.onboarded.me': true,
+      'velas.local.parties': jsonEncode([_party]),
     });
     final prefs = await SharedPreferences.getInstance();
 

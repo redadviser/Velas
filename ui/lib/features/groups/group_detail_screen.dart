@@ -14,6 +14,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/confetti.dart';
 import '../../data/models/group_models.dart';
 import '../../data/models/payment.dart';
 import '../chat/chat_widgets.dart';
@@ -41,16 +42,16 @@ class GroupDetailScreen extends ConsumerWidget {
   Future<void> _pay(BuildContext context, WidgetRef ref, GiftGroup g, GroupMember me) async {
     final payee = await ref.read(_payeeProvider(groupId).future);
     if (!context.mounted) return;
-    final result = await showPaySheet(
+    final paid = await showPaySheet(
       context,
       payeeName: g.buyer?.name ?? 'quem compra',
       amount: g.shareOf(me),
       payee: payee,
-      reference: '${g.title} — ${me.name}',
+      reference: '${g.title}: ${me.name}',
     );
-    if (result == null || !context.mounted) return;
-    final method = result.method;
-    await runGuarded(
+    if (paid == null || !context.mounted) return;
+    final method = paid.method;
+    final ok = await runGuarded(
       context,
       () => _ctrl(ref).mutate(
         (repo) => repo.setPaid(me, method),
@@ -58,6 +59,7 @@ class GroupDetailScreen extends ConsumerWidget {
       ),
       success: 'Registado. ${g.buyer?.name ?? 'Quem compra'} vai confirmar que recebeu.',
     );
+    if (ok && context.mounted) showConfetti(context);
   }
 
   GiftGroup _replace(GiftGroup g, GroupMember m) =>
@@ -104,7 +106,7 @@ class GroupDetailScreen extends ConsumerWidget {
               if (status == ContributionStatus.paid)
                 ListTile(
                   leading: const Icon(LucideIcons.circleX),
-                  title: const Text('Não recebi — voltar a "por pagar"'),
+                  title: const Text('Não recebi: voltar a "por pagar"'),
                   onTap: () => Navigator.pop(ctx, 'reset'),
                 ),
               if (status == ContributionStatus.pending)
@@ -520,9 +522,11 @@ class _Header extends StatelessWidget {
                   children: [
                     Icon(LucideIcons.externalLink, size: 14, color: context.colors.primary),
                     const SizedBox(width: 6),
-                    Text(
-                      'Ver prenda',
-                      style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.w600),
+                    Flexible(
+                      child: Text(
+                        'Ver prenda',
+                        style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ],
                 ),
@@ -530,17 +534,30 @@ class _Header extends StatelessWidget {
             ),
           const SizedBox(height: 18),
           // Wrap: com letra grande, "de X recebidos" passa para baixo.
-          Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.end,
+          Text('JÁ REUNIMOS', style: AppTheme.eyebrow(context)),
+          const SizedBox(height: 2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(Fmt.money(g.confirmedAmount), style: AppTheme.display(context, size: 30)),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  'de ${Fmt.money(g.targetAmount)} recebidos',
-                  style: TextStyle(color: context.palette.mutedForeground),
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  children: [
+                    Text(Fmt.money(g.confirmedAmount), style: AppTheme.display(context, size: 30)),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        'de ${Fmt.money(g.targetAmount)}',
+                        style: TextStyle(color: context.palette.mutedForeground),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              Text(
+                '${(ratio * 100).round()}%',
+                style: AppTheme.display(context, size: 20, color: context.palette.accentForeground),
               ),
             ],
           ),
@@ -554,18 +571,29 @@ class _Header extends StatelessWidget {
                   Container(color: context.palette.card),
                   FractionallySizedBox(
                     widthFactor: reportedRatio,
-                    child: Container(color: context.palette.success.withValues(alpha: 0.3)),
+                    child: Container(color: context.colors.primary.withValues(alpha: 0.25)),
                   ),
                   FractionallySizedBox(
                     widthFactor: ratio,
-                    child: Container(color: context.palette.success),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(99),
+                        gradient: LinearGradient(colors: [context.colors.primary, const Color(0xFFFF8B76)]),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            '${g.members.where((m) => g.statusOf(m) == ContributionStatus.confirmed).length} de ${g.members.length} pessoas já pagaram',
+            style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+          ),
           if (g.awaitingConfirmationCount > 0) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             Text(
               '${g.awaitingConfirmationCount} pagamento${g.awaitingConfirmationCount == 1 ? '' : 's'} por confirmar',
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),

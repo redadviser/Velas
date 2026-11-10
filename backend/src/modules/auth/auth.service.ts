@@ -140,7 +140,7 @@ export class AuthService {
     const link = `${this.config.publicUrl}/auth/reset?token=${token}`;
     await this.mail({
       to: email,
-      subject: 'Birthdayly — nova palavra-passe',
+      subject: 'Birthdayly: nova palavra-passe',
       text: `Recebemos um pedido para alterar a tua palavra-passe.\n\nAbre este link no telemóvel onde tens a app Birthdayly (válido durante ${resetTtlMinutes} minutos):\n${link}\n\nSe não foste tu, ignora este email.`,
       html: `<p>Recebemos um pedido para alterar a tua palavra-passe.</p><p><a href="${link}">Definir nova palavra-passe</a></p><p>Abre o link no telemóvel onde tens a app Birthdayly. É válido durante ${resetTtlMinutes} minutos.</p><p>Se não foste tu, ignora este email.</p>`,
     }).catch((e) => log.error(e, 'falhou o envio do email de recuperação'));

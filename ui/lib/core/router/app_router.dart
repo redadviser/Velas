@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/agenda/agenda_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
@@ -40,6 +39,11 @@ import '../../features/profile/accessibility_screen.dart';
 import '../../features/profile/help_screen.dart';
 import '../../features/profile/plans_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/special/special_dates_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
+import '../../features/parties/parties_screen.dart';
+import '../../features/parties/party_detail_screen.dart';
+import '../../features/parties/party_form_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../services/deferred_link.dart';
 import '../../services/notification_service.dart';
@@ -108,16 +112,40 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/agenda', builder: (_, _) => const AgendaScreen())],
-          ),
-          StatefulShellBranch(
             routes: [GoRoute(path: '/people', builder: (_, _) => const PeopleScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/gifts', builder: (_, _) => const GiftsScreen())],
           ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (_, _) => const ProfileScreen(),
+                routes: [
+                  GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
+                  GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
+                  GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
+                  GoRoute(path: 'help', parentNavigatorKey: _rootKey, builder: (_, _) => const HelpScreen()),
+                  for (final section in ProfileSection.values)
+                    GoRoute(
+                      path: section.name,
+                      parentNavigatorKey: _rootKey,
+                      builder: (_, _) => ProfileSectionScreen(section: section),
+                    ),
+                  GoRoute(
+                    path: 'accessibility',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const AccessibilityScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
+      // A Agenda saiu da barra; links e lembretes antigos abrem Pessoas.
+      GoRoute(path: '/agenda', redirect: (_, _) => '/people'),
       GoRoute(
         path: '/chats/:id',
         parentNavigatorKey: _rootKey,
@@ -152,6 +180,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
+      GoRoute(path: '/special', parentNavigatorKey: _rootKey, builder: (_, _) => const SpecialDatesScreen()),
+      GoRoute(path: '/notifications', parentNavigatorKey: _rootKey, builder: (_, _) => const NotificationsScreen()),
+      GoRoute(path: '/parties', parentNavigatorKey: _rootKey, builder: (_, _) => const PartiesScreen()),
+      GoRoute(
+        path: '/parties/new',
+        parentNavigatorKey: _rootKey,
+        builder: (_, s) => PartyFormScreen(personId: s.uri.queryParameters['personId']),
+      ),
+      GoRoute(
+        path: '/parties/:id',
+        parentNavigatorKey: _rootKey,
+        builder: (_, s) => PartyDetailScreen(partyId: s.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            parentNavigatorKey: _rootKey,
+            builder: (_, s) => PartyFormScreen(partyId: s.pathParameters['id']),
+          ),
+        ],
+      ),
       GoRoute(path: '/people/requests', parentNavigatorKey: _rootKey, builder: (_, _) => const PendingAnswersScreen()),
       GoRoute(
         path: '/people/import',
@@ -201,18 +249,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _rootKey,
             builder: (_, s) => GroupFormScreen(groupId: s.pathParameters['id']),
           ),
-        ],
-      ),
-      GoRoute(
-        path: '/profile',
-        parentNavigatorKey: _rootKey,
-        builder: (_, _) => const ProfileScreen(),
-        routes: [
-          GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
-          GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
-          GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
-          GoRoute(path: 'help', parentNavigatorKey: _rootKey, builder: (_, _) => const HelpScreen()),
-          GoRoute(path: 'accessibility', parentNavigatorKey: _rootKey, builder: (_, _) => const AccessibilityScreen()),
         ],
       ),
     ],

@@ -55,7 +55,7 @@ export async function accountDeletionPublicRoutes(app: FastifyInstance, deletion
 
 function confirmPage(token: string, email: string): string {
   return htmlPage({
-    title: 'Birthdayly — apagar a conta',
+    title: 'Birthdayly: apagar a conta',
     body: `<div id="ask">
 <h1>Apagar a conta?</h1>
 <p>Vais apagar a conta <strong>${escapeHtml(email)}</strong> e todos os dados: o perfil, os aniversários, as ideias de presente, as mensagens, os cartões, as fotografias, as conversas privadas e os grupos que administras.</p>
@@ -88,7 +88,7 @@ btn.onclick = function () {
 
 function expiredPage(): string {
   return htmlPage({
-    title: 'Birthdayly — link expirado',
+    title: 'Birthdayly: link expirado',
     body: `<h1>Link expirado</h1>
 <p>Este link para apagar a conta expirou ou já foi usado.</p>
 <a class="btn primary" href="/legal/apagar-conta">Pedir um link novo</a>`,

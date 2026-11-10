@@ -103,24 +103,34 @@ class BudgetBar extends StatelessWidget {
           children: [
             Text(Fmt.money(spent), style: AppTheme.display(context, size: 24)),
             const SizedBox(width: 6),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Text(
-                limit == null ? 'gastos' : 'de ${Fmt.money(limit)}',
-                style: TextStyle(color: context.palette.mutedForeground),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  limit == null ? 'gastos' : 'de ${Fmt.money(limit)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.palette.mutedForeground),
+                ),
               ),
             ),
-            const Spacer(),
             if (over)
-              Pill(
-                label: 'Acima do orçamento',
-                background: context.colors.error.withValues(alpha: 0.12),
-                foreground: context.colors.error,
+              Flexible(
+                child: Pill(
+                  label: 'Acima do orçamento',
+                  background: context.colors.error.withValues(alpha: 0.12),
+                  foreground: context.colors.error,
+                ),
               )
             else if (limit != null)
-              Text(
-                'Restam ${Fmt.money(limit - spent)}',
-                style: context.text.labelMedium?.copyWith(color: context.palette.mutedForeground),
+              Flexible(
+                child: Text(
+                  'Restam ${Fmt.money(limit - spent)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: context.text.labelMedium?.copyWith(color: context.palette.mutedForeground),
+                ),
               ),
           ],
         ),

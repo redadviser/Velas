@@ -469,7 +469,7 @@ export class ChatService {
 
   /** Só quem enviou. Fica "mensagem apagada" para todos. */
   async remove(userId: string, messageId: string): Promise<void> {
-    const result = await this.as(userId, async (c) => {
+    const removed = await this.as(userId, async (c) => {
       const { rows } = await c.query<{ conversation_id: string; media_key: string | null }>(
         `select conversation_id, media_key from chat_messages
          where id = $1 and sender_id = $2 and deleted_at is null for update`,
@@ -487,9 +487,9 @@ export class ChatService {
         ids: await ChatService.participantIds(c, rows[0].conversation_id),
       };
     });
-    if (!result) throw notFound();
-    if (result.media_key) await this.storage.remove(result.media_key);
-    this.hub.send(result.ids, { type: 'message_updated', message: result.message });
+    if (!removed) throw notFound();
+    if (removed.media_key) await this.storage.remove(removed.media_key);
+    this.hub.send(removed.ids, { type: 'message_updated', message: removed.message });
   }
 
   async react(userId: string, messageId: string, emoji: string | null): Promise<MessageJson> {

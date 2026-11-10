@@ -5,6 +5,9 @@ import '../data/models/models.dart';
 /// botão "Prenda em grupo".
 typedef Reminder = ({String title, String body, String payload, bool groupAction});
 
+/// Um lembrete por agendar: quando, de quem (pessoa ou data especial) e de que dia.
+typedef PlannedReminder = ({DateTime when, Person? person, SpecialDate? special, int daysBefore, DateTime occurrence});
+
 /// O texto e o destino de cada lembrete dependem de quanto falta: perto do
 /// dia leva aos parabéns; com tempo, à pessoa (ideias de presente) e, pelo
 /// botão, à prenda em grupo.
@@ -67,6 +70,70 @@ class ReminderCopy {
     };
   }
 
+  /// Data especial (casamento, Dia da Mãe…): tocar abre a lista das datas.
+  static Reminder special(SpecialDate d, {required int daysBefore, required DateTime date, int? years}) {
+    final yearsText = years == null || years <= 0 ? '' : ' ${years == 1 ? 'Faz 1 ano' : 'Fazem $years anos'}.';
+    return switch (daysBefore) {
+      0 => (title: 'Hoje: ${d.title}', body: 'Um dia para assinalar.$yearsText', payload: 'special:${d.id}', groupAction: false),
+      1 => (title: '${d.title} é amanhã', body: '${Fmt.dayMonth(date)}.$yearsText', payload: 'special:${d.id}', groupAction: false),
+      _ => (
+        title: '${d.title} daqui a ${reminderShortLabel(daysBefore)}',
+        body: '${Fmt.weekdayDayMonth(date)}.$yearsText',
+        payload: 'special:${d.id}',
+        groupAction: false,
+      ),
+    };
+  }
+
+  /// Todos os lembretes depois de [now], por ordem (este ano e o seguinte,
+  /// para os que já passaram). Usado pelo agendador e pelo ecrã Notificações.
+  static List<PlannedReminder> plan(AppData data, UserProfile profile, DateTime now) {
+    final out = <PlannedReminder>[];
+    void add(int day, int month, List<int> offsets, int hour, int minute, {Person? person, SpecialDate? special}) {
+      final next = BirthdayUtils.nextOccurrence(day, month, from: now);
+      for (final occurrence in [next, BirthdayUtils.occurrenceIn(next.year + 1, day, month)]) {
+        for (final days in offsets) {
+          final d = BirthdayUtils.addDays(occurrence, -days);
+          final when = DateTime(d.year, d.month, d.day, hour, minute);
+          if (when.isAfter(now)) {
+            out.add((when: when, person: person, special: special, daysBefore: days, occurrence: occurrence));
+          }
+        }
+      }
+    }
+
+    for (final p in data.people) {
+      // Hora própria da pessoa (Birthdayly+); senão a do perfil.
+      final custom = profile.isPlus && p.reminderHour != null && p.reminderMinute != null;
+      add(
+        p.day,
+        p.month,
+        p.reminderDays ?? profile.defaultReminderDays,
+        custom ? p.reminderHour! : profile.reminderHour,
+        custom ? p.reminderMinute! : profile.reminderMinute,
+        person: p,
+      );
+    }
+    for (final s in data.specialDates) {
+      add(s.day, s.month, s.reminderDays ?? profile.defaultReminderDays, profile.reminderHour, profile.reminderMinute, special: s);
+    }
+    return out..sort((a, b) => a.when.compareTo(b.when));
+  }
+
+  /// O texto de um lembrete planeado.
+  static Reminder copyFor(PlannedReminder p, AppData data) => switch ((p.person, p.special)) {
+    (final person?, _) => build(
+      person,
+      daysBefore: p.daysBefore,
+      date: p.occurrence,
+      age: person.year == null ? null : p.occurrence.year - person.year!,
+      hasMessage: data.messageFor(person.id) != null,
+      ideas: data.giftsFor(person.id).where((g) => !g.purchased).length,
+    ),
+    (_, final s?) => special(s, daysBefore: p.daysBefore, date: p.occurrence, years: s.year == null ? null : p.occurrence.year - s.year!),
+    _ => throw StateError('lembrete sem pessoa nem data'),
+  };
+
   /// Para onde leva uma notificação tocada: o botão "Prenda em grupo" muda o
   /// destino de `person:<id>` para `group:<id>`.
   static String? target(String? payload, String? actionId) {
@@ -90,7 +157,8 @@ class ReminderCopy {
       'message' => '/person/$id/message',
       'send' => '/person/$id/message?send=1',
       'group' => '/groups/new?personId=$id',
-      'agenda' => '/agenda',
+      'agenda' => '/people',
+      'special' => '/special',
       _ => null,
     };
   }

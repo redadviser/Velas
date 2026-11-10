@@ -81,7 +81,7 @@ export class AccountDeletionService {
     const help = this.config.legal.email ? ` Dúvidas? Escreve para ${this.config.legal.email}.` : '';
     await this.mail({
       to: email,
-      subject: 'Birthdayly — confirmar a eliminação da conta',
+      subject: 'Birthdayly: confirmar a eliminação da conta',
       text:
         `Recebemos um pedido para apagar a tua conta da Birthdayly (${email}).\n\n` +
         `Para apagar a conta, abre este link e confirma (válido durante ${deletionTtlHours} horas):\n${link}\n\n` +

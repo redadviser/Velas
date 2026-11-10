@@ -273,8 +273,9 @@ class _Actions extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text('Já tens conta?', style: TextStyle(color: muted, fontSize: 15)),
             TextButton(

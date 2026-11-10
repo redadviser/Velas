@@ -49,7 +49,7 @@ class MessageSuggestions {
           'Feliz aniversário, $name! Ter-te na família é um presente todos os dias. Hoje celebramos-te a ti. ❤️'
         else
           'Feliz aniversário, $name! Obrigado por seres uma pessoa tão especial. Que hoje seja um dia à tua medida. ❤️',
-        'Muitos parabéns, $name! Desejo-te um ano cheio de momentos bons e de pessoas que te façam sorrir — como tu fazes a quem está à tua volta.',
+        'Muitos parabéns, $name! Desejo-te um ano cheio de momentos bons e de pessoas que te façam sorrir, como tu fazes a quem está à tua volta.',
         'Hoje o dia é teu, $name. Que nunca te falte motivo para sorrir. Parabéns e um beijinho grande!',
       ],
       MessageTone.fun => [

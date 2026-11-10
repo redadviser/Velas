@@ -7,48 +7,73 @@ import 'app_colors.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const radius = 16.0;
-  static const radiusSmall = 12.0;
+  static const radius = 20.0;
+  static const radiusSmall = 14.0;
 
-  static ThemeData light({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) => _build(
-    highContrast: highContrast,
-    reduceMotion: reduceMotion,
-    brightness: Brightness.light,
-    background: AppColors.background,
-    foreground: AppColors.foreground,
-    card: AppColors.card,
-    primary: accent.light,
-    onPrimary: AppColors.primaryForeground,
-    secondary: accent == AppAccent.coral ? AppColors.secondary : accent.gradient.last,
-    error: AppColors.destructive,
-    palette: highContrast
-        ? AppPalette.light.copyWith(brand: accent.brand, mutedForeground: const Color(0xFF3F3431), border: const Color(0xFF8C7F7A))
-        : AppPalette.light.copyWith(brand: accent.brand),
-  );
+  static ThemeData light({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) =>
+      _build(
+        highContrast: highContrast,
+        reduceMotion: reduceMotion,
+        brightness: Brightness.light,
+        background: AppColors.background,
+        foreground: AppColors.foreground,
+        card: AppColors.card,
+        primary: accent.light,
+        onPrimary: AppColors.primaryForeground,
+        secondary: accent == AppAccent.coral ? AppColors.secondary : accent.gradient.last,
+        error: AppColors.destructive,
+        palette: highContrast
+            ? AppPalette.light.copyWith(
+                brand: accent.brand,
+                mutedForeground: const Color(0xFF3F3431),
+                border: const Color(0xFF8C7F7A),
+              )
+            : AppPalette.light.copyWith(brand: accent.brand),
+      );
 
-  static ThemeData dark({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) => _build(
-    highContrast: highContrast,
-    reduceMotion: reduceMotion,
-    brightness: Brightness.dark,
-    background: AppColors.darkBackground,
-    foreground: AppColors.darkForeground,
-    card: AppColors.darkCard,
-    primary: accent.dark,
-    onPrimary: AppColors.darkPrimaryForeground,
-    secondary: accent == AppAccent.coral ? AppColors.darkSecondary : accent.gradient.last,
-    error: AppColors.darkDestructive,
-    palette: highContrast
-        ? AppPalette.dark.copyWith(brand: accent.brand, mutedForeground: const Color(0xFFE2D8D2), border: const Color(0x8CFFFFFF))
-        : AppPalette.dark.copyWith(brand: accent.brand),
-  );
+  static ThemeData dark({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) =>
+      _build(
+        highContrast: highContrast,
+        reduceMotion: reduceMotion,
+        brightness: Brightness.dark,
+        background: AppColors.darkBackground,
+        foreground: AppColors.darkForeground,
+        card: AppColors.darkCard,
+        primary: accent.dark,
+        onPrimary: AppColors.darkPrimaryForeground,
+        secondary: accent == AppAccent.coral ? AppColors.darkSecondary : accent.gradient.last,
+        error: AppColors.darkDestructive,
+        palette: highContrast
+            ? AppPalette.dark.copyWith(
+                brand: accent.brand,
+                mutedForeground: const Color(0xFFE2D8D2),
+                border: const Color(0x8CFFFFFF),
+              )
+            : AppPalette.dark.copyWith(brand: accent.brand),
+      );
 
-  /// Títulos editoriais em serifa, como no site de referência.
-  static TextStyle display(BuildContext context, {double size = 28, Color? color}) => GoogleFonts.fraunces(
+  /// Títulos redondos e cheios (Nunito 900).
+  /// O peso tem de vir aqui: o google_fonts fixa uma família por peso e um
+  /// `copyWith(fontWeight:)` depois já não o muda.
+  static TextStyle display(
+    BuildContext context, {
+    double size = 28,
+    Color? color,
+    FontWeight weight = FontWeight.w900,
+  }) => GoogleFonts.nunito(
     fontSize: size,
-    fontWeight: FontWeight.w500,
-    height: 1.15,
-    letterSpacing: -0.4,
+    fontWeight: weight,
+    height: 1.1,
+    letterSpacing: -0.2,
     color: color ?? Theme.of(context).colorScheme.onSurface,
+  );
+
+  /// Etiqueta pequena em maiúsculas (ex.: "ESTA SEMANA").
+  static TextStyle eyebrow(BuildContext context, {Color? color}) => GoogleFonts.dmSans(
+    fontSize: 11,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 1.1,
+    color: color ?? Theme.of(context).extension<AppPalette>()!.mutedForeground,
   );
 
   static ThemeData _build({
@@ -92,9 +117,11 @@ class AppTheme {
     );
 
     final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: brightness);
-    final textTheme = GoogleFonts.plusJakartaSansTextTheme(
+    final textTheme = GoogleFonts.dmSansTextTheme(
       base.textTheme,
     ).apply(bodyColor: foreground, displayColor: foreground);
+    TextStyle? heading(TextStyle? s, double size) =>
+        s?.merge(GoogleFonts.nunito(fontWeight: FontWeight.w900, fontSize: size, color: foreground));
 
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radiusSmall),
@@ -104,9 +131,9 @@ class AppTheme {
     return base.copyWith(
       scaffoldBackgroundColor: background,
       textTheme: textTheme.copyWith(
-        titleLarge: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 20),
-        titleMedium: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 16),
-        titleSmall: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        titleLarge: heading(textTheme.titleLarge, 21),
+        titleMedium: heading(textTheme.titleMedium, 17),
+        titleSmall: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         bodyMedium: textTheme.bodyMedium?.copyWith(height: 1.45),
         labelLarge: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600, fontSize: 15),
       ),
@@ -114,10 +141,7 @@ class AppTheme {
       // Reduzir animações: as mudanças de ecrã passam a ser instantâneas.
       pageTransitionsTheme: reduceMotion
           ? const PageTransitionsTheme(
-              builders: {
-                TargetPlatform.android: _NoTransitionsBuilder(),
-                TargetPlatform.iOS: _NoTransitionsBuilder(),
-              },
+              builders: {TargetPlatform.android: _NoTransitionsBuilder(), TargetPlatform.iOS: _NoTransitionsBuilder()},
             )
           : null,
       splashFactory: InkSparkle.splashFactory,
@@ -127,8 +151,8 @@ class AppTheme {
         foregroundColor: foreground,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
-        titleTextStyle: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 17),
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.nunito(fontWeight: FontWeight.w900, fontSize: 20, color: foreground),
         systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       ),
       cardTheme: CardThemeData(
@@ -179,17 +203,21 @@ class AppTheme {
           textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
+      // Escolhido = tinta cheia, como os filtros do design de referência.
       chipTheme: ChipThemeData(
         backgroundColor: card,
-        selectedColor: palette.accent,
+        selectedColor: foreground,
         side: BorderSide(color: palette.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        labelStyle: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600, color: foreground),
-        secondaryLabelStyle: textTheme.labelMedium?.copyWith(
+        // O FilterChip não usa o secondaryLabelStyle: a cor tem de seguir o estado aqui.
+        labelStyle: textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: palette.accentForeground,
+          color: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? background : palette.mutedForeground,
+          ),
         ),
-        checkmarkColor: palette.accentForeground,
+        secondaryLabelStyle: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600, color: background),
+        checkmarkColor: background,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         showCheckmark: false,
       ),

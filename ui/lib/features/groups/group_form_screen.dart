@@ -427,7 +427,7 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
             Text('Participantes', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              'Adiciona pelo @username, email ou telemóvel — são únicos, por isso não há confusão com nomes '
+              'Adiciona pelo @username, email ou telemóvel: são únicos, por isso não há confusão com nomes '
               'repetidos. Cada pessoa entra no grupo quando aceitar o convite.',
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),

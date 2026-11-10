@@ -26,6 +26,9 @@ abstract class DataRepository {
   Future<void> saveMessage(BirthdayMessage message);
   Future<void> deleteMessage(String id);
 
+  Future<void> saveSpecialDate(SpecialDate date);
+  Future<void> deleteSpecialDate(String id);
+
   void dispose();
 }
 
@@ -60,6 +63,8 @@ abstract class CachedDataRepository implements DataRepository {
   Future<void> removeGift(String id);
   Future<void> persistMessage(BirthdayMessage message);
   Future<void> removeMessage(String id);
+  Future<void> persistSpecialDate(SpecialDate date);
+  Future<void> removeSpecialDate(String id);
 
   @override
   Future<void> load() async {
@@ -105,6 +110,8 @@ abstract class CachedDataRepository implements DataRepository {
         people: _data.people.where((p) => p.id != id).toList(),
         gifts: _data.gifts.where((g) => g.personId != id).toList(),
         messages: _data.messages.where((m) => m.personId != id).toList(),
+        // No servidor a ligação passa a null (on delete set null).
+        specialDates: [for (final d in _data.specialDates) d.personId == id ? d.copyWith(personId: () => null) : d],
       ),
       () => removePerson(person),
     );
@@ -155,6 +162,18 @@ abstract class CachedDataRepository implements DataRepository {
   @override
   Future<void> deleteMessage(String id) =>
       _optimistic(_data.copyWith(messages: _data.messages.where((m) => m.id != id).toList()), () => removeMessage(id));
+
+  @override
+  Future<void> saveSpecialDate(SpecialDate date) => _optimistic(
+    _data.copyWith(specialDates: _upsert(_data.specialDates, date, (d) => d.id)),
+    () => persistSpecialDate(date),
+  );
+
+  @override
+  Future<void> deleteSpecialDate(String id) => _optimistic(
+    _data.copyWith(specialDates: _data.specialDates.where((d) => d.id != id).toList()),
+    () => removeSpecialDate(id),
+  );
 
   @override
   void dispose() => _controller.close();

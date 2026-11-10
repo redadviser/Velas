@@ -1,5 +1,5 @@
 name: aniversarios
-description: "A new Flutter project."
+description: "Aniversários: lembretes, grupos, cartões, chat e prendas em conjunto."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -95,6 +95,7 @@ flutter:
     - assets/images/welcome/
     - assets/images/payments/
     - assets/translations/
+    - assets/google_fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

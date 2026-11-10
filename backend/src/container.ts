@@ -20,6 +20,8 @@ import { GroupsService } from './modules/groups/groups.service.js';
 import { InvitationsService } from './modules/invitations/invitations.service.js';
 import { MessagesService } from './modules/messages/messages.service.js';
 import { PeopleService } from './modules/people/people.service.js';
+import { SpecialDatesService } from './modules/special-dates/special-dates.service.js';
+import { PartiesService } from './modules/parties/parties.service.js';
 import { SafetyService } from './modules/safety/safety.service.js';
 import type { AdaptyClient } from './modules/subscriptions/adapty.js';
 import { SubscriptionsService } from './modules/subscriptions/subscriptions.service.js';
@@ -53,6 +55,7 @@ export function createServices(deps: Deps) {
   const people = new PeopleService(db, storage);
   const gifts = new GiftsService(db);
   const messages = new MessagesService(db);
+  const specialDates = new SpecialDatesService(db);
   const hub = new RealtimeHub();
   const chat = new ChatService(db, storage, hub);
   const groups = new GroupsService(db, storage, hub);
@@ -74,7 +77,9 @@ export function createServices(deps: Deps) {
     people,
     gifts,
     messages,
-    sync: new SyncService(db, categories, people, gifts, messages),
+    specialDates,
+    parties: new PartiesService(db),
+    sync: new SyncService(db, categories, people, gifts, messages, specialDates),
     groups,
     invitations: new InvitationsService(db, storage),
     friends: new FriendsService(db, hub, storage),

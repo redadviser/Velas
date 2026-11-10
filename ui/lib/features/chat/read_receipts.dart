@@ -21,15 +21,15 @@ abstract final class ReadReceipts {
     List<Participant> participants,
     String me,
   ) {
-    final result = <String, List<Participant>>{};
+    final byMessage = <String, List<Participant>>{};
     for (final p in participants) {
       final readAt = p.lastReadAt;
       if (p.user.userId == me || readAt == null) continue;
       final last = messages.where((m) => m.state == SendState.sent && !m.createdAt.isAfter(readAt)).firstOrNull;
       if (last == null || last.senderId == p.user.userId) continue;
-      (result[last.id] ??= []).add(p);
+      (byMessage[last.id] ??= []).add(p);
     }
-    return result;
+    return byMessage;
   }
 
   /// Todos os outros já viram [m] (✓✓).

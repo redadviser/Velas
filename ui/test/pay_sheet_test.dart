@@ -44,7 +44,7 @@ void main() {
                   payeeName: 'Ana',
                   amount: 15,
                   payee: payee,
-                  reference: 'Prenda — Eu',
+                  reference: 'Prenda: Eu',
                 );
               },
               child: const Text('pagar'),
@@ -61,7 +61,7 @@ void main() {
       ..physicalSize = const Size(402, 874) * 3
       ..devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    final result = await open(tester, const PaymentDetails(mbwayPhone: '912345678', revolutTag: 'ana'));
+    final paid = await open(tester, const PaymentDetails(mbwayPhone: '912345678', revolutTag: 'ana'));
     await tester.tap(find.text('pagar'));
     await tester.pumpAndSettle();
 
@@ -88,7 +88,7 @@ void main() {
 
     await tester.tap(find.text('Já paguei por MB WAY'));
     await tester.pumpAndSettle();
-    expect(result()?.method, PaymentMethod.mbway);
+    expect(paid()?.method, PaymentMethod.mbway);
     expect(tester.takeException(), isNull);
   });
 

@@ -502,9 +502,11 @@ class GroupConversationTile extends StatelessWidget {
       onTap: c == null ? openGroup : () => context.push('/chats/${c.id}'),
       footer: Row(
         children: [
-          GestureDetector(
-            onTap: openGroup,
-            child: Pill(label: status.$1, background: status.$2, foreground: status.$3, dense: true),
+          Flexible(
+            child: GestureDetector(
+              onTap: openGroup,
+              child: Pill(label: status.$1, background: status.$2, foreground: status.$3, dense: true),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(

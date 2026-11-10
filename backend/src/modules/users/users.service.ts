@@ -216,6 +216,10 @@ export class UsersService {
         gift_ideas: await q(`select id, person_id, title, price, link, notes, purchased, purchased_at, created_at
                              from gift_ideas where user_id = $1 order by created_at`),
         messages: await q('select id, person_id, body, tone, updated_at from messages where user_id = $1'),
+        parties: await q(`select p.id, p.title, p.celebrant_name, p.starts_at, p.place, g.rsvp as my_rsvp, p.created_by = $1 as admin
+                          from parties p join party_guests g on g.party_id = p.id and g.user_id = $1 order by p.created_at`),
+        special_dates: await q(`select id, title, kind, day, month, year, person_id, notes, reminder_days, created_at
+                                from special_dates where user_id = $1 order by month, day`),
         cards_sent: urlOf(
           await q(`select id, person_id, recipient_name, body, via, media_kind, media_key, created_at, opened_at, claimed_at
                    from greeting_cards where sender_id = $1 order by created_at`),

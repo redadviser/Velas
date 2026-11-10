@@ -10,19 +10,19 @@ import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 
-/// Gerir categorias (Família, Amigos, Trabalho, …) — RF11.
+/// Gerir categorias (Família, Amigos, Trabalho, …), RF11.
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
 
   Future<void> _edit(BuildContext context, WidgetRef ref, [PersonCategory? category]) async {
     final data = ref.read(dataProvider);
-    final result = await showModalBottomSheet<PersonCategory>(
+    final picked = await showModalBottomSheet<PersonCategory>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _CategoryEditor(category: category, nextSort: data.categories.length),
     );
-    if (result != null && context.mounted) {
-      await runGuarded(context, () => ref.read(dataRepositoryProvider)!.saveCategory(result));
+    if (picked != null && context.mounted) {
+      await runGuarded(context, () => ref.read(dataRepositoryProvider)!.saveCategory(picked));
     }
   }
 
@@ -54,7 +54,7 @@ class CategoriesScreen extends ConsumerWidget {
               child: EmptyState(
                 icon: LucideIcons.tag,
                 title: 'Sem categorias',
-                message: 'Cria categorias para organizar as pessoas — por exemplo Família, Amigos ou Trabalho.',
+                message: 'Cria categorias para organizar as pessoas, por exemplo Família, Amigos ou Trabalho.',
               ),
             )
           : ListView(

@@ -94,7 +94,7 @@ export class SafetyService {
     const to = this.config.moderationEmail;
     if (!to) return;
     const who = (p: { id: string; display_name: string; username: string | null }) =>
-      `${p.display_name}${p.username ? ` (@${p.username})` : ''} — ${p.id}`;
+      `${p.display_name}${p.username ? ` (@${p.username})` : ''}, ${p.id}`;
     const lines = [
       `Motivo: ${reasonLabels[input.reason]}`,
       `Denunciado: ${who(reported)}`,

@@ -60,7 +60,7 @@ void main() {
   }
 
   testWidgets('data nova: ano → mês → dia', (tester) async {
-    final result = await open(tester);
+    final picked = await open(tester);
     await tester.tap(find.text('2020'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Março').last);
@@ -69,11 +69,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
-    expect(result(), (day: 12, month: 3, year: 2020));
+    expect(picked(), (day: 12, month: 3, year: 2020));
   });
 
   testWidgets('sem ano permite 29 de fevereiro', (tester) async {
-    final result = await open(tester);
+    final picked = await open(tester);
     await tester.tap(find.text('Sem ano'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Fevereiro').last);
@@ -82,17 +82,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
-    expect(result(), (day: 29, month: 2, year: null));
+    expect(picked(), (day: 29, month: 2, year: null));
   });
 
   testWidgets('ao editar abre no mês e ajusta o dia ao mudar de mês', (tester) async {
-    final result = await open(tester, initial: (day: 31, month: 1, year: 1990));
+    final picked = await open(tester, initial: (day: 31, month: 1, year: 1990));
     expect(find.text('Janeiro'), findsOneWidget);
     await tester.tap(find.byTooltip('Mês seguinte'));
     await tester.pumpAndSettle();
     expect(find.text('Fevereiro'), findsOneWidget);
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
-    expect(result(), (day: 28, month: 2, year: 1990));
+    expect(picked(), (day: 28, month: 2, year: 1990));
   });
 }

@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
+import '../special/special_dates_screen.dart';
 import '../../data/models/models.dart';
 import '../../data/models/group_models.dart';
 import '../chat/chat_widgets.dart';
@@ -102,10 +103,23 @@ class PersonDetailScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
         children: [
           Center(
-            child: PersonAvatar(person: person, color: color, size: 96, celebrate: days == 0),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: context.palette.card, width: 4),
+                boxShadow: context.palette.shadow,
+              ),
+              child: PersonAvatar(person: person, color: color, size: 96, celebrate: days == 0),
+            ),
           ),
-          const SizedBox(height: 14),
-          Text(person.name, textAlign: TextAlign.center, style: AppTheme.display(context, size: 28)),
+          const SizedBox(height: 12),
+          Text(person.name, textAlign: TextAlign.center, style: AppTheme.display(context, size: 26)),
+          const SizedBox(height: 2),
+          Text(
+            [Fmt.dayMonth(next), if (person.turningAge != null) 'faz ${person.turningAge} anos'].join(' · '),
+            textAlign: TextAlign.center,
+            style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
+          ),
           const SizedBox(height: 8),
           Wrap(
             alignment: WrapAlignment.center,
@@ -154,7 +168,38 @@ class PersonDetailScreen extends ConsumerWidget {
               ),
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Action(
+                  icon: LucideIcons.messageSquareHeart,
+                  label: message == null ? 'Enviar parabéns' : 'Ver mensagem',
+                  onTap: () => context.push('/person/${person.id}/message'),
+                ),
+                const SizedBox(width: 9),
+                _Action(
+                  icon: LucideIcons.lightbulb,
+                  label: 'Ideia de prenda',
+                  onTap: () => showGiftEditor(context, ref, personId: person.id),
+                ),
+                const SizedBox(width: 9),
+                _Action(
+                  icon: LucideIcons.usersRound,
+                  label: 'Prenda em grupo',
+                  onTap: () => context.push('/groups/new?personId=${person.id}'),
+                ),
+                const SizedBox(width: 9),
+                _Action(
+                  icon: LucideIcons.partyPopper,
+                  label: 'Festa surpresa',
+                  onTap: () => context.push('/parties/new?personId=${person.id}'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           AppCard(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: IntrinsicHeight(
@@ -268,7 +313,7 @@ class PersonDetailScreen extends ConsumerWidget {
           else
             _MessageCard(message: message, personId: person.id),
           SectionTitle(
-            'Presentes',
+            'Prendas',
             action: 'Adicionar',
             onAction: () => showGiftEditor(context, ref, personId: person.id),
             padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
@@ -321,6 +366,22 @@ class PersonDetailScreen extends ConsumerWidget {
             ),
           ),
           for (final g in groups) ...[const SizedBox(height: 12), GroupCard(group: g, userId: user?.id)],
+          SectionTitle(
+            'Datas especiais',
+            action: 'Adicionar',
+            onAction: () => showSpecialDateEditor(context, ref, personId: person.id),
+            padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
+          ),
+          for (final d in data.upcomingSpecialDates.where((d) => d.personId == person.id)) ...[
+            SpecialDateTile(date: d, data: data, onTap: () => showSpecialDateEditor(context, ref, date: d)),
+            const SizedBox(height: 10),
+          ],
+          if (!data.specialDates.any((d) => d.personId == person.id))
+            DashedButton(
+              icon: LucideIcons.heart,
+              label: 'Casamento, namoro ou outra data de ${person.firstName}',
+              onTap: () => showSpecialDateEditor(context, ref, personId: person.id),
+            ),
           if (person.notes.isNotEmpty) ...[
             SectionTitle('Notas', padding: const EdgeInsets.fromLTRB(4, 28, 0, 10)),
             AppCard(child: Text(person.notes, style: context.text.bodyMedium)),
@@ -329,6 +390,35 @@ class PersonDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Atalho em quadrado, três lado a lado.
+class _Action extends StatelessWidget {
+  const _Action({required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: AppCard(
+      onTap: onTap,
+      raised: false,
+      padding: const EdgeInsets.fromLTRB(6, 16, 6, 14),
+      child: Column(
+        children: [
+          IconBadge(icon: icon, size: 40),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: context.text.labelMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.2),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Stat extends StatelessWidget {
@@ -379,7 +469,7 @@ class _MessageCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       message.body,
-                      style: AppTheme.display(context, size: 16).copyWith(fontWeight: FontWeight.w400, height: 1.45),
+                      style: AppTheme.display(context, size: 16, weight: FontWeight.w500).copyWith(height: 1.45),
                     ),
                   ),
                 ],

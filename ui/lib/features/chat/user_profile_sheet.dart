@@ -18,7 +18,7 @@ import 'friends_screen.dart';
 import 'safety.dart';
 
 /// Perfil de outra pessoa (ao tocar no avatar no chat): fotografia, nome e o
-/// estado da amizade — pedir, aceitar, cancelar ou enviar mensagem.
+/// estado da amizade: pedir, aceitar, cancelar ou enviar mensagem.
 Future<void> showUserProfileSheet(BuildContext context, ChatUser user, {bool showMessageButton = true}) =>
     showModalBottomSheet<void>(
       context: context,

@@ -182,7 +182,7 @@ class ChatSocket {
 
   void _onClosed(int? code) {
     _teardown();
-    // 4401: token recusado (provavelmente expirou) — pede outro antes de voltar a ligar.
+    // 4401: token recusado (provavelmente expirou): pede outro antes de voltar a ligar.
     if (code == 4401) _renewToken = true;
     _scheduleRetry();
   }

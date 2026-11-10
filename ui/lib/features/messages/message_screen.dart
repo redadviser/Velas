@@ -358,7 +358,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                 maxLength: 1000,
                 onChanged: (_) => setState(() {}),
                 textCapitalization: TextCapitalization.sentences,
-                style: AppTheme.display(context, size: 17).copyWith(fontWeight: FontWeight.w400, height: 1.5),
+                style: AppTheme.display(context, size: 17, weight: FontWeight.w500).copyWith(height: 1.5),
                 decoration: const InputDecoration(
                   hintText: 'Escreve aqui os teus parabéns…',
                   border: InputBorder.none,
@@ -373,7 +373,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text('Juntar ao cartão', style: context.text.titleSmall),
+                  Flexible(child: Text('Juntar ao cartão', style: context.text.titleSmall)),
                   const SizedBox(width: 8),
                   const PlusBadge(),
                 ],
@@ -463,7 +463,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               children: [
                 Icon(LucideIcons.sparkles, size: 18, color: context.colors.primary),
                 const SizedBox(width: 8),
-                Text('Sugestões', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                Flexible(child: Text('Sugestões', style: context.text.titleMedium)),
               ],
             ),
             const SizedBox(height: 12),

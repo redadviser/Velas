@@ -6,6 +6,10 @@ import '../data/api/api_cards_repository.dart';
 import '../data/api/api_client.dart';
 import '../data/api/api_data_repository.dart';
 import '../data/api/api_group_repository.dart';
+import '../data/api/api_party_repository.dart';
+import '../data/local/local_party_repository.dart';
+import '../data/models/party_models.dart';
+import '../data/repositories/party_repository.dart';
 import '../data/local/local_data_repository.dart';
 import '../data/local/local_group_repository.dart';
 import '../data/models/group_models.dart';
@@ -112,6 +116,43 @@ class GroupsController extends AsyncNotifier<List<GiftGroup>> {
 }
 
 final groupsProvider = AsyncNotifierProvider<GroupsController, List<GiftGroup>>(GroupsController.new);
+
+final partyRepositoryProvider = Provider<PartyRepository?>((ref) {
+  final userId = ref.watch(currentUserProvider.select((u) => u?.id));
+  if (userId == null) return null;
+  final api = ref.watch(apiClientProvider);
+  if (api != null) return ApiPartyRepository(api);
+  return LocalPartyRepository(ref.watch(sharedPrefsProvider), () => ref.read(currentUserProvider)!);
+});
+
+/// Festas surpresa. Partilhadas com os convidados: cada alteração devolve a
+/// festa atualizada, que substitui a da lista.
+class PartiesController extends AsyncNotifier<List<Party>> {
+  @override
+  Future<List<Party>> build() async {
+    final repo = ref.watch(partyRepositoryProvider);
+    return repo == null ? const [] : repo.fetchParties();
+  }
+
+  PartyRepository get repo => ref.read(partyRepositoryProvider)!;
+
+  Future<void> refresh() async => state = AsyncData(await repo.fetchParties());
+
+  /// Corre a operação; se devolver a festa, troca-a na lista, senão recarrega.
+  Future<Party?> run(Future<Party?> Function(PartyRepository repo) op) async {
+    final updated = await op(repo);
+    final list = state.value ?? const <Party>[];
+    if (updated == null) {
+      await refresh();
+    } else {
+      final i = list.indexWhere((p) => p.id == updated.id);
+      state = AsyncData(i == -1 ? [...list, updated] : ([...list]..[i] = updated));
+    }
+    return updated;
+  }
+}
+
+final partiesProvider = AsyncNotifierProvider<PartiesController, List<Party>>(PartiesController.new);
 
 /// Convites para grupos que o utilizador recebeu e ainda não respondeu.
 final invitationsProvider = FutureProvider<List<InvitationPreview>>((ref) async {

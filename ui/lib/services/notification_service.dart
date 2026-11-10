@@ -337,24 +337,7 @@ class NotificationService {
 
     final now = tz.TZDateTime.now(tz.local);
     final digest = profile.isPlus && profile.weeklyDigest;
-    final pending = <_Pending>[];
-    for (final person in people) {
-      final offsets = person.reminderDays ?? profile.defaultReminderDays;
-      // Hora própria da pessoa (Birthdayly+); senão a do perfil.
-      final custom = profile.isPlus && person.reminderHour != null && person.reminderMinute != null;
-      final hour = custom ? person.reminderHour! : profile.reminderHour;
-      final minute = custom ? person.reminderMinute! : profile.reminderMinute;
-      final next = person.nextBirthday();
-      // Considera também o ano seguinte para lembretes que já passaram.
-      for (final occurrence in [next, BirthdayUtils.occurrenceIn(next.year + 1, person.day, person.month)]) {
-        for (final days in offsets) {
-          final d = BirthdayUtils.addDays(occurrence, -days);
-          final when = tz.TZDateTime(tz.local, d.year, d.month, d.day, hour, minute);
-          if (when.isAfter(now)) pending.add(_Pending(person, days, when, occurrence));
-        }
-      }
-    }
-    pending.sort((a, b) => a.when.compareTo(b.when));
+    final pending = ReminderCopy.plan(data, profile, now);
 
     // Mensagens agendadas para enviar fora da app: o aviso à hora marcada.
     final sends = [
@@ -379,20 +362,12 @@ class NotificationService {
     // O resumo semanal e as mensagens agendadas ocupam lugares (o iOS só guarda 64 notificações).
     final room = _maxScheduled - scheduledSends.length - (digest ? _digestWeeks : 0);
     for (final (i, p) in pending.take(room).indexed) {
-      final age = p.person.year == null ? null : p.occurrence.year - p.person.year!;
-      final r = ReminderCopy.build(
-        p.person,
-        daysBefore: p.daysBefore,
-        date: p.occurrence,
-        age: age,
-        hasMessage: data.messageFor(p.person.id) != null,
-        ideas: data.giftsFor(p.person.id).where((g) => !g.purchased).length,
-      );
+      final r = ReminderCopy.copyFor(p, data);
       await _plugin.zonedSchedule(
         id: i,
         title: r.title,
         body: r.body,
-        scheduledDate: p.when,
+        scheduledDate: tz.TZDateTime.from(p.when, tz.local),
         payload: r.payload,
         notificationDetails: NotificationDetails(
           android: _channel(groupAction: r.groupAction),
@@ -450,14 +425,9 @@ class NotificationService {
     for (final m in data.messages) {
       if (m.scheduleVia == ScheduleVia.remind) b.write('send:${m.id}:${m.scheduledAt}:${m.body.hashCode};');
     }
+    for (final s in data.specialDates) {
+      b.write('special:${s.id}:${s.title}:${s.day}/${s.month}/${s.year}:${s.reminderDays};');
+    }
     return b.toString();
   }
-}
-
-class _Pending {
-  _Pending(this.person, this.daysBefore, this.when, this.occurrence);
-  final Person person;
-  final int daysBefore;
-  final tz.TZDateTime when;
-  final DateTime occurrence;
 }

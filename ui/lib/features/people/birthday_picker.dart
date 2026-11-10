@@ -149,7 +149,7 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
               _isFuture
                   ? 'A data não pode estar no futuro.'
                   : _year == null && _yearPicked
-                  ? 'Sem ano — só não mostramos a idade.'
+                  ? 'Sem ano: só não mostramos a idade.'
                   : 'Não sabes o ano? Toca no ano e escolhe "Sem ano".',
               textAlign: TextAlign.center,
               style: context.text.bodySmall?.copyWith(color: _isFuture ? context.colors.error : muted),

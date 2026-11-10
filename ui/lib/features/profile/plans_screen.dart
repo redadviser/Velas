@@ -141,8 +141,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               ),
             ],
           ),
-          if (store != null && !user.planDebug)
-            TextButton(onPressed: _manage, child: const Text('Gerir subscrição')),
+          if (store != null && !user.planDebug) TextButton(onPressed: _manage, child: const Text('Gerir subscrição')),
         ],
       );
     } else if (store != null) {
@@ -175,13 +174,24 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
             _registered
                 ? Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: Text('Vais ser dos primeiros a saber.', textAlign: TextAlign.center, style: TextStyle(color: muted)),
+                    child: Text(
+                      'Vais ser dos primeiros a saber.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: muted),
+                    ),
                   )
-                : TextButton(onPressed: _sending ? null : _notifyMe, child: const Text('Avisa-me quando a subscrição chegar')),
+                : TextButton(
+                    onPressed: _sending ? null : _notifyMe,
+                    child: const Text('Avisa-me quando a subscrição chegar'),
+                  ),
         ],
       );
     } else if (ref.watch(apiClientProvider) == null) {
-      plusAction = Text('Disponível em breve.', textAlign: TextAlign.center, style: TextStyle(color: muted));
+      plusAction = Text(
+        'Disponível em breve.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: muted),
+      );
     } else if (_registered) {
       plusAction = Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -357,7 +367,14 @@ class _PlanCard extends StatelessWidget {
 }
 
 class _PlanBody extends StatelessWidget {
-  const _PlanBody({required this.name, required this.price, required this.features, this.badge, this.period, this.note});
+  const _PlanBody({
+    required this.name,
+    required this.price,
+    required this.features,
+    this.badge,
+    this.period,
+    this.note,
+  });
 
   final String name;
   final String price;
@@ -375,7 +392,7 @@ class _PlanBody extends StatelessWidget {
         Row(
           children: [
             Expanded(child: Text(name, style: AppTheme.display(context, size: 22))),
-            ?badge,
+            if (badge != null) Flexible(child: badge!),
           ],
         ),
         const SizedBox(height: 6),
@@ -383,7 +400,11 @@ class _PlanBody extends StatelessWidget {
           TextSpan(
             children: [
               TextSpan(text: price, style: AppTheme.display(context, size: 28)),
-              if (period != null) TextSpan(text: ' $period', style: TextStyle(color: muted)),
+              if (period != null)
+                TextSpan(
+                  text: ' $period',
+                  style: TextStyle(color: muted),
+                ),
             ],
           ),
         ),
@@ -453,14 +474,18 @@ class _PlusCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Mensal')),
-                ButtonSegment(value: true, label: Text('Anual')),
-              ],
-              selected: {yearly},
-              onSelectionChanged: (s) => onPeriod(s.first),
-              showSelectedIcon: false,
+            // O SegmentedButton tem altura fixa: acima de 120% o texto saía do botão.
+            MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.2,
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Mensal')),
+                  ButtonSegment(value: true, label: Text('Anual')),
+                ],
+                selected: {yearly},
+                onSelectionChanged: (s) => onPeriod(s.first),
+                showSelectedIcon: false,
+              ),
             ),
             const SizedBox(height: 16),
             _PlanBody(

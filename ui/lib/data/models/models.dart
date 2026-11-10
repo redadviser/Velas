@@ -520,6 +520,103 @@ class BirthdayMessage {
   );
 }
 
+/// Tipo de data especial (define o ícone e a cor).
+enum SpecialDateKind {
+  couple('Namoro'),
+  wedding('Casamento'),
+  family('Família'),
+  memorial('Em memória'),
+  other('Outra');
+
+  const SpecialDateKind(this.label);
+  final String label;
+}
+
+/// Data que se repete todos os anos e não é um aniversário de nascimento
+/// (casamento, Dia da Mãe…), opcionalmente ligada a uma pessoa.
+@immutable
+class SpecialDate {
+  const SpecialDate({
+    required this.id,
+    required this.title,
+    required this.day,
+    required this.month,
+    this.kind = SpecialDateKind.other,
+    this.year,
+    this.personId,
+    this.notes = '',
+    this.reminderDays,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String title;
+  final SpecialDateKind kind;
+  final int day;
+  final int month;
+  final int? year;
+  final String? personId;
+  final String notes;
+
+  /// `null` = usar as preferências do perfil.
+  final List<int>? reminderDays;
+  final DateTime createdAt;
+
+  DateTime nextDate([DateTime? from]) => BirthdayUtils.nextOccurrence(day, month, from: from);
+  int daysUntil([DateTime? from]) => BirthdayUtils.daysUntil(day, month, from: from);
+
+  /// Quantos anos faz na próxima vez (se se souber o ano).
+  int? get years => BirthdayUtils.turningAge(day, month, year);
+
+  SpecialDate copyWith({
+    String? title,
+    SpecialDateKind? kind,
+    int? day,
+    int? month,
+    int? Function()? year,
+    String? Function()? personId,
+    String? notes,
+    List<int>? Function()? reminderDays,
+  }) => SpecialDate(
+    id: id,
+    title: title ?? this.title,
+    kind: kind ?? this.kind,
+    day: day ?? this.day,
+    month: month ?? this.month,
+    year: year != null ? year() : this.year,
+    personId: personId != null ? personId() : this.personId,
+    notes: notes ?? this.notes,
+    reminderDays: reminderDays != null ? reminderDays() : this.reminderDays,
+    createdAt: createdAt,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'kind': kind.name,
+    'day': day,
+    'month': month,
+    'year': year,
+    'person_id': personId,
+    'notes': notes,
+    'reminder_days': reminderDays,
+    'created_at': createdAt.toUtc().toIso8601String(),
+  };
+
+  factory SpecialDate.fromJson(Map<String, dynamic> j) => SpecialDate(
+    id: j['id'] as String,
+    title: j['title'] as String,
+    kind: SpecialDateKind.values.where((k) => k.name == j['kind']).firstOrNull ?? SpecialDateKind.other,
+    day: (j['day'] as num).toInt(),
+    month: (j['month'] as num).toInt(),
+    year: (j['year'] as num?)?.toInt(),
+    personId: j['person_id'] as String?,
+    notes: j['notes'] as String? ?? '',
+    reminderDays: j['reminder_days'] == null ? null : _intList(j['reminder_days']),
+    createdAt: _date(j['created_at']),
+  );
+}
+
 /// Instantâneo imutável de todos os dados do utilizador.
 @immutable
 class AppData {
@@ -528,6 +625,7 @@ class AppData {
     this.categories = const [],
     this.gifts = const [],
     this.messages = const [],
+    this.specialDates = const [],
     this.loaded = false,
   });
 
@@ -535,6 +633,7 @@ class AppData {
   final List<PersonCategory> categories;
   final List<GiftIdea> gifts;
   final List<BirthdayMessage> messages;
+  final List<SpecialDate> specialDates;
   final bool loaded;
 
   static const empty = AppData();
@@ -560,12 +659,14 @@ class AppData {
     List<PersonCategory>? categories,
     List<GiftIdea>? gifts,
     List<BirthdayMessage>? messages,
+    List<SpecialDate>? specialDates,
     bool? loaded,
   }) => AppData(
     people: people ?? this.people,
     categories: categories ?? this.categories,
     gifts: gifts ?? this.gifts,
     messages: messages ?? this.messages,
+    specialDates: specialDates ?? this.specialDates,
     loaded: loaded ?? this.loaded,
   );
 
@@ -575,5 +676,9 @@ class AppData {
     'categories': categories.map((e) => e.toJson()).toList(),
     'gift_ideas': gifts.map((e) => e.toJson()).toList(),
     'messages': messages.map((e) => e.toJson()).toList(),
+    'special_dates': specialDates.map((e) => e.toJson()).toList(),
   };
+
+  /// Datas especiais pela próxima ocorrência (hoje primeiro).
+  List<SpecialDate> get upcomingSpecialDates => [...specialDates]..sort((a, b) => a.daysUntil().compareTo(b.daysUntil()));
 }

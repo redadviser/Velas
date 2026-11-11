@@ -79,8 +79,6 @@ class HomeScreen extends ConsumerWidget {
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                         child: _HeroCard(person: next, data: data),
                       ),
-                    const SectionTitle('Os próximos 7 dias'),
-                    _WeekStrip(data: data, start: today),
                     _Upcoming(data: data, exclude: {...todays.map((p) => p.id), ?next?.id}),
                     SectionTitle(
                       'Datas especiais',
@@ -376,7 +374,7 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-/// Próximos aniversários (60 dias), com filtro por categoria e agrupados por
+/// Os próximos aniversários (os 8 primeiros), com filtro por categoria e agrupados por
 /// "esta semana", "este mês" e "mais tarde".
 class _Upcoming extends StatefulWidget {
   const _Upcoming({required this.data, required this.exclude});
@@ -397,7 +395,7 @@ class _UpcomingState extends State<_Upcoming> {
     final cats = data.categories;
     final today = BirthdayUtils.today();
     final list = data.upcoming
-        .where((p) => !widget.exclude.contains(p.id) && p.daysUntil() <= 60)
+        .where((p) => !widget.exclude.contains(p.id))
         .where((p) => _category == null || p.categoryId == _category)
         .take(8)
         .toList();
@@ -441,7 +439,7 @@ class _UpcomingState extends State<_Upcoming> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Text(
-              'Ninguém desta categoria faz anos nos próximos 60 dias.',
+              'Ainda não há ninguém nesta categoria.',
               style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
             ),
           ),
@@ -582,77 +580,6 @@ class _NewGroupCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _WeekStrip extends StatelessWidget {
-  const _WeekStrip({required this.data, required this.start});
-
-  final AppData data;
-  final DateTime start;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          for (var i = 0; i < 7; i++)
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  final day = BirthdayUtils.addDays(start, i);
-                  final people = data.people.where((p) => p.daysUntil() == i).toList();
-                  final isToday = i == 0;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isToday ? context.colors.onSurface : context.palette.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isToday ? Colors.transparent : context.palette.border),
-                      boxShadow: isToday ? null : context.palette.shadow,
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          Fmt.weekdayShort(day).substring(0, 3),
-                          style: context.text.labelSmall?.copyWith(
-                            color: isToday
-                                ? context.colors.surface.withValues(alpha: 0.7)
-                                : context.palette.mutedForeground,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${day.day}',
-                          style: AppTheme.display(context, size: 18, color: isToday ? context.colors.surface : null),
-                        ),
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          height: 6,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              for (final p in people.take(3))
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                                  decoration: BoxDecoration(color: personColor(p, data), shape: BoxShape.circle),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
       ),
     );
   }

@@ -24,7 +24,7 @@ export class UsersService {
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
               p.message_notifications, p.message_previews,
               coalesce(plan_until(p) > now(), false) as plus, plan_until(p) as plus_until, p.plan_source,
-              p.trial_until is null as plus_trial_available, p.weekly_digest, u.terms_version
+              p.trial_until is null as plus_trial_available, p.weekly_digest, u.terms_version, p.interests
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
@@ -209,10 +209,11 @@ export class UsersService {
         categories: await q('select id, name, color, sort from categories where user_id = $1 order by sort'),
         people: urlOf(
           await q(`select id, name, birth_day, birth_month, birth_year, relation, category_id, notes, gift_budget,
-                          reminder_days, reminder_hour, reminder_minute, linked_user_id, photo_path, created_at
+                          reminder_days, reminder_hour, reminder_minute, linked_user_id, interests, photo_path, created_at
                    from people where user_id = $1 order by name`),
           'photo_path',
         ),
+        wishlist: await q('select title, price, link, notes, created_at from wishlist_items where user_id = $1 order by created_at'),
         gift_ideas: await q(`select id, person_id, title, price, link, notes, purchased, purchased_at, created_at
                              from gift_ideas where user_id = $1 order by created_at`),
         messages: await q('select id, person_id, body, tone, updated_at from messages where user_id = $1'),

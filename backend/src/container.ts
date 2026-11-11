@@ -21,6 +21,7 @@ import { InvitationsService } from './modules/invitations/invitations.service.js
 import { MessagesService } from './modules/messages/messages.service.js';
 import { PeopleService } from './modules/people/people.service.js';
 import { SpecialDatesService } from './modules/special-dates/special-dates.service.js';
+import { WishlistService } from './modules/wishlist/wishlist.service.js';
 import { PartiesService } from './modules/parties/parties.service.js';
 import { SafetyService } from './modules/safety/safety.service.js';
 import type { AdaptyClient } from './modules/subscriptions/adapty.js';
@@ -78,6 +79,7 @@ export function createServices(deps: Deps) {
     gifts,
     messages,
     specialDates,
+    wishlist: new WishlistService(db),
     parties: new PartiesService(db),
     sync: new SyncService(db, categories, people, gifts, messages, specialDates),
     groups,

@@ -39,6 +39,9 @@ import '../../features/profile/accessibility_screen.dart';
 import '../../features/profile/help_screen.dart';
 import '../../features/profile/plans_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/widget_screen.dart';
+import '../../features/profile/my_wishlist_screen.dart';
+import '../../features/gifts/ideas_screen.dart';
 import '../../features/special/special_dates_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/parties/parties_screen.dart';
@@ -127,6 +130,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
                   GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
                   GoRoute(path: 'help', parentNavigatorKey: _rootKey, builder: (_, _) => const HelpScreen()),
+                  GoRoute(path: 'widget', parentNavigatorKey: _rootKey, builder: (_, _) => const WidgetScreen()),
+                  GoRoute(path: 'wishlist', parentNavigatorKey: _rootKey, builder: (_, _) => const MyWishlistScreen()),
                   for (final section in ProfileSection.values)
                     GoRoute(
                       path: section.name,
@@ -231,6 +236,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'history',
             parentNavigatorKey: _rootKey,
             builder: (_, s) => HistoryScreen(personId: s.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'ideas',
+            parentNavigatorKey: _rootKey,
+            builder: (_, s) => IdeasScreen(personId: s.pathParameters['id']!),
           ),
         ],
       ),

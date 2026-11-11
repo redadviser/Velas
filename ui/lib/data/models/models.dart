@@ -26,6 +26,7 @@ String reminderShortLabel(int days) => switch (days) {
   _ => '$days dias',
 };
 
+List<String> _stringList(dynamic v) => v == null ? const [] : (v as List).cast<String>().toList();
 List<int> _intList(dynamic v) => v == null ? const [] : (v as List).map((e) => (e as num).toInt()).toList();
 double? _double(dynamic v) => v == null ? null : (v as num).toDouble();
 DateTime _date(dynamic v) => v == null ? DateTime.now() : DateTime.parse(v as String).toLocal();
@@ -54,6 +55,7 @@ class UserProfile {
     this.planDebug = false,
     this.weeklyDigest = false,
     this.termsVersion,
+    this.interests = const [],
   });
 
   final String id;
@@ -91,6 +93,9 @@ class UserProfile {
 
   /// Versão dos Termos e da Política de Privacidade que aceitou (null = nenhuma).
   final String? termsVersion;
+
+  /// Gostos e hobbies (chaves de [Interest]); os amigos veem-nos.
+  final List<String> interests;
 
   /// Tem o Birthdayly+ agora.
   bool get isPlus => plusUntil != null && plusUntil!.isAfter(DateTime.now());
@@ -130,6 +135,7 @@ class UserProfile {
     bool? planDebug,
     bool? weeklyDigest,
     String? termsVersion,
+    List<String>? interests,
   }) => UserProfile(
     id: id,
     email: email,
@@ -152,6 +158,7 @@ class UserProfile {
     planDebug: planDebug ?? this.planDebug,
     weeklyDigest: weeklyDigest ?? this.weeklyDigest,
     termsVersion: termsVersion ?? this.termsVersion,
+    interests: interests ?? this.interests,
   );
 
   /// Campos que o próprio altera com PATCH /me (a fotografia vai à parte).
@@ -170,6 +177,7 @@ class UserProfile {
     'message_notifications': messageNotifications,
     'message_previews': messagePreviews,
     'weekly_digest': weeklyDigest,
+    'interests': interests,
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> j, {required String id, required String email}) => UserProfile(
@@ -198,6 +206,7 @@ class UserProfile {
     planDebug: (j['plan_source'] ?? 'store') != 'store',
     weeklyDigest: j['weekly_digest'] as bool? ?? false,
     termsVersion: j['terms_version'] as String?,
+    interests: _stringList(j['interests']),
   );
 }
 
@@ -243,6 +252,7 @@ class Person {
     this.linkedUserId,
     this.reminderHour,
     this.reminderMinute,
+    this.interests = const [],
     required this.createdAt,
   });
 
@@ -273,6 +283,9 @@ class Person {
   /// Hora própria dos lembretes desta pessoa (Birthdayly+); null usa a do perfil.
   final int? reminderHour;
   final int? reminderMinute;
+
+  /// Gostos e hobbies (chaves de [Interest]).
+  final List<String> interests;
   final DateTime createdAt;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
@@ -309,6 +322,7 @@ class Person {
     List<int>? Function()? reminderDays,
     String? Function()? linkedUserId,
     ({int hour, int minute})? Function()? reminderTime,
+    List<String>? interests,
   }) => Person(
     id: id,
     name: name ?? this.name,
@@ -325,6 +339,7 @@ class Person {
     linkedUserId: linkedUserId != null ? linkedUserId() : this.linkedUserId,
     reminderHour: reminderTime != null ? reminderTime()?.hour : reminderHour,
     reminderMinute: reminderTime != null ? reminderTime()?.minute : reminderMinute,
+    interests: interests ?? this.interests,
     createdAt: createdAt,
   );
 
@@ -343,6 +358,7 @@ class Person {
     'linked_user_id': linkedUserId,
     'reminder_hour': reminderHour,
     'reminder_minute': reminderMinute,
+    'interests': interests,
     'created_at': createdAt.toUtc().toIso8601String(),
   };
 
@@ -361,6 +377,7 @@ class Person {
     linkedUserId: j['linked_user_id'] as String?,
     reminderHour: (j['reminder_hour'] as num?)?.toInt(),
     reminderMinute: (j['reminder_minute'] as num?)?.toInt(),
+    interests: _stringList(j['interests']),
     createdAt: _date(j['created_at']),
   );
 }
@@ -681,4 +698,41 @@ class AppData {
 
   /// Datas especiais pela próxima ocorrência (hoje primeiro).
   List<SpecialDate> get upcomingSpecialDates => [...specialDates]..sort((a, b) => a.daysUntil().compareTo(b.daysUntil()));
+}
+
+/// Algo que o utilizador gostava de receber (os amigos veem a lista).
+@immutable
+class WishItem {
+  const WishItem({
+    required this.id,
+    required this.title,
+    this.price,
+    this.link = '',
+    this.notes = '',
+    required this.createdAt,
+  });
+
+  final String id;
+  final String title;
+  final double? price;
+  final String link;
+  final String notes;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'price': price,
+    'link': link,
+    'notes': notes,
+    'created_at': createdAt.toUtc().toIso8601String(),
+  };
+
+  factory WishItem.fromJson(Map<String, dynamic> j) => WishItem(
+    id: j['id'] as String,
+    title: j['title'] as String,
+    price: _double(j['price']),
+    link: j['link'] as String? ?? '',
+    notes: j['notes'] as String? ?? '',
+    createdAt: _date(j['created_at']),
+  );
 }

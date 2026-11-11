@@ -29,15 +29,16 @@ export class PeopleService {
     // linked_user_id no pedido (versões antigas da app), a ligação mantém-se.
     const { rows } = await c.query<PersonRow>(
       `insert into people (id, user_id, name, birth_day, birth_month, birth_year, relation, category_id,
-                           notes, gift_budget, reminder_days, created_at, linked_user_id, reminder_hour, reminder_minute)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()), $13, $15, $16)
+                           notes, gift_budget, reminder_days, created_at, linked_user_id, reminder_hour, reminder_minute, interests)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()), $13, $15, $16, coalesce($18::text[], '{}'))
        on conflict (id) do update set
          name = excluded.name, birth_day = excluded.birth_day, birth_month = excluded.birth_month,
          birth_year = excluded.birth_year, relation = excluded.relation, category_id = excluded.category_id,
          notes = excluded.notes, gift_budget = excluded.gift_budget, reminder_days = excluded.reminder_days,
          linked_user_id = case when $14 then excluded.linked_user_id else people.linked_user_id end,
          reminder_hour = case when $17 then excluded.reminder_hour else people.reminder_hour end,
-         reminder_minute = case when $17 then excluded.reminder_minute else people.reminder_minute end
+         reminder_minute = case when $17 then excluded.reminder_minute else people.reminder_minute end,
+         interests = coalesce($18::text[], people.interests)
        where people.user_id = excluded.user_id
        returning *`,
       [
@@ -47,6 +48,7 @@ export class PeopleService {
         customTime ? p.reminder_hour : null,
         customTime ? p.reminder_minute : null,
         p.reminder_hour !== undefined,
+        p.interests ?? null,
       ],
     );
     if (!rows[0]) throw notFound();

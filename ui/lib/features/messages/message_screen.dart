@@ -11,6 +11,7 @@ import '../../core/chat_providers.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
@@ -45,6 +46,8 @@ class MessageScreen extends ConsumerStatefulWidget {
 
 class _MessageScreenState extends ConsumerState<MessageScreen> {
   final _text = TextEditingController();
+  final _focus = FocusNode();
+  int _suggestion = 0;
   BirthdayMessage? _existing;
   MessageTone _tone = MessageTone.warm;
   bool _saving = false;
@@ -88,6 +91,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   @override
   void dispose() {
     _text.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -303,12 +307,32 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     },
   );
 
+  /// Troca o texto por uma sugestão do tom escolhido (a seguinte, em "Gerar outra").
+  void _suggest(Person person, {bool next = false}) {
+    final list = MessageSuggestions.generate(person, _tone);
+    if (list.isEmpty) return;
+    _suggestion = next ? (_suggestion + 1) % list.length : 0;
+    setState(() => _text.text = list[_suggestion]);
+  }
+
+  /// Ao mudar de tom, só troca o texto se estiver vazio ou for uma sugestão por mexer.
+  void _pickTone(Person person, MessageTone tone) {
+    final current = _text.text.trim();
+    final untouched =
+        current.isEmpty || MessageTone.values.any((t) => MessageSuggestions.generate(person, t).contains(current));
+    setState(() => _tone = tone);
+    if (untouched) _suggest(person);
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(dataProvider);
     final person = data.person(widget.personId);
     if (person == null) return Scaffold(appBar: AppBar());
-    final suggestions = MessageSuggestions.generate(person, _tone);
+    final hasText = _text.text.trim().isNotEmpty;
+    final muted = context.palette.mutedForeground;
+    final scheduled = ref.watch(dataProvider).messageFor(person.id);
+    final pending = scheduled != null && scheduled.isScheduled && scheduled.isPending;
 
     return PopScope(
       canPop: !_dirty,
@@ -327,13 +351,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Row(
-            children: [
-              PersonAvatar(person: person, color: personColor(person, data), size: 32),
-              const SizedBox(width: 10),
-              Expanded(child: Text('Para ${person.firstName}', overflow: TextOverflow.ellipsis)),
-            ],
-          ),
+          title: Text('Mensagem para ${person.firstName}', overflow: TextOverflow.ellipsis),
           actions: [
             TextButton(
               onPressed: _saving || !_dirty
@@ -349,51 +367,135 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: context.palette.accent,
+                borderRadius: BorderRadius.circular(AppTheme.radius),
+              ),
+              child: Row(
+                children: [
+                  PersonAvatar(person: person, color: personColor(person, data), size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Para ${person.firstName}', style: AppTheme.display(context, size: 19)),
+                        Text(
+                          person.isToday ? 'Faz anos hoje' : 'Faz anos a ${Fmt.dayMonth(person.nextBirthday())}',
+                          style: context.text.bodySmall?.copyWith(color: muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text('QUE TOM QUERES?', style: AppTheme.eyebrow(context)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final t in MessageTone.values)
+                  ChoiceChip(label: Text(t.label), selected: _tone == t, onSelected: (_) => _pickTone(person, t)),
+              ],
+            ),
+            const SizedBox(height: 20),
             AppCard(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: TextField(
-                controller: _text,
-                minLines: 5,
-                maxLines: 12,
-                maxLength: 1000,
-                onChanged: (_) => setState(() {}),
-                textCapitalization: TextCapitalization.sentences,
-                style: AppTheme.display(context, size: 17, weight: FontWeight.w500).copyWith(height: 1.5),
-                decoration: const InputDecoration(
-                  hintText: 'Escreve aqui os teus parabéns…',
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                ),
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Icon(LucideIcons.quote, size: 22, color: context.colors.primary),
+                  ),
+                  TextField(
+                    controller: _text,
+                    focusNode: _focus,
+                    minLines: 4,
+                    maxLines: 12,
+                    maxLength: 1000,
+                    onChanged: (_) => setState(() {}),
+                    textCapitalization: TextCapitalization.sentences,
+                    style: AppTheme.display(context, size: 17, weight: FontWeight.w500).copyWith(height: 1.5),
+                    decoration: const InputDecoration(
+                      hintText: 'Escolhe um tom ou escreve os teus parabéns…',
+                      counterText: '',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                  const Divider(height: 20),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      IconButton(
+                        tooltip: 'Copiar',
+                        onPressed: !hasText
+                            ? null
+                            : () async {
+                                await Clipboard.setData(ClipboardData(text: _text.text.trim()));
+                                if (context.mounted) showMessage(context, 'Mensagem copiada.');
+                              },
+                        icon: const Icon(LucideIcons.copy, size: 18),
+                      ),
+                      FilledButton.tonal(
+                        onPressed: () => _focus.requestFocus(),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                        child: const Text('Editar'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _suggest(person, next: hasText),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                        icon: const Icon(LucideIcons.sparkles, size: 18),
+                        label: Text(hasText ? 'Gerar outra' : 'Gerar uma'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             if (ref.watch(cardsRepositoryProvider) != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 28),
               Row(
                 children: [
-                  Flexible(child: Text('Juntar ao cartão', style: context.text.titleSmall)),
+                  Flexible(child: Text('Juntar algo especial', style: AppTheme.display(context, size: 20))),
                   const SizedBox(width: 8),
                   const PlusBadge(),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               if (_media == null)
                 Row(
                   children: [
-                    for (final (kind, icon, label) in [
-                      (CardMediaKind.image, LucideIcons.image, 'Foto'),
-                      (CardMediaKind.video, LucideIcons.video, 'Vídeo'),
-                      (CardMediaKind.audio, LucideIcons.mic, 'Áudio'),
+                    for (final (kind, icon, label, hint) in [
+                      (CardMediaKind.image, LucideIcons.camera, 'Fotografia', 'Da galeria'),
+                      (CardMediaKind.video, LucideIcons.video, 'Vídeo', 'Da galeria'),
+                      (CardMediaKind.audio, LucideIcons.mic, 'Áudio', 'Gravar agora'),
                     ]) ...[
-                      if (kind != CardMediaKind.image) const SizedBox(width: 8),
+                      if (kind != CardMediaKind.image) const SizedBox(width: 10),
                       Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
-                          onPressed: () => _attach(kind),
-                          icon: Icon(icon, size: 18),
-                          label: Text(label),
+                        child: AppCard(
+                          onTap: () => _attach(kind),
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(icon, size: 22, color: context.colors.primary),
+                              const SizedBox(height: 8),
+                              Text(label, style: context.text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(hint, style: context.text.bodySmall?.copyWith(color: muted), maxLines: 2),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -418,84 +520,43 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                   ],
                 ),
             ],
-            const SizedBox(height: 12),
-            // "Enviar" à largura toda; "Copiar" e "Agendar" por baixo (cabem com letra grande).
-            FilledButton.icon(
-              onPressed: _text.text.trim().isEmpty ? null : () => _share(person),
-              icon: const Icon(LucideIcons.send, size: 18),
-              label: const Text('Enviar'),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-                    onPressed: _text.text.trim().isEmpty
-                        ? null
-                        : () async {
-                            await Clipboard.setData(ClipboardData(text: _text.text.trim()));
-                            if (context.mounted) showMessage(context, 'Mensagem copiada.');
-                          },
-                    icon: const Icon(LucideIcons.copy, size: 18),
-                    label: const Text('Copiar', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
+            const SizedBox(height: 16),
+            MergeSemantics(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(LucideIcons.clock),
+                title: const Text('Agendar'),
+                subtitle: Text(
+                  pending
+                      ? '${scheduled.scheduleVia == ScheduleVia.wall ? 'Vai para o mural' : 'Lembramos-te'}: ${scheduleLabel(scheduled.scheduledAt!).toLowerCase()}'
+                      : 'Escolhe o dia e a hora, e nós tratamos do resto',
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-                    onPressed: _text.text.trim().isEmpty || _saving ? null : () => _schedule(person),
-                    icon: const Icon(LucideIcons.calendarClock, size: 18),
-                    label: const Text('Agendar', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-            ),
-            _ScheduleStatus(
-              personId: person.id,
-              firstName: person.firstName,
-              onCancel: _saving ? null : _cancelSchedule,
-            ),
-            _CardStatus(personId: person.id, firstName: person.firstName),
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                Icon(LucideIcons.sparkles, size: 18, color: context.colors.primary),
-                const SizedBox(width: 8),
-                Flexible(child: Text('Sugestões', style: context.text.titleMedium)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final t in MessageTone.values)
-                  ChoiceChip(label: Text(t.label), selected: _tone == t, onSelected: (_) => setState(() => _tone = t)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            for (final s in suggestions)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  onTap: () => setState(() => _text.text = s),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: Text(s, style: context.text.bodyMedium)),
-                      const SizedBox(width: 12),
-                      Icon(LucideIcons.cornerDownLeft, size: 16, color: context.palette.mutedForeground),
-                    ],
-                  ),
+                enabled: hasText || pending,
+                onTap: _saving || !hasText ? null : () => _schedule(person),
+                trailing: Switch(
+                  value: pending,
+                  onChanged: _saving || (!hasText && !pending)
+                      ? null
+                      : (on) => on ? _schedule(person) : _cancelSchedule(),
                 ),
               ),
-            Text(
-              'Toca numa sugestão para a usar e depois personaliza-a à tua maneira.',
-              textAlign: TextAlign.center,
-              style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),
+            _ScheduleStatus(personId: person.id, firstName: person.firstName),
+            _CardStatus(personId: person.id, firstName: person.firstName),
           ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.palette.border)),
+            ),
+            child: FilledButton.icon(
+              onPressed: hasText ? () => _share(person) : null,
+              icon: const Icon(LucideIcons.share2, size: 18),
+              label: const Text('Enviar'),
+            ),
+          ),
         ),
       ),
     );
@@ -504,11 +565,10 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
 
 /// A mensagem agendada: quando sai e como, se já saiu, ou porque falhou.
 class _ScheduleStatus extends ConsumerWidget {
-  const _ScheduleStatus({required this.personId, required this.firstName, this.onCancel});
+  const _ScheduleStatus({required this.personId, required this.firstName});
 
   final String personId;
   final String firstName;
-  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -541,6 +601,8 @@ class _ScheduleStatus extends ConsumerWidget {
       _ when m.isPending => (LucideIcons.bellRing, 'Vamos lembrar-te de a enviar $when.', false, true),
       _ => (LucideIcons.bellRing, 'Lembrete enviado $when.', false, false),
     };
+    // Por enviar, a linha "Agendar" já diz quando.
+    if (pending) return const SizedBox.shrink();
     final color = error
         ? context.colors.error
         : pending
@@ -555,7 +617,6 @@ class _ScheduleStatus extends ConsumerWidget {
           Expanded(
             child: Text(text, style: context.text.bodySmall?.copyWith(color: color)),
           ),
-          if (pending) TextButton(onPressed: onCancel, child: const Text('Cancelar')),
         ],
       ),
     );

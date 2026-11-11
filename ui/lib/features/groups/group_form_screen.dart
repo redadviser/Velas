@@ -78,6 +78,9 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
   final List<FoundUser> _toInvite = [];
   bool _saving = false;
   bool _titleTouched = false;
+  int _step = 0;
+
+  static const _steps = ['Prenda', 'Divisão', 'Convidar'];
 
   bool get _isEdit => widget.groupId != null;
 
@@ -140,7 +143,11 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
     _day = p.day;
     _month = p.month;
     if (!_titleTouched) _title.text = 'Prenda para ${p.firstName}';
-    _deadline ??= BirthdayUtils.addDays(p.nextBirthday(), -1);
+    if (_deadline == null) {
+      final eve = BirthdayUtils.addDays(p.nextBirthday(), -1);
+      final today = BirthdayUtils.today();
+      _deadline = eve.isBefore(today) ? today : eve;
+    }
     final idea = ref.read(dataProvider).giftsFor(p.id).where((g) => !g.purchased).firstOrNull;
     if (_gift.text.isEmpty && idea != null) {
       _gift.text = idea.title;
@@ -205,21 +212,38 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
 
   double get _customSum => _members.fold(0, (a, m) => a + (parseEuros(m.amount.text) ?? 0));
 
-  Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
+  /// As partes e quem compra; mostra o problema e devolve false se houver.
+  bool _splitOk() {
     final total = parseEuros(_total.text)!;
     if (_split == SplitMode.custom && ((_customSum - total).abs() >= 0.01)) {
       showMessage(
         context,
         'A soma das partes (${Fmt.money(_customSum)}) tem de ser igual ao total (${Fmt.money(total)}).',
       );
-      return;
+      return false;
     }
     final buyer = _members.where((m) => m.id == _buyerId).firstOrNull;
     if (buyer != null && buyer.userId == null && !buyer.payment.hasAnyDigital && !buyer.payment.acceptsCash) {
       showMessage(context, 'Indica como se paga a ${buyer.name}.');
-      return;
+      return false;
     }
+    return true;
+  }
+
+  void _next() {
+    if (!_form.currentState!.validate()) return;
+    if (_step == 1 && !_splitOk()) return;
+    if (_step < _steps.length - 1) {
+      setState(() => _step++);
+    } else {
+      _save();
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    if (!_splitOk()) return;
+    final total = parseEuros(_total.text)!;
 
     final user = ref.read(currentUserProvider)!;
     final now = DateTime.now();
@@ -309,322 +333,182 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
     final buyerDraft = _members.where((m) => m.id == _buyerId).firstOrNull;
     final equalShare = total == null || _members.isEmpty ? null : total / _members.length;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(LucideIcons.x), onPressed: () => context.pop()),
-        title: Text(_isEdit ? 'Editar grupo' : 'Prenda em grupo'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(minimumSize: const Size(88, 40)),
-              child: _saving
-                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(_isEdit ? 'Guardar' : 'Criar'),
+    final spinner = const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2));
+    final giftStep = <Widget>[
+      const FieldLabel('Para quem é?'),
+      TextFormField(
+        controller: _celebrant,
+        textCapitalization: TextCapitalization.words,
+        validator: (v) => Validators.required(v, 'Indica para quem é a prenda.'),
+        onChanged: (v) => setState(() {
+          if (_person != null && v != _person!.name) _person = null;
+          if (!_titleTouched && v.trim().isNotEmpty) _title.text = 'Prenda para ${v.trim().split(' ').first}';
+        }),
+        decoration: InputDecoration(
+          hintText: 'Nome',
+          prefixIcon: const Icon(LucideIcons.cake, size: 18),
+          suffixIcon: TextButton(onPressed: _pickPerson, child: const Text('Da lista')),
+        ),
+      ),
+      if (_day != null && _month != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Text(
+            'Faz anos a ${Fmt.dayMonth(DateTime(2000, _month!, _day!))}',
+            style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+          ),
+        ),
+      const SizedBox(height: 18),
+      const FieldLabel('Nome do grupo'),
+      TextFormField(
+        controller: _title,
+        textCapitalization: TextCapitalization.sentences,
+        onChanged: (_) => _titleTouched = true,
+        validator: (v) => Validators.required(v, 'Dá um nome ao grupo.'),
+        decoration: const InputDecoration(hintText: 'Ex.: Prenda para a Mãe'),
+      ),
+      const SizedBox(height: 18),
+      const FieldLabel('A prenda'),
+      TextFormField(
+        controller: _gift,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(hintText: 'O que vão oferecer? (pode ficar para depois)'),
+      ),
+      const SizedBox(height: 10),
+      TextFormField(
+        controller: _link,
+        keyboardType: TextInputType.url,
+        decoration: const InputDecoration(hintText: 'Link (opcional)', prefixIcon: Icon(LucideIcons.link, size: 16)),
+      ),
+      const SizedBox(height: 18),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const FieldLabel('Valor total'),
+                TextFormField(
+                  controller: _total,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                  onChanged: (_) => setState(() {}),
+                  validator: (v) {
+                    final n = parseEuros(v ?? '');
+                    return n == null || n <= 0 ? 'Indica o valor.' : null;
+                  },
+                  decoration: const InputDecoration(hintText: '0', suffixText: '€'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const FieldLabel('Pagar até'),
+                OutlinedButton.icon(
+                  onPressed: _pickDeadline,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    alignment: Alignment.centerLeft,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(LucideIcons.calendar, size: 16),
+                  label: Text(_deadline == null ? 'Sem data' : Fmt.dayMonth(_deadline!)),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 48),
+    ];
+    final splitStep = <Widget>[
+      if (_isEdit) const SizedBox(height: 28),
+      Text('Como querem dividir?', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text(
+        'Podes mudar os valores depois, quando já estiverem todos no grupo.',
+        style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<SplitMode>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: SplitMode.equal, label: Text('Dividir igual')),
+            ButtonSegment(value: SplitMode.custom, label: Text('Valores à medida')),
+          ],
+          selected: {_split},
+          onSelectionChanged: (s) => setState(() => _split = s.first),
+        ),
+      ),
+      const SizedBox(height: 12),
+      AppCard(
+        padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            const FieldLabel('Para quem é?'),
-            TextFormField(
-              controller: _celebrant,
-              textCapitalization: TextCapitalization.words,
-              validator: (v) => Validators.required(v, 'Indica para quem é a prenda.'),
-              onChanged: (v) => setState(() {
-                if (_person != null && v != _person!.name) _person = null;
-                if (!_titleTouched && v.trim().isNotEmpty) _title.text = 'Prenda para ${v.trim().split(' ').first}';
-              }),
-              decoration: InputDecoration(
-                hintText: 'Nome',
-                prefixIcon: const Icon(LucideIcons.cake, size: 18),
-                suffixIcon: TextButton(onPressed: _pickPerson, child: const Text('Da lista')),
-              ),
-            ),
-            if (_day != null && _month != null)
+            for (final (i, m) in _members.indexed) ...[
+              if (i > 0) const Divider(indent: 16, endIndent: 16),
               Padding(
-                padding: const EdgeInsets.only(top: 6, left: 4),
-                child: Text(
-                  'Faz anos a ${Fmt.dayMonth(DateTime(2000, _month!, _day!))}',
-                  style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-                ),
-              ),
-            const SizedBox(height: 18),
-            const FieldLabel('Nome do grupo'),
-            TextFormField(
-              controller: _title,
-              textCapitalization: TextCapitalization.sentences,
-              onChanged: (_) => _titleTouched = true,
-              validator: (v) => Validators.required(v, 'Dá um nome ao grupo.'),
-              decoration: const InputDecoration(hintText: 'Ex.: Prenda para a Mãe'),
-            ),
-            const SizedBox(height: 18),
-            const FieldLabel('A prenda'),
-            TextFormField(
-              controller: _gift,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'O que vão oferecer? (pode ficar para depois)'),
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _link,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                hintText: 'Link (opcional)',
-                prefixIcon: Icon(LucideIcons.link, size: 16),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const FieldLabel('Valor total'),
-                      TextFormField(
-                        controller: _total,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                        onChanged: (_) => setState(() {}),
-                        validator: (v) {
-                          final n = parseEuros(v ?? '');
-                          return n == null || n <= 0 ? 'Indica o valor.' : null;
-                        },
-                        decoration: const InputDecoration(hintText: '0', suffixText: '€'),
+                padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: swatch(i).withValues(alpha: 0.16),
+                      child: Text(
+                        initialOf(m.name),
+                        style: TextStyle(color: swatch(i), fontWeight: FontWeight.w700, fontSize: 13),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const FieldLabel('Pagar até'),
-                      OutlinedButton.icon(
-                        onPressed: _pickDeadline,
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
-                          alignment: Alignment.centerLeft,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        icon: const Icon(LucideIcons.calendar, size: 16),
-                        label: Text(_deadline == null ? 'Sem data' : Fmt.dayMonth(_deadline!)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            Text('Participantes', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(
-              'Adiciona pelo @username, email ou telemóvel: são únicos, por isso não há confusão com nomes '
-              'repetidos. Cada pessoa entra no grupo quando aceitar o convite.',
-              style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-            ),
-            const SizedBox(height: 12),
-            ContactLookup(
-              actionLabel: 'Adicionar',
-              onAction: (u) async {
-                final already = _toInvite.any((x) => x.userId == u.userId) || _members.any((m) => m.userId == u.userId);
-                if (already) return '${u.name} já está na lista.';
-                setState(() => _toInvite.add(u));
-                return '${u.name} recebe o convite quando ${_isEdit ? 'guardares' : 'criares o grupo'}.';
-              },
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<SplitMode>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(value: SplitMode.equal, label: Text('Dividir igual')),
-                  ButtonSegment(value: SplitMode.custom, label: Text('Valores à medida')),
-                ],
-                selected: {_split},
-                onSelectionChanged: (s) => setState(() => _split = s.first),
-              ),
-            ),
-            const SizedBox(height: 12),
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  for (final (i, m) in _members.indexed) ...[
-                    if (i > 0) const Divider(indent: 16, endIndent: 16),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
-                      child: Row(
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: swatch(i).withValues(alpha: 0.16),
-                            child: Text(
-                              initialOf(m.name),
-                              style: TextStyle(color: swatch(i), fontWeight: FontWeight.w700, fontSize: 13),
-                            ),
+                          Text(m.userId == user.id ? '${m.name} (tu)' : m.name, style: context.text.bodyLarge),
+                          Text(
+                            [
+                              if (m.username.isNotEmpty) '@${m.username}',
+                              if (m.userId == (_original?.createdBy ?? user.id)) 'Administrador',
+                              if (m.userId == null) 'Sem conta',
+                            ].join(' · '),
+                            style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(m.userId == user.id ? '${m.name} (tu)' : m.name, style: context.text.bodyLarge),
-                                Text(
-                                  [
-                                    if (m.username.isNotEmpty) '@${m.username}',
-                                    if (m.userId == (_original?.createdBy ?? user.id)) 'Administrador',
-                                    if (m.userId == null) 'Sem conta',
-                                  ].join(' · '),
-                                  style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_split == SplitMode.custom)
-                            SizedBox(
-                              width: 92,
-                              child: TextFormField(
-                                controller: m.amount,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                                onChanged: (_) => setState(() {}),
-                                textAlign: TextAlign.right,
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  hintText: '0',
-                                  suffixText: '€',
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                ),
-                              ),
-                            )
-                          else if (equalShare != null)
-                            Text(Fmt.money(equalShare), style: context.text.labelLarge),
-                          if (m.userId != (_original?.createdBy ?? user.id))
-                            IconButton(
-                              tooltip: 'Remover',
-                              onPressed: () => _removeMember(m),
-                              icon: Icon(LucideIcons.x, size: 18, color: context.palette.mutedForeground),
-                            )
-                          else
-                            const SizedBox(width: 12),
                         ],
                       ),
                     ),
-                  ],
-                  for (final u in _toInvite) ...[
-                    const Divider(indent: 16, endIndent: 16),
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: context.palette.muted,
-                        child: Icon(LucideIcons.mail, size: 14, color: context.palette.mutedForeground),
-                      ),
-                      title: Text(u.name),
-                      subtitle: Text(
-                        [if (u.username.isNotEmpty) '@${u.username}', 'Recebe o convite ao guardar'].join(' · '),
-                      ),
-                      trailing: IconButton(
+                    if (_split == SplitMode.custom)
+                      SizedBox(
+                        width: 92,
+                        child: TextFormField(
+                          controller: m.amount,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                          onChanged: (_) => setState(() {}),
+                          textAlign: TextAlign.right,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            hintText: '0',
+                            suffixText: '€',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          ),
+                        ),
+                      )
+                    else if (equalShare != null)
+                      Text(Fmt.money(equalShare), style: context.text.labelLarge),
+                    if (m.userId != (_original?.createdBy ?? user.id))
+                      IconButton(
                         tooltip: 'Remover',
+                        onPressed: () => _removeMember(m),
                         icon: Icon(LucideIcons.x, size: 18, color: context.palette.mutedForeground),
-                        onPressed: () => setState(() => _toInvite.remove(u)),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (_split == SplitMode.custom && total != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8, left: 4),
-                child: Builder(
-                  builder: (context) {
-                    final diff = total - _customSum;
-                    final ok = diff.abs() < 0.01;
-                    return Text(
-                      ok
-                          ? 'As partes somam o total.'
-                          : diff > 0
-                          ? 'Faltam distribuir ${Fmt.money(diff)}.'
-                          : 'As partes excedem o total em ${Fmt.money(-diff)}.',
-                      style: context.text.bodySmall?.copyWith(
-                        color: ok ? context.palette.success : context.colors.error,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 28),
-            Text('Quem compra a prenda?', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(
-              'Recebe o dinheiro dos outros. Se não escolheres ninguém, és tu, como administrador.',
-              style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final m in _members)
-                  ChoiceChip(
-                    avatar: Icon(LucideIcons.shoppingBag, size: 14, color: context.palette.accentForeground),
-                    label: Text(m.userId == user.id ? 'Eu' : m.name),
-                    selected:
-                        (_buyerId ?? _members.firstWhere((d) => d.userId == (_original?.createdBy ?? user.id)).id) ==
-                        m.id,
-                    onSelected: (_) =>
-                        setState(() => _buyerId = m.userId == (_original?.createdBy ?? user.id) ? null : m.id),
-                  ),
-              ],
-            ),
-            if (buyerDraft != null && buyerDraft.userId == null) ...[
-              const SizedBox(height: 16),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Como se paga a ${buyerDraft.name}?', style: context.text.titleSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${buyerDraft.name} não tem conta, por isso indica tu os dados.',
-                      style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-                    ),
-                    const SizedBox(height: 16),
-                    PaymentDetailsFields(
-                      key: ValueKey(buyerDraft.id),
-                      initial: buyerDraft.payment,
-                      onChanged: (d) => buyerDraft.payment = d,
-                    ),
-                  ],
-                ),
-              ),
-            ] else if ((buyerDraft == null || buyerDraft.userId == user.id) && !user.payment.hasAnyDigital) ...[
-              const SizedBox(height: 16),
-              AppCard(
-                color: context.palette.accent,
-                onTap: () => context.push('/profile/payments'),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.wallet, color: context.palette.accentForeground, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Adiciona o teu MB WAY ou Revolut para os outros te pagarem.',
-                        style: TextStyle(color: context.palette.accentForeground, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Icon(LucideIcons.chevronRight, color: context.palette.accentForeground, size: 18),
+                      )
+                    else
+                      const SizedBox(width: 12),
                   ],
                 ),
               ),
@@ -632,6 +516,308 @@ class _GroupFormScreenState extends ConsumerState<GroupFormScreen> {
           ],
         ),
       ),
+      if (_split == SplitMode.custom && total != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8, left: 4),
+          child: Builder(
+            builder: (context) {
+              final diff = total - _customSum;
+              final ok = diff.abs() < 0.01;
+              return Text(
+                ok
+                    ? 'As partes somam o total.'
+                    : diff > 0
+                    ? 'Faltam distribuir ${Fmt.money(diff)}.'
+                    : 'As partes excedem o total em ${Fmt.money(-diff)}.',
+                style: context.text.bodySmall?.copyWith(
+                  color: ok ? context.palette.success : context.colors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              );
+            },
+          ),
+        ),
+      const SizedBox(height: 28),
+      Text('Quem compra a prenda?', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text(
+        'Recebe o dinheiro dos outros. Se não escolheres ninguém, és tu, como administrador.',
+        style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+      ),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final m in _members)
+            ChoiceChip(
+              avatar: Icon(LucideIcons.shoppingBag, size: 14, color: context.palette.accentForeground),
+              label: Text(m.userId == user.id ? 'Eu' : m.name),
+              selected:
+                  (_buyerId ?? _members.firstWhere((d) => d.userId == (_original?.createdBy ?? user.id)).id) == m.id,
+              onSelected: (_) => setState(() => _buyerId = m.userId == (_original?.createdBy ?? user.id) ? null : m.id),
+            ),
+        ],
+      ),
+      if (buyerDraft != null && buyerDraft.userId == null) ...[
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Como se paga a ${buyerDraft.name}?', style: context.text.titleSmall),
+              const SizedBox(height: 4),
+              Text(
+                '${buyerDraft.name} não tem conta, por isso indica tu os dados.',
+                style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+              ),
+              const SizedBox(height: 16),
+              PaymentDetailsFields(
+                key: ValueKey(buyerDraft.id),
+                initial: buyerDraft.payment,
+                onChanged: (d) => buyerDraft.payment = d,
+              ),
+            ],
+          ),
+        ),
+      ] else if ((buyerDraft == null || buyerDraft.userId == user.id) && !user.payment.hasAnyDigital) ...[
+        const SizedBox(height: 16),
+        AppCard(
+          color: context.palette.accent,
+          onTap: () => context.push('/profile/payments'),
+          child: Row(
+            children: [
+              Icon(LucideIcons.wallet, color: context.palette.accentForeground, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Adiciona o teu MB WAY ou Revolut para os outros te pagarem.',
+                  style: TextStyle(color: context.palette.accentForeground, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Icon(LucideIcons.chevronRight, color: context.palette.accentForeground, size: 18),
+            ],
+          ),
+        ),
+      ],
+    ];
+    final first = _person?.firstName ?? _celebrant.text.trim().split(' ').first;
+    final inviteStep = <Widget>[
+      if (_isEdit)
+        const SizedBox(height: 28)
+      else ...[
+        AppCard(
+          color: context.palette.violetSoft,
+          raised: false,
+          child: Row(
+            children: [
+              Icon(LucideIcons.lock, color: context.colors.secondary, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      first.isEmpty ? 'É segredo' : 'É segredo: $first não vê este grupo',
+                      style: context.text.titleSmall,
+                    ),
+                    Text(
+                      'Só entra quem convidares.',
+                      style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+      Text('Participantes', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text(
+        'Adiciona pelo @username, email ou telemóvel: são únicos, por isso não há confusão com nomes '
+        'repetidos. Cada pessoa entra no grupo quando aceitar o convite.',
+        style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+      ),
+      const SizedBox(height: 12),
+      ContactLookup(
+        actionLabel: 'Adicionar',
+        onAction: (u) async {
+          final already = _toInvite.any((x) => x.userId == u.userId) || _members.any((m) => m.userId == u.userId);
+          if (already) return '${u.name} já está na lista.';
+          setState(() => _toInvite.add(u));
+          return '${u.name} recebe o convite quando ${_isEdit ? 'guardares' : 'criares o grupo'}.';
+        },
+      ),
+      if (_toInvite.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (final (i, u) in _toInvite.indexed) ...[
+                if (i > 0) const Divider(indent: 16, endIndent: 16),
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: context.palette.muted,
+                    child: Icon(LucideIcons.mail, size: 14, color: context.palette.mutedForeground),
+                  ),
+                  title: Text(u.name),
+                  subtitle: Text(
+                    [if (u.username.isNotEmpty) '@${u.username}', 'Recebe o convite ao guardar'].join(' · '),
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Remover',
+                    icon: Icon(LucideIcons.x, size: 18, color: context.palette.mutedForeground),
+                    onPressed: () => setState(() => _toInvite.remove(u)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+      if (!_isEdit) ...[
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(LucideIcons.share2, size: 16, color: context.palette.mutedForeground),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Depois de criares, tens um link para partilhar no WhatsApp com quem não está na app.',
+                style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ];
+
+    if (_isEdit) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(icon: const Icon(LucideIcons.x), onPressed: () => context.pop()),
+          title: const Text('Editar grupo'),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(minimumSize: const Size(88, 40)),
+                child: _saving ? spinner : const Text('Guardar'),
+              ),
+            ),
+          ],
+        ),
+        body: Form(
+          key: _form,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 48),
+            children: [...giftStep, ...splitStep, ...inviteStep],
+          ),
+        ),
+      );
+    }
+
+    final last = _step == _steps.length - 1;
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _step--);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: _step == 0
+              ? IconButton(tooltip: 'Fechar', icon: const Icon(LucideIcons.x), onPressed: () => context.pop())
+              : IconButton(
+                  tooltip: 'Voltar',
+                  icon: const Icon(LucideIcons.arrowLeft),
+                  onPressed: () => setState(() => _step--),
+                ),
+          title: const Text('Prenda em grupo'),
+        ),
+        body: Form(
+          key: _form,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+            children: [
+              _Stepper(steps: _steps, current: _step),
+              const SizedBox(height: 20),
+              ...[giftStep, splitStep, inviteStep][_step],
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: FilledButton.icon(
+              onPressed: _saving ? null : _next,
+              iconAlignment: IconAlignment.end,
+              icon: _saving ? spinner : Icon(last ? LucideIcons.check : LucideIcons.arrowRight, size: 18),
+              label: Text(last ? 'Criar grupo' : 'Continuar'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Stepper extends StatelessWidget {
+  const _Stepper({required this.steps, required this.current});
+
+  final List<String> steps;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.palette.mutedForeground;
+    return Row(
+      children: [
+        for (final (i, label) in steps.indexed) ...[
+          if (i > 0)
+            Expanded(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.only(bottom: 20),
+                color: i <= current ? context.colors.primary : context.palette.border,
+              ),
+            ),
+          Semantics(
+            label: 'Passo ${i + 1} de ${steps.length}: $label',
+            selected: i == current,
+            excludeSemantics: true,
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: i <= current ? context.colors.primary : context.palette.muted,
+                  child: i < current
+                      ? Icon(LucideIcons.check, size: 14, color: context.colors.onPrimary)
+                      : Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            color: i == current ? context.colors.onPrimary : muted,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: context.text.labelSmall?.copyWith(
+                    color: i == current ? context.colors.onSurface : muted,
+                    fontWeight: i == current ? FontWeight.w700 : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -24,6 +24,7 @@ import { invitationsRoutes } from './modules/invitations/invitations.routes.js';
 import { messagesRoutes } from './modules/messages/messages.routes.js';
 import { peopleRoutes } from './modules/people/people.routes.js';
 import { specialDatesRoutes } from './modules/special-dates/special-dates.routes.js';
+import { wishlistRoutes } from './modules/wishlist/wishlist.routes.js';
 import { partiesRoutes } from './modules/parties/parties.routes.js';
 import { pushPublicRoutes, pushRoutes } from './modules/push/push.routes.js';
 import { subscriptionsPublicRoutes, subscriptionsRoutes } from './modules/subscriptions/subscriptions.routes.js';
@@ -104,6 +105,7 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
     await categoriesRoutes(scope, services.categories);
     await giftsRoutes(scope, services.gifts);
     await specialDatesRoutes(scope, services.specialDates);
+    await wishlistRoutes(scope, services.wishlist);
     await messagesRoutes(scope, services.messages);
     await cardsRoutes(scope, services.cards);
     await birthdayRequestsRoutes(scope, services.birthdayRequests);

@@ -119,7 +119,8 @@ final data = AppData(
     PersonCategory(id: 'c3', name: 'Trabalho', color: 2),
   ],
   people: [
-    person('p1', 'Maria Constança Vasconcelos', 0, year: 1990, category: 'c1', notes: 'Gosta de livros e de plantas.'),
+    person('p1', 'Maria Constança Vasconcelos', 0, year: 1990, category: 'c1', notes: 'Gosta de livros e de plantas.')
+        .copyWith(interests: ['books', 'crafts', 'outdoors'], linkedUserId: () => 'u1'),
     person('p2', 'Bartolomeu Figueiredo', 1, year: 1985, category: 'c2'),
     person('p3', 'Ana', 5, category: 'c3'),
     person('p4', 'Guilherme Albuquerque Sampaio', 12, year: 2001),
@@ -157,6 +158,9 @@ const loggedInRoutes = [
   '/gifts',
   '/person/p1',
   '/person/p1/message',
+  '/person/p1/ideas',
+  '/profile/widget',
+  '/profile/wishlist',
   '/person/new',
   '/person/p1/edit',
   '/profile',
@@ -183,6 +187,8 @@ const serverRoutes = [
   '/gifts',
   '/person/p1',
   '/person/p1/message',
+  '/person/p1/ideas',
+  '/profile/wishlist',
   '/chats/c1',
   '/chats/c1/info',
   '/chats/c2',
@@ -223,6 +229,14 @@ Map<String, Object?> _msg(String id, String conv, String? sender, String name, S
   'deleted': false,
 };
 const _long = 'Bartolomeu Figueiredo de Vasconcelos';
+final _wish = {
+  'id': 'w1',
+  'title': 'Edição ilustrada de "O Senhor dos Anéis" em capa dura com mapas',
+  'price': 59.9,
+  'link': 'https://www.livraria-muito-comprida-exemplo.pt/livros/senhor-dos-aneis',
+  'notes': 'A versão com os mapas desdobráveis, por favor',
+  'created_at': _iso,
+};
 final _conversations = [
   {
     'id': 'c1',
@@ -364,6 +378,11 @@ Object? _serve(String method, String path) => switch (path) {
   ],
   '/legal/info' => {'terms_version': 'x', 'support_email': 'apoio@birthdayly.pt'},
   '/stickers' => [],
+  '/me/wishlist' => [_wish],
+  '/friends/u1/wishlist' => {
+    'interests': ['music', 'coffee_tea', 'photography'],
+    'items': [_wish],
+  },
   _ => null,
 };
 

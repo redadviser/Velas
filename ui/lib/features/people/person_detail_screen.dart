@@ -17,6 +17,8 @@ import '../../data/models/group_models.dart';
 import '../chat/chat_widgets.dart';
 import '../chat/conversations_list.dart';
 import '../gifts/gift_widgets.dart';
+import '../gifts/wishlist_widgets.dart';
+import '../../core/wishlist_providers.dart';
 import '../groups/group_widgets.dart';
 import 'linked_friend.dart';
 
@@ -312,10 +314,11 @@ class PersonDetailScreen extends ConsumerWidget {
             )
           else
             _MessageCard(message: message, personId: person.id),
+          _TastesAndWishes(person: person, friendId: friend?.userId),
           SectionTitle(
             'Prendas',
-            action: 'Adicionar',
-            onAction: () => showGiftEditor(context, ref, personId: person.id),
+            action: 'Ver ideias',
+            onAction: () => context.push('/person/${person.id}/ideas'),
             padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
           ),
           AppCard(
@@ -373,7 +376,11 @@ class PersonDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
           ),
           for (final d in data.upcomingSpecialDates.where((d) => d.personId == person.id)) ...[
-            SpecialDateTile(date: d, data: data, onTap: () => showSpecialDateEditor(context, ref, date: d)),
+            SpecialDateTile(
+              date: d,
+              data: data,
+              onTap: () => showSpecialDateEditor(context, ref, date: d),
+            ),
             const SizedBox(height: 10),
           ],
           if (!data.specialDates.any((d) => d.personId == person.id))
@@ -507,6 +514,56 @@ class _MessageCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Os gostos da pessoa (os que escolheste e, se for amiga na app, os dela) e a
+/// lista de desejos que ela própria guardou.
+class _TastesAndWishes extends ConsumerWidget {
+  const _TastesAndWishes({required this.person, this.friendId});
+
+  final Person person;
+  final String? friendId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theirs = friendId == null ? null : ref.watch(friendWishlistProvider(friendId!)).value;
+    final interests = {...person.interests, ...?theirs?.interests};
+    final muted = context.palette.mutedForeground;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (interests.isNotEmpty) ...[
+          SectionTitle(
+            'Gostos e hobbies',
+            action: 'Editar',
+            onAction: () => context.push('/person/${person.id}/edit'),
+            padding: const EdgeInsets.fromLTRB(4, 28, 0, 8),
+          ),
+          InterestChips(keys: interests),
+        ],
+        if (theirs != null) ...[
+          SectionTitle('Lista de desejos de ${person.firstName}', padding: const EdgeInsets.fromLTRB(4, 28, 0, 6)),
+          if (theirs.items.isEmpty)
+            Text('${person.firstName} ainda não pôs nada na lista.', style: TextStyle(color: muted))
+          else
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (final (i, w) in theirs.items.indexed) ...[
+                    if (i > 0) const Divider(indent: 16, endIndent: 16),
+                    WishRow(
+                      item: w,
+                      trailing: KeepWishButton(person: person, wish: w),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paymentSchema, phoneSchema, usernameSchema } from '../../core/validation.js';
+import { interestsSchema } from '../wishlist/wishlist.model.js';
 
 /** Perfil no formato que a app lê (UserProfile.fromJson). */
 export interface Profile {
@@ -34,6 +35,8 @@ export interface Profile {
   weekly_digest: boolean;
   /** Versão dos Termos que aceitou (null = ainda não aceitou nenhuma). */
   terms_version: string | null;
+  /** Gostos e hobbies (chaves da app); os amigos veem-nos. */
+  interests: string[];
 }
 
 /** Dados para criar uma conta (registo ou primeira entrada com Google). */
@@ -71,6 +74,7 @@ export const profilePatchSchema = z
     message_notifications: z.boolean(),
     message_previews: z.boolean(),
     weekly_digest: z.boolean(),
+    interests: interestsSchema,
   })
   .partial();
 

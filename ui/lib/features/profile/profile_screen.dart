@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -379,6 +380,12 @@ class ProfileScreen extends ConsumerWidget {
                 onTap: () => context.push('/profile/reminders'),
               ),
               _Tile(
+                icon: LucideIcons.heart,
+                title: 'Gostos e desejos',
+                value: user.interests.isEmpty ? null : '${user.interests.length} gostos',
+                onTap: () => context.push('/profile/wishlist'),
+              ),
+              _Tile(
                 icon: LucideIcons.slidersHorizontal,
                 title: 'Preferências',
                 value: switch (themeMode) {
@@ -388,6 +395,12 @@ class ProfileScreen extends ConsumerWidget {
                 },
                 onTap: () => context.push('/profile/preferences'),
               ),
+              if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                _Tile(
+                  icon: LucideIcons.layoutGrid,
+                  title: 'Widgets',
+                  onTap: () => context.push('/profile/widget'),
+                ),
               _Tile(
                 icon: LucideIcons.shieldCheck,
                 title: 'Privacidade e dados',

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { id, moneySchema, timestampSchema } from '../../core/validation.js';
+import { interestsSchema } from '../wishlist/wishlist.model.js';
 
 export const personSchema = z.object({
   id,
@@ -15,6 +16,8 @@ export const personSchema = z.object({
   reminder_days: z.array(z.number().int().min(0).max(60)).max(10).nullish(),
   /** Amigo da app que é esta pessoa (null desfaz a ligação; ausente mantém a atual). */
   linked_user_id: id.nullish(),
+  /** Gostos e hobbies (chaves da app); ausente mantém os atuais. */
+  interests: interestsSchema.optional(),
   /** Hora própria do lembrete (Birthdayly+); null usa a do perfil, ausente mantém a atual. */
   reminder_hour: z.number().int().min(0).max(23).nullish(),
   reminder_minute: z.number().int().min(0).max(59).nullish(),
@@ -39,6 +42,7 @@ export interface PersonRow {
   gift_budget: number | null;
   reminder_days: number[] | null;
   linked_user_id: string | null;
+  interests: string[];
   reminder_hour: number | null;
   reminder_minute: number | null;
   created_at: Date;

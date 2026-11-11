@@ -295,6 +295,41 @@ describe('dados pessoais', () => {
     expect((await call('GET', '/data', { token: a.access_token })).body.special_dates).toHaveLength(1);
   });
 
+  it('gostos e lista de desejos: o dono gere, só os amigos veem', async () => {
+    const me = (body: object) => call('PATCH', '/me', { token: a.access_token, body });
+    expect((await me({ interests: ['books', 'travel'] })).body.interests).toEqual(['books', 'travel']);
+    expect((await me({ interests: ['Livros!'] })).status).toBe(400);
+
+    const wishId = uuid();
+    const wish = (s: Session, id: string, body: object) => call('PUT', `/me/wishlist/${id}`, { token: s.access_token, body });
+    expect((await wish(a, wishId, { title: 'Dune ilustrado', price: 32.5, link: 'https://wook.pt/dune' })).body).toMatchObject({ title: 'Dune ilustrado', price: 32.5 });
+    expect((await wish(a, wishId, { title: 'Dune (capa dura)', price: 35 })).body.title).toBe('Dune (capa dura)');
+    expect((await wish(a, uuid(), { title: '' })).status).toBe(400);
+    // B não sobrescreve nem apaga o desejo de A.
+    expect((await wish(b, wishId, { title: 'X' })).status).toBe(404);
+    await call('DELETE', `/me/wishlist/${wishId}`, { token: b.access_token });
+    expect((await call('GET', '/me/wishlist', { token: a.access_token })).body).toHaveLength(1);
+    expect((await call('GET', '/me/wishlist', { token: b.access_token })).body).toEqual([]);
+
+    // Sem amizade aceite, B não vê nada (nem sabe se a conta existe).
+    const ofA = () => call('GET', `/friends/${a.user.id}/wishlist`, { token: b.access_token });
+    expect((await ofA()).status).toBe(404);
+    await call('POST', '/friends/requests', { token: b.access_token, body: { user_id: a.user.id } });
+    expect((await ofA()).status).toBe(404);
+    await call('POST', '/friends/requests', { token: a.access_token, body: { user_id: b.user.id } });
+    const seen = (await ofA()).body;
+    expect(seen.interests).toEqual(['books', 'travel']);
+    expect(seen.items.map((w: { title: string }) => w.title)).toEqual(['Dune (capa dura)']);
+
+    // Gostos das pessoas sem conta: guardam-se e, sem o campo, mantêm-se.
+    const put = (body: object) => call('PUT', `/people/${personId}`, { token: a.access_token, body: { name: 'Marta', birth_day: 1, birth_month: 1, ...body } });
+    expect((await put({ interests: ['plants'] })).body.interests).toEqual(['plants']);
+    expect((await put({})).body.interests).toEqual(['plants']);
+    expect((await call('GET', '/me/export', { token: a.access_token })).body.wishlist).toHaveLength(1);
+    await call('DELETE', `/friends/${b.user.id}`, { token: a.access_token });
+    expect((await ofA()).status).toBe(404);
+  });
+
   it('carrega fotografias e serve-as por URL assinado', async () => {
     const res = await call('PUT', `/people/${personId}/photo`, { token: a.access_token, raw: jpeg });
     expect(res.status).toBe(200);

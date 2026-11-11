@@ -77,7 +77,7 @@ class ApiCardsRepository implements CardsRepository {
   Future<ClaimedCard> claim(String token) async {
     try {
       final res = (await _api.post('/cards/$token/claim') as Map).cast<String, dynamic>();
-      return ClaimedCard(senderId: res['sender_id'] as String, conversationId: res['conversation_id'] as String);
+      return ClaimedCard(senderId: res['sender_id'] as String);
     } on ApiException catch (e) {
       if (e.code == 'card_claimed') throw const AppException('Este cartão já foi guardado noutra conta.');
       if (e.code == 'own_card') throw const AppException('Este cartão foi enviado por ti.');

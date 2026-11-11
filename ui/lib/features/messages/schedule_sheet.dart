@@ -175,7 +175,7 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
                 _friend != null
                     ? 'Enviar sozinha para o mural de ${_friend!.firstName}'
                     : 'Enviar sozinha para o mural de um amigo',
-                'Publicamos a mensagem à hora marcada, no mural e na vossa conversa. Avisamos-te quando for enviada.',
+                'Publicamos a mensagem no mural à hora marcada e avisamos-te quando for enviada.',
                 _chooseWall,
               ),
             option(

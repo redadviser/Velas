@@ -131,6 +131,26 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadow: [BoxShadow(color: Color(0x1452393E), blurRadius: 30, offset: Offset(0, 10))],
   );
 
+  /// Os tons claros (fundos de ícones, chips, cartões) na cor do tema escolhido;
+  /// o Coral fica como está.
+  AppPalette tinted(AppAccent a, Brightness b) {
+    if (a == AppAccent.coral) return copyWith(brand: a.brand);
+    final light = b == Brightness.light;
+    final base = light ? Colors.white : AppColors.darkCard;
+    final c = light ? a.light : a.dark;
+    Color tint(Color color, double amount) => Color.lerp(base, color, amount)!;
+    return copyWith(
+      brand: a.brand,
+      accent: tint(c, light ? 0.10 : 0.22),
+      accentForeground: light ? Color.lerp(c, Colors.black, 0.3)! : Color.lerp(c, Colors.white, 0.55)!,
+      softGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [for (final g in a.gradient) tint(g, light ? 0.08 : 0.18)],
+      ),
+    );
+  }
+
   static const dark = AppPalette(
     muted: AppColors.darkMuted,
     mutedForeground: AppColors.darkMutedForeground,
@@ -149,15 +169,22 @@ class AppPalette extends ThemeExtension<AppPalette> {
   );
 
   @override
-  AppPalette copyWith({LinearGradient? brand, Color? mutedForeground, Color? border}) => AppPalette(
+  AppPalette copyWith({
+    LinearGradient? brand,
+    Color? mutedForeground,
+    Color? border,
+    Color? accent,
+    Color? accentForeground,
+    Gradient? softGradient,
+  }) => AppPalette(
     muted: muted,
     mutedForeground: mutedForeground ?? this.mutedForeground,
-    accent: accent,
-    accentForeground: accentForeground,
+    accent: accent ?? this.accent,
+    accentForeground: accentForeground ?? this.accentForeground,
     success: success,
     border: border ?? this.border,
     card: card,
-    softGradient: softGradient,
+    softGradient: softGradient ?? this.softGradient,
     violetSoft: violetSoft,
     shadow: shadow,
     brand: brand ?? this.brand,

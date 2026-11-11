@@ -163,7 +163,7 @@ class _Logo extends StatelessWidget {
     width: 22,
     height: 22,
     alignment: Alignment.center,
-    decoration: BoxDecoration(gradient: AppColors.brandGradient, borderRadius: BorderRadius.circular(7)),
+    decoration: BoxDecoration(gradient: context.palette.brand, borderRadius: BorderRadius.circular(7)),
     child: const Icon(LucideIcons.cakeSlice, size: 13, color: Colors.white),
   );
 }

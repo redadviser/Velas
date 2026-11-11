@@ -23,12 +23,10 @@ class AppTheme {
         secondary: accent == AppAccent.coral ? AppColors.secondary : accent.gradient.last,
         error: AppColors.destructive,
         palette: highContrast
-            ? AppPalette.light.copyWith(
-                brand: accent.brand,
-                mutedForeground: const Color(0xFF3F3431),
-                border: const Color(0xFF8C7F7A),
-              )
-            : AppPalette.light.copyWith(brand: accent.brand),
+            ? AppPalette.light
+                  .tinted(accent, Brightness.light)
+                  .copyWith(mutedForeground: const Color(0xFF3F3431), border: const Color(0xFF8C7F7A))
+            : AppPalette.light.tinted(accent, Brightness.light),
       );
 
   static ThemeData dark({AppAccent accent = AppAccent.coral, bool highContrast = false, bool reduceMotion = false}) =>
@@ -44,12 +42,10 @@ class AppTheme {
         secondary: accent == AppAccent.coral ? AppColors.darkSecondary : accent.gradient.last,
         error: AppColors.darkDestructive,
         palette: highContrast
-            ? AppPalette.dark.copyWith(
-                brand: accent.brand,
-                mutedForeground: const Color(0xFFE2D8D2),
-                border: const Color(0x8CFFFFFF),
-              )
-            : AppPalette.dark.copyWith(brand: accent.brand),
+            ? AppPalette.dark
+                  .tinted(accent, Brightness.dark)
+                  .copyWith(mutedForeground: const Color(0xFFE2D8D2), border: const Color(0x8CFFFFFF))
+            : AppPalette.dark.tinted(accent, Brightness.dark),
       );
 
   /// Títulos redondos e cheios (Nunito 900).

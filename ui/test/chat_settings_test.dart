@@ -96,10 +96,25 @@ void main() {
   });
 
   test('fixadas primeiro; silenciadas não contam nas não lidas', () async {
-    final groups = <GiftGroup>[];
-    final list = [conv('a', hour: 9), conv('b', hour: 11), conv('c', hour: 8, pinned: true)];
+    final list = [
+      conv('a', group: true, hour: 9),
+      conv('b', group: true, hour: 11),
+      conv('c', group: true, hour: 8, pinned: true),
+    ];
+    final groups = [
+      for (final c in list)
+        GiftGroup(
+          id: c.id,
+          createdBy: 'me',
+          title: c.id,
+          celebrantName: 'Rita',
+          targetAmount: 50,
+          createdAt: DateTime(2026, 9, 1),
+          conversationId: c.id,
+        ),
+    ];
     expect(
-      [for (final i in conversationItems(groups, list, ConversationFilter.all)) (i as DirectItem).conversation.id],
+      [for (final i in conversationItems(groups, list, ConversationFilter.all)) (i as GroupItem).group.id],
       ['c', 'b', 'a'],
     );
 

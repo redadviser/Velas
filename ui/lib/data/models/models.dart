@@ -292,12 +292,7 @@ class Person {
 
   /// Iniciais do primeiro e do último nome, sem símbolos nem emojis.
   String get initials {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .map(initialOf)
-        .where((i) => i != '?')
-        .toList();
+    final parts = name.trim().split(RegExp(r'\s+')).map(initialOf).where((i) => i != '?').toList();
     if (parts.isEmpty) return '?';
     return parts.length == 1 ? parts.first : parts.first + parts.last;
   }
@@ -440,7 +435,7 @@ class GiftIdea {
 }
 
 /// Como a mensagem agendada sai: [wall] a Birthdayly publica-a sozinha no
-/// mural do amigo (e na vossa conversa); [remind] a app avisa à hora marcada
+/// mural do amigo; [remind] a app avisa à hora marcada
 /// para a enviares fora da app (WhatsApp, SMS, cartão por link).
 enum ScheduleVia { wall, remind }
 
@@ -483,7 +478,8 @@ class BirthdayMessage {
   bool get isScheduled => scheduledAt != null && scheduleVia != null;
 
   /// Agendada e ainda por enviar (ou, no "lembrar-me", por avisar).
-  bool get isPending => isScheduled && sentAt == null && (scheduleVia == ScheduleVia.wall || scheduledAt!.isAfter(DateTime.now()));
+  bool get isPending =>
+      isScheduled && sentAt == null && (scheduleVia == ScheduleVia.wall || scheduledAt!.isAfter(DateTime.now()));
 
   BirthdayMessage copyWith({
     String? body,
@@ -697,7 +693,8 @@ class AppData {
   };
 
   /// Datas especiais pela próxima ocorrência (hoje primeiro).
-  List<SpecialDate> get upcomingSpecialDates => [...specialDates]..sort((a, b) => a.daysUntil().compareTo(b.daysUntil()));
+  List<SpecialDate> get upcomingSpecialDates =>
+      [...specialDates]..sort((a, b) => a.daysUntil().compareTo(b.daysUntil()));
 }
 
 /// Algo que o utilizador gostava de receber (os amigos veem a lista).

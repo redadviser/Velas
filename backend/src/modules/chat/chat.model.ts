@@ -6,7 +6,6 @@ import { giphyUrl } from '../gifs/gifs.service.js';
 const dimension = z.number().int().min(1).max(10_000).nullish();
 const giphy = z.string().max(500).regex(giphyUrl);
 
-export const directSchema = z.object({ user_id: id });
 
 export const messagesQuery = z.object({
   /** Mensagens anteriores a esta (paginação para trás). */

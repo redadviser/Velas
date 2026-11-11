@@ -52,7 +52,8 @@ class ReminderCopy {
       ),
       1 => (
         title: '${p.name} faz anos amanhã',
-        body: '${Fmt.dayMonth(date)}.$ageText ${hasMessage ? 'A tua mensagem já está pronta.' : 'Já tens a mensagem pronta?'}',
+        body:
+            '${Fmt.dayMonth(date)}.$ageText ${hasMessage ? 'A tua mensagem já está pronta.' : 'Já tens a mensagem pronta?'}',
         payload: 'message:${p.id}',
         groupAction: false,
       ),
@@ -74,8 +75,18 @@ class ReminderCopy {
   static Reminder special(SpecialDate d, {required int daysBefore, required DateTime date, int? years}) {
     final yearsText = years == null || years <= 0 ? '' : ' ${years == 1 ? 'Faz 1 ano' : 'Fazem $years anos'}.';
     return switch (daysBefore) {
-      0 => (title: 'Hoje: ${d.title}', body: 'Um dia para assinalar.$yearsText', payload: 'special:${d.id}', groupAction: false),
-      1 => (title: '${d.title} é amanhã', body: '${Fmt.dayMonth(date)}.$yearsText', payload: 'special:${d.id}', groupAction: false),
+      0 => (
+        title: 'Hoje: ${d.title}',
+        body: 'Um dia para assinalar.$yearsText',
+        payload: 'special:${d.id}',
+        groupAction: false,
+      ),
+      1 => (
+        title: '${d.title} é amanhã',
+        body: '${Fmt.dayMonth(date)}.$yearsText',
+        payload: 'special:${d.id}',
+        groupAction: false,
+      ),
       _ => (
         title: '${d.title} daqui a ${reminderShortLabel(daysBefore)}',
         body: '${Fmt.weekdayDayMonth(date)}.$yearsText',
@@ -115,7 +126,14 @@ class ReminderCopy {
       );
     }
     for (final s in data.specialDates) {
-      add(s.day, s.month, s.reminderDays ?? profile.defaultReminderDays, profile.reminderHour, profile.reminderMinute, special: s);
+      add(
+        s.day,
+        s.month,
+        s.reminderDays ?? profile.defaultReminderDays,
+        profile.reminderHour,
+        profile.reminderMinute,
+        special: s,
+      );
     }
     return out..sort((a, b) => a.when.compareTo(b.when));
   }
@@ -130,7 +148,12 @@ class ReminderCopy {
       hasMessage: data.messageFor(person.id) != null,
       ideas: data.giftsFor(person.id).where((g) => !g.purchased).length,
     ),
-    (_, final s?) => special(s, daysBefore: p.daysBefore, date: p.occurrence, years: s.year == null ? null : p.occurrence.year - s.year!),
+    (_, final s?) => special(
+      s,
+      daysBefore: p.daysBefore,
+      date: p.occurrence,
+      years: s.year == null ? null : p.occurrence.year - s.year!,
+    ),
     _ => throw StateError('lembrete sem pessoa nem data'),
   };
 
@@ -159,6 +182,7 @@ class ReminderCopy {
       'group' => '/groups/new?personId=$id',
       'agenda' => '/people',
       'special' => '/special',
+      'wall' => '/wall',
       _ => null,
     };
   }
@@ -174,9 +198,7 @@ class ReminderCopy {
     }
     if (week.isEmpty) return null;
     week.sort((a, b) => a.$1.compareTo(b.$1));
-    final names = [
-      for (final (d, p) in week.take(4)) '${p.firstName} (${Fmt.weekdayShort(d).toLowerCase()})',
-    ];
+    final names = [for (final (d, p) in week.take(4)) '${p.firstName} (${Fmt.weekdayShort(d).toLowerCase()})'];
     final more = week.length - names.length;
     return (
       title: week.length == 1 ? '🎂 Esta semana faz anos 1 pessoa' : '🎂 Esta semana fazem anos ${week.length} pessoas',

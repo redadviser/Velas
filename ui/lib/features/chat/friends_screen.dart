@@ -12,7 +12,6 @@ import '../../data/models/chat_models.dart';
 import '../groups/invite_widgets.dart';
 import 'chat_format.dart';
 import 'chat_widgets.dart';
-import 'conversations_list.dart';
 
 String friendRequestMessage(FriendRequestResult r, String name) => tr(
   switch (r) {
@@ -37,11 +36,6 @@ class FriendsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(LucideIcons.messageCircle),
-              title: Text(ctx.tr(Keys.friendsChatWith, {'name': f.firstName})),
-              onTap: () => Navigator.pop(ctx, 'chat'),
-            ),
-            ListTile(
               leading: Icon(LucideIcons.userMinus, color: ctx.colors.error),
               title: Text(ctx.tr(Keys.friendsRemoveAction), style: TextStyle(color: ctx.colors.error)),
               onTap: () => Navigator.pop(ctx, 'remove'),
@@ -52,9 +46,7 @@ class FriendsScreen extends ConsumerWidget {
       ),
     );
     if (!context.mounted) return;
-    if (action == 'chat') {
-      await openDirectChat(context, ref, f.userId);
-    } else if (action == 'remove') {
+    if (action == 'remove') {
       final ok = await confirmDialog(
         context,
         title: context.tr(Keys.friendsRemoveTitle, {'name': f.firstName}),
@@ -150,11 +142,6 @@ class FriendsScreen extends ConsumerWidget {
                         leading: PresenceAvatar(user: f),
                         title: Text(f.name),
                         subtitle: _FriendStatus(user: f),
-                        trailing: IconButton(
-                          tooltip: context.tr(Keys.friendsChat),
-                          onPressed: () => openDirectChat(context, ref, f.userId),
-                          icon: Icon(LucideIcons.messageCircle, color: context.colors.primary),
-                        ),
                         onTap: () => _friendMenu(context, ref, f),
                       ),
                     ],

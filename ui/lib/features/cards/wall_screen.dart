@@ -10,7 +10,6 @@ import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/card_models.dart';
 import '../chat/chat_widgets.dart';
-import '../chat/conversations_list.dart';
 import '../profile/plus.dart';
 import 'card_media.dart';
 
@@ -31,11 +30,19 @@ class _WallScreenState extends ConsumerState<WallScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(wallProvider.future).then((cards) {
-      if (!mounted) return;
-      setState(() => _fresh = {for (final c in cards) if (!c.seen) c.id});
-      ref.read(wallProvider.notifier).markSeen().catchError((_) {});
-    }).catchError((_) {});
+    ref
+        .read(wallProvider.future)
+        .then((cards) {
+          if (!mounted) return;
+          setState(
+            () => _fresh = {
+              for (final c in cards)
+                if (!c.seen) c.id,
+            },
+          );
+          ref.read(wallProvider.notifier).markSeen().catchError((_) {});
+        })
+        .catchError((_) {});
   }
 
   @override
@@ -44,7 +51,10 @@ class _WallScreenState extends ConsumerState<WallScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('O teu mural'),
-        actions: [_AlbumButton(year: DateTime.now().year), const SizedBox(width: 8)],
+        actions: [
+          _AlbumButton(year: DateTime.now().year),
+          const SizedBox(width: 8),
+        ],
       ),
       body: wall.when(
         loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
@@ -106,7 +116,12 @@ class _WallList extends StatelessWidget {
           ),
         );
       }
-      rows.add(Padding(padding: const EdgeInsets.only(bottom: 12), child: _WallCard(card: c, fresh: fresh.contains(c.id))));
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _WallCard(card: c, fresh: fresh.contains(c.id)),
+        ),
+      );
     }
     return ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 32), children: rows);
   }
@@ -152,20 +167,15 @@ class _WallCard extends ConsumerWidget {
             ],
           ),
           if (card.media != null)
-            Padding(padding: const EdgeInsets.fromLTRB(0, 12, 8, 0), child: CardMediaView(media: card.media!)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 8, 0),
+              child: CardMediaView(media: card.media!),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 12, 8, 4),
             child: Text(
               card.body,
               style: AppTheme.display(context, size: 17, weight: FontWeight.w500).copyWith(height: 1.5),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => openDirectChat(context, ref, card.sender.userId),
-              icon: const Icon(LucideIcons.messageCircle, size: 16),
-              label: Text('Agradecer a ${card.sender.firstName}'),
             ),
           ),
         ],
@@ -243,7 +253,13 @@ class _AlbumButton extends ConsumerWidget {
       },
       child: const Row(
         mainAxisSize: MainAxisSize.min,
-        children: [Icon(LucideIcons.images, size: 16), SizedBox(width: 6), Text('Álbum'), SizedBox(width: 6), PlusBadge()],
+        children: [
+          Icon(LucideIcons.images, size: 16),
+          SizedBox(width: 6),
+          Text('Álbum'),
+          SizedBox(width: 6),
+          PlusBadge(),
+        ],
       ),
     );
   }

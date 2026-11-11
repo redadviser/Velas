@@ -162,6 +162,22 @@ export class PushService {
     );
   }
 
+  /** Parabéns de um amigo no mural (respeita as notificações de mensagens). */
+  async wallCard(recipientId: string, senderId: string): Promise<void> {
+    if (!this.sender) return;
+    const { rows } = await this.db.query<{ name: string }>(
+      `select s.display_name as name from profiles s, profiles r
+       where s.id = $2 and r.id = $1 and r.message_notifications and not is_blocked($1, $2)`,
+      [recipientId, senderId],
+    );
+    const name = rows[0]?.name.split(' ')[0];
+    if (!name) return;
+    await this.deliver([recipientId], (_, lang) => {
+      const c = pushCopy(lang);
+      return { title: c.wallCard(name), body: c.wallCardBody, data: { type: 'wall' } };
+    });
+  }
+
   /** A mensagem agendada foi publicada no mural (ou não conseguiu). */
   async scheduledMessage(userId: string, p: { personId: string; personName: string; ok: boolean }): Promise<void> {
     await this.deliver([userId], (_, lang) => {

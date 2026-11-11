@@ -13,6 +13,8 @@ interface Copy {
   scheduledSentBody: string;
   scheduledFailed: (name: string) => string;
   scheduledFailedBody: string;
+  wallCard: (name: string) => string;
+  wallCardBody: string;
 }
 
 const copy: Record<PushLang, Copy> = {
@@ -24,7 +26,9 @@ const copy: Record<PushLang, Copy> = {
     sticker: 'Sticker',
     inGroup: (n, t) => `${n}: ${t}`,
     scheduledSent: (n) => `🎉 Enviámos os teus parabéns a ${n}`,
-    scheduledSentBody: 'A tua mensagem já está no mural e na vossa conversa.',
+    scheduledSentBody: 'A tua mensagem já está no mural.',
+    wallCard: (n) => `${n} deixou-te parabéns no mural`,
+    wallCardBody: 'Toca para leres.',
     scheduledFailed: (n) => `Não foi possível enviar a mensagem a ${n}`,
     scheduledFailedBody: 'Abre a app para a enviares de outra forma.',
   },
@@ -36,7 +40,9 @@ const copy: Record<PushLang, Copy> = {
     sticker: 'Sticker',
     inGroup: (n, t) => `${n}: ${t}`,
     scheduledSent: (n) => `🎉 We sent your birthday wishes to ${n}`,
-    scheduledSentBody: 'Your message is on their wall and in your chat.',
+    scheduledSentBody: 'Your message is on their wall.',
+    wallCard: (n) => `${n} left you birthday wishes on your wall`,
+    wallCardBody: 'Tap to read.',
     scheduledFailed: (n) => `We couldn't send your message to ${n}`,
     scheduledFailedBody: 'Open the app to send it another way.',
   },
@@ -48,7 +54,9 @@ const copy: Record<PushLang, Copy> = {
     sticker: 'Sticker',
     inGroup: (n, t) => `${n}: ${t}`,
     scheduledSent: (n) => `🎉 Hemos enviado tu felicitación a ${n}`,
-    scheduledSentBody: 'Tu mensaje ya está en su muro y en vuestra conversación.',
+    scheduledSentBody: 'Tu mensaje ya está en su muro.',
+    wallCard: (n) => `${n} te ha felicitado en tu muro`,
+    wallCardBody: 'Toca para leerlo.',
     scheduledFailed: (n) => `No se pudo enviar tu mensaje a ${n}`,
     scheduledFailedBody: 'Abre la app para enviarlo de otra forma.',
   },
@@ -60,7 +68,9 @@ const copy: Record<PushLang, Copy> = {
     sticker: 'Sticker',
     inGroup: (n, t) => `${n} : ${t}`,
     scheduledSent: (n) => `🎉 Nous avons envoyé vos vœux à ${n}`,
-    scheduledSentBody: 'Votre message est sur son mur et dans votre conversation.',
+    scheduledSentBody: 'Votre message est sur son mur.',
+    wallCard: (n) => `${n} vous a souhaité un joyeux anniversaire sur votre mur`,
+    wallCardBody: 'Touchez pour lire.',
     scheduledFailed: (n) => `Impossible d'envoyer votre message à ${n}`,
     scheduledFailedBody: "Ouvrez l'app pour l'envoyer autrement.",
   },

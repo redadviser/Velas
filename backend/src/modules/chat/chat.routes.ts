@@ -5,7 +5,7 @@ import { HttpError } from '../../core/errors.js';
 import { doc } from '../../core/openapi.js';
 import { PhotoStorage } from '../../core/storage.js';
 import { idParams } from '../../core/validation.js';
-import { directSchema, messagesQuery, prefsSchema, reactionSchema, saveStickerSchema, sendSchema } from './chat.model.js';
+import { messagesQuery, prefsSchema, reactionSchema, saveStickerSchema, sendSchema } from './chat.model.js';
 import type { ChatService } from './chat.service.js';
 import type { StickersService } from './stickers.service.js';
 
@@ -30,12 +30,6 @@ export async function chatRoutes(app: FastifyInstance, chat: ChatService, sticke
 
   app.get('/conversations/:id', { schema: doc({ tag, summary: 'Uma conversa e quem participa', params: idParams }) }, (req) =>
     chat.get(req.uid, idParams.parse(req.params).id),
-  );
-
-  app.post(
-    '/conversations/direct',
-    { schema: doc({ tag, summary: 'Abrir a conversa privada com um amigo', body: directSchema }) },
-    (req) => chat.openDirect(req.uid, directSchema.parse(req.body).user_id),
   );
 
   app.patch(

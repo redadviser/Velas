@@ -63,7 +63,7 @@ class FakeCards implements CardsRepository {
   @override
   Future<ClaimedCard> claim(String t) async {
     claimed.add(t);
-    return const ClaimedCard(senderId: 'rita', conversationId: 'c-rita');
+    return const ClaimedCard(senderId: 'rita');
   }
 
   @override
@@ -73,15 +73,6 @@ class FakeCards implements CardsRepository {
 class FakeChat implements ChatRepository {
   @override
   Future<List<Conversation>> fetchConversations() async => const [];
-
-  @override
-  Future<Conversation> openDirect(String userId) async => Conversation(
-    id: 'c-$userId',
-    isGroup: false,
-    title: 'Rita Lopes',
-    otherUser: ChatUser(userId: userId, name: 'Rita Lopes'),
-    createdAt: DateTime(2026),
-  );
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(invocation.memberName.toString());
@@ -117,12 +108,26 @@ void main() {
       initialLocation: at,
       routes: [
         GoRoute(path: '/wall', builder: (_, _) => const WallScreen()),
-        GoRoute(path: '/banner', builder: (_, _) => const Scaffold(body: WallBanner())),
-        GoRoute(path: '/card/:token', builder: (_, s) => CardScreen(token: s.pathParameters['token']!)),
-        GoRoute(path: '/register', builder: (_, _) => const Scaffold(body: Text('registo'))),
-        GoRoute(path: '/login', builder: (_, _) => const Scaffold(body: Text('login'))),
-        GoRoute(path: '/home', builder: (_, _) => const Scaffold(body: Text('início'))),
-        GoRoute(path: '/chats/:id', builder: (_, s) => Scaffold(body: Text('conversa ${s.pathParameters['id']}'))),
+        GoRoute(
+          path: '/banner',
+          builder: (_, _) => const Scaffold(body: WallBanner()),
+        ),
+        GoRoute(
+          path: '/card/:token',
+          builder: (_, s) => CardScreen(token: s.pathParameters['token']!),
+        ),
+        GoRoute(
+          path: '/register',
+          builder: (_, _) => const Scaffold(body: Text('registo')),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, _) => const Scaffold(body: Text('login')),
+        ),
+        GoRoute(
+          path: '/home',
+          builder: (_, _) => const Scaffold(body: Text('início')),
+        ),
       ],
     );
     await tester.pumpWidget(
@@ -133,31 +138,34 @@ void main() {
           chatRepositoryProvider.overrideWithValue(FakeChat()),
           chatEventsProvider.overrideWithValue(const Stream.empty()),
         ],
-        child: MaterialApp.router(theme: ThemeData(extensions: const [AppPalette.light]), routerConfig: router),
+        child: MaterialApp.router(
+          theme: ThemeData(extensions: const [AppPalette.light]),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
     return cards;
   }
 
-  testWidgets('sem conta lê a mensagem e vai criar conta para responder', (tester) async {
+  testWidgets('sem conta lê a mensagem e vai criar conta para a guardar', (tester) async {
     final cards = await open(tester, null);
     expect(find.text('Parabéns, Tomás! 🎉'), findsOneWidget);
     expect(find.text('Que seja um ano incrível!'), findsOneWidget);
     expect(cards.opened, [token]);
 
-    await tester.tap(find.text('Responder a Rita'));
+    await tester.tap(find.text('Criar conta'));
     await tester.pumpAndSettle();
     expect(find.text('registo'), findsOneWidget);
   });
 
-  testWidgets('com conta guarda o cartão e abre a conversa com quem o enviou', (tester) async {
+  testWidgets('com conta guarda o cartão no mural, sem abrir conversa', (tester) async {
     final cards = await open(tester, tomas);
-    await tester.tap(find.text('Responder a Rita'));
+    await tester.tap(find.text('Guardar no meu mural'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(cards.claimed, [token]);
-    expect(find.text('conversa c-rita'), findsOneWidget);
+    expect(find.text('O teu mural'), findsOneWidget);
   });
 
   testWidgets('o mural mostra os parabéns por ano, destaca os novos e marca-os como vistos', (tester) async {
@@ -169,9 +177,7 @@ void main() {
     expect(find.text('Nova'), findsOneWidget);
     expect(cards.wallSeen, 1);
 
-    await tester.tap(find.text('Agradecer a Rita'));
-    await tester.pumpAndSettle();
-    expect(find.text('conversa c-rita'), findsOneWidget);
+    expect(find.text('Agradecer a Rita'), findsNothing);
   });
 
   testWidgets('o Início avisa quando chegam parabéns novos ao mural', (tester) async {
@@ -185,7 +191,7 @@ void main() {
   testWidgets('quem enviou vê o próprio cartão sem o marcar como aberto', (tester) async {
     final cards = await open(tester, rita);
     expect(find.text('Este é o cartão que enviaste.'), findsOneWidget);
-    expect(find.text('Responder a Rita'), findsNothing);
+    expect(find.text('Guardar no meu mural'), findsNothing);
     expect(cards.opened, isEmpty);
   });
 }

@@ -17,9 +17,6 @@ abstract class ChatRepository {
   /// Uma conversa com os participantes (e até onde cada um leu).
   Future<Conversation> fetchConversation(String conversationId);
 
-  /// Abre (ou cria) a conversa privada com um amigo.
-  Future<Conversation> openDirect(String userId);
-
   Future<void> markRead(String conversationId);
 
   /// Silenciar ([mutedUntil], `null` = deixar de silenciar) e fixar, só para mim.

@@ -290,6 +290,8 @@ class NotificationService {
         await showChatMessage(conversationId: id, title: title, body: body, replyToken: data['reply_token'] as String?);
       case 'scheduled_sent' || 'scheduled_failed':
         await showInfo(title: title, body: body, payload: 'message:${data['person_id']}');
+      case 'wall':
+        await showInfo(title: title, body: body, payload: 'wall:me');
     }
   }
 

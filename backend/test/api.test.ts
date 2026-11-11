@@ -146,6 +146,21 @@ async function signup(name: string, username: string, email: string, password = 
   return res.body as Session;
 }
 
+/** Uma prenda em grupo de [owner] com [others] lá dentro; devolve a conversa do grupo. */
+async function groupChat(owner: Session, ...others: Session[]): Promise<string> {
+  const groupId = uuid();
+  await call('PUT', `/groups/${groupId}`, {
+    token: owner.access_token,
+    body: {
+      group: { title: 'Prenda da Rita', celebrant_name: 'Rita', target_amount: 30 },
+      new_members: [{ id: uuid(), user_id: owner.user.id, display_name: owner.user.display_name }],
+    },
+  });
+  const group = (await call('GET', '/groups', { token: owner.access_token })).body.find((g: { id: string }) => g.id === groupId);
+  for (const s of others) await call('POST', `/invite-codes/${group.invite_code}/join`, { token: s.access_token, body: {} });
+  return group.conversation_id;
+}
+
 describe('autenticação', () => {
   it('regista, entra por email e por username, e recusa duplicados', async () => {
     const s = await signup('Ana Silva', 'Ana.Silva', 'ana@ex.pt');
@@ -651,13 +666,13 @@ describe('amigos e conversas', () => {
     expect((await call('GET', '/friends', { token: hugo.access_token })).body.friends).toEqual([]);
   });
 
-  it('conversa privada só entre amigos, com não lidas, respostas, reações e apagar', async () => {
-    expect((await call('POST', '/conversations/direct', { token: hugo.access_token, body: { user_id: filipa.user.id } })).body.error).toBe('not_friends');
+  it('conversa do grupo, com não lidas, respostas, reações e apagar; sem conversas privadas', async () => {
+    expect((await call('POST', '/conversations/direct', { token: filipa.access_token, body: { user_id: gil.user.id } })).status).toBe(404);
+    await expect(db.query('insert into conversations (user_a, user_b) values ($1, $2)', [filipa.user.id, gil.user.id].sort())).rejects.toThrow();
 
-    const opened = await call('POST', '/conversations/direct', { token: filipa.access_token, body: { user_id: gil.user.id } });
-    expect(opened.body).toMatchObject({ kind: 'direct', title: 'Gil', other_user: { user_id: gil.user.id }, unread_count: 0 });
-    direct = opened.body.id;
-    expect((await call('POST', '/conversations/direct', { token: gil.access_token, body: { user_id: filipa.user.id } })).body.id).toBe(direct);
+    direct = await groupChat(filipa, gil);
+    const opened = (await call('GET', '/conversations', { token: filipa.access_token })).body.find((c: { id: string }) => c.id === direct);
+    expect(opened).toMatchObject({ kind: 'group', title: 'Prenda da Rita', unread_count: 0 });
 
     const id = uuid();
     const first = await call('POST', `/conversations/${direct}/messages`, { token: filipa.access_token, body: { id, kind: 'text', body: '  Olá! O que oferecemos à Rita?  ' } });
@@ -667,7 +682,7 @@ describe('amigos e conversas', () => {
     expect((await send(filipa, direct, { kind: 'text', body: '   ' })).status).toBe(422);
 
     let gilConv = (await call('GET', '/conversations', { token: gil.access_token })).body.find((c: { id: string }) => c.id === direct);
-    expect(gilConv).toMatchObject({ title: 'Filipa', unread_count: 1, last_message: { body: 'Olá! O que oferecemos à Rita?' } });
+    expect(gilConv).toMatchObject({ title: 'Prenda da Rita', unread_count: 1, last_message: { body: 'Olá! O que oferecemos à Rita?' } });
 
     const reply = await send(gil, direct, { kind: 'text', body: 'Um livro 📚', reply_to: id });
     expect(reply.body.reply).toMatchObject({ id, sender_name: 'Filipa' });
@@ -827,8 +842,8 @@ describe('amigos e conversas', () => {
     await new Promise((r) => filipaWs.once('message', r));
     // O Gil (amigo) vê que a Filipa ficou online, também na lista de conversas.
     expect(await next('presence')).toMatchObject({ user_id: filipa.user.id, online: true });
-    const withFilipa = (await call('GET', '/conversations', { token: gil.access_token })).body.find((c: { id: string }) => c.id === direct);
-    expect(withFilipa.other_user).toMatchObject({ user_id: filipa.user.id, online: true });
+    const withFilipa = (await call('GET', `/conversations/${direct}`, { token: gil.access_token })).body.participants;
+    expect(withFilipa.find((p: { user_id: string }) => p.user_id === filipa.user.id)).toMatchObject({ online: true });
     expect((await call('GET', '/friends', { token: gil.access_token })).body.friends.find((f: { user_id: string }) => f.user_id === filipa.user.id).online).toBe(true);
 
     filipaWs.send(JSON.stringify({ type: 'typing', conversation_id: direct }));
@@ -849,10 +864,9 @@ describe('amigos e conversas', () => {
     await call('POST', '/friends/requests', { token: hugo.access_token, body: { user_id: gil.user.id } });
     await next('friends');
 
-    // Deixar de ser amigos: a conversa fica para ler, mas já não se escreve.
+    // Deixar de ser amigos não tira ninguém da conversa do grupo.
     await call('DELETE', `/friends/${filipa.user.id}`, { token: gil.access_token });
-    expect((await send(gil, direct, { kind: 'text', body: 'adeus' })).body.error).toBe('not_friends');
-    expect((await call('GET', `/conversations/${direct}/messages`, { token: gil.access_token })).status).toBe(200);
+    expect((await send(gil, direct, { kind: 'text', body: 'adeus' })).status).toBe(200);
 
     ws.terminate();
     filipaWs.terminate();
@@ -873,14 +887,13 @@ describe('fotografia de perfil', () => {
     expect((await call('GET', '/me', { token: ines.access_token })).body.photo_url).toBe(up.body.photo_url);
     expect((await call('PUT', '/me/photo', { token: ines.access_token, raw: Buffer.from('não sou imagem') })).status).toBe(415);
 
-    // Aparece a quem a procura, aos amigos e na conversa privada.
+    // Aparece a quem a procura, aos amigos e nas conversas.
     expect((await call('POST', '/users/find', { token: joao.access_token, body: { identifier: '@ines' } })).body.user.photo_url).toBe(up.body.photo_url);
     await call('POST', '/friends/requests', { token: joao.access_token, body: { user_id: ines.user.id } });
     await call('POST', '/friends/requests', { token: ines.access_token, body: { user_id: joao.user.id } });
     expect((await call('GET', '/friends', { token: joao.access_token })).body.friends[0].photo_url).toBe(up.body.photo_url);
-    const conv = await call('POST', '/conversations/direct', { token: joao.access_token, body: { user_id: ines.user.id } });
-    expect(conv.body.other_user.photo_url).toBe(up.body.photo_url);
-    const sent = await call('POST', `/conversations/${conv.body.id}/messages`, { token: ines.access_token, body: { id: uuid(), kind: 'text', body: 'Olá!' } });
+    const conv = await groupChat(joao, ines);
+    const sent = await call('POST', `/conversations/${conv}/messages`, { token: ines.access_token, body: { id: uuid(), kind: 'text', body: 'Olá!' } });
     expect(sent.body.sender_photo_url).toBe(up.body.photo_url);
     // E aos outros membros de um grupo.
     const groupId = uuid();
@@ -912,7 +925,7 @@ describe('definições das conversas', () => {
     const max = await signup('Max', 'max', 'max@ex.pt');
     await call('POST', '/friends/requests', { token: lia.access_token, body: { user_id: max.user.id } });
     await call('POST', '/friends/requests', { token: max.access_token, body: { user_id: lia.user.id } });
-    const conv = (await call('POST', '/conversations/direct', { token: lia.access_token, body: { user_id: max.user.id } })).body.id;
+    const conv = await groupChat(lia, max);
     await call('POST', `/conversations/${conv}/messages`, { token: lia.access_token, body: { id: uuid(), kind: 'text', body: 'Olá Max' } });
     await call('POST', `/conversations/${conv}/read`, { token: max.access_token });
     // O Max também fica com "visto por último".
@@ -927,14 +940,18 @@ describe('definições das conversas', () => {
       ).last_read_at;
     expect((await liaConv()).seen_by).toHaveLength(1);
     expect(await maxReadAt()).not.toBeNull();
-    expect((await liaConv()).other_user.last_seen_at).not.toBeNull();
+    const maxSeen = async () =>
+      (await call('GET', `/conversations/${conv}`, { token: lia.access_token })).body.participants.find(
+        (p: { user_id: string }) => p.user_id === max.user.id,
+      );
+    expect((await maxSeen()).last_seen_at).not.toBeNull();
 
     // O Max desliga as confirmações de leitura: a Lia deixa de ver "vista".
     const off = await call('PATCH', '/me', { token: max.access_token, body: { read_receipts: false, show_presence: false } });
     expect(off.body).toMatchObject({ read_receipts: false, show_presence: false, typing_indicator: true });
     expect((await liaConv()).seen_by).toEqual([]);
     expect(await maxReadAt()).toBeNull();
-    expect((await liaConv()).other_user).toMatchObject({ online: false, last_seen_at: null });
+    expect(await maxSeen()).toMatchObject({ online: false, last_seen_at: null });
     // ...e ele também deixa de ver os da Lia (mas as suas não lidas continuam certas).
     await call('POST', `/conversations/${conv}/read`, { token: lia.access_token });
     const maxView = (await call('GET', `/conversations/${conv}`, { token: max.access_token })).body;
@@ -1064,7 +1081,7 @@ describe('cartões de parabéns', () => {
     expect((await call('GET', `/cards/${'x'.repeat(22)}`)).body.error).toBe('card_not_found');
   });
 
-  it('ao guardar o cartão ficam amigos e a mensagem abre a conversa', async () => {
+  it('ao guardar o cartão ficam amigos (sem conversa privada)', async () => {
     expect((await call('POST', `/cards/${token}/claim`, { token: rita.access_token })).body.error).toBe('own_card');
 
     const claimed = await call('POST', `/cards/${token}/claim`, { token: tomas.access_token });
@@ -1073,25 +1090,15 @@ describe('cartões de parabéns', () => {
     const friends = (await call('GET', '/friends', { token: tomas.access_token })).body.friends;
     expect(friends.map((f: { user_id: string }) => f.user_id)).toEqual([rita.user.id]);
 
-    const { messages } = (await call('GET', `/conversations/${claimed.body.conversation_id}/messages`, { token: tomas.access_token })).body;
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({ id: cardId, sender_id: rita.user.id, body: 'Parabéns, Tomás!\nQue seja um ano <incrível>.' });
+    expect(claimed.body.conversation_id).toBeUndefined();
+    expect((await call('GET', '/conversations', { token: tomas.access_token })).body).toEqual([]);
 
-    // Repetir não duplica; outra pessoa já não o pode guardar.
-    const again = await call('POST', `/cards/${token}/claim`, { token: tomas.access_token });
-    expect(again.body.conversation_id).toBe(claimed.body.conversation_id);
-    expect((await call('GET', `/conversations/${claimed.body.conversation_id}/messages`, { token: tomas.access_token })).body.messages).toHaveLength(1);
+    // Repetir não falha; outra pessoa já não o pode guardar.
+    expect((await call('POST', `/cards/${token}/claim`, { token: tomas.access_token })).body.sender_id).toBe(rita.user.id);
     expect((await call('POST', `/cards/${token}/claim`, { token: vera.access_token })).body.error).toBe('card_claimed');
 
     expect((await call('GET', `/cards/${token}`)).body.claimed).toBe(true);
     expect((await call('GET', '/cards/sent', { token: rita.access_token })).body[0].claimed_at).not.toBeNull();
-
-    // Quem recebeu responde logo na conversa.
-    const reply = await call('POST', `/conversations/${claimed.body.conversation_id}/messages`, {
-      token: tomas.access_token,
-      body: { id: uuid(), kind: 'text', body: 'Obrigado, Rita!' },
-    });
-    expect(reply.status).toBe(200);
   });
 
   it('entre amigos publica-se diretamente no mural, que é privado', async () => {
@@ -1107,10 +1114,8 @@ describe('cartões de parabéns', () => {
     const notFriend = await call('POST', '/cards', { token: vera.access_token, body: { ...post, id: uuid(), person_id: veraPerson } });
     expect(notFriend.body.error).toBe('not_friends');
 
-    // Também chega à conversa, para responder.
-    const conv = (await call('POST', '/conversations/direct', { token: tomas.access_token, body: { user_id: rita.user.id } })).body.id;
-    const { messages } = (await call('GET', `/conversations/${conv}/messages`, { token: tomas.access_token })).body;
-    expect(messages[0]).toMatchObject({ id: wallId, sender_id: rita.user.id, body: 'Mais um abraço de parabéns!' });
+    // Só vai para o mural: não abre conversa nenhuma.
+    expect((await call('GET', '/conversations', { token: tomas.access_token })).body).toEqual([]);
 
     // O mural tem os dois cartões, o mais recente primeiro; só o próprio o vê.
     const wall = (await call('GET', '/cards/received', { token: tomas.access_token })).body;
@@ -1404,9 +1409,7 @@ describe('bloquear e denunciar', () => {
     await call('POST', '/friends/requests', { token: pia.access_token, body: { user_id: quim.user.id } });
   });
 
-  it('bloquear desfaz a amizade, esconde a conversa privada e as mensagens nos grupos', async () => {
-    const direct = (await call('POST', '/conversations/direct', { token: pia.access_token, body: { user_id: quim.user.id } })).body.id;
-    await say(quim, direct, 'Olá Pia');
+  it('bloquear desfaz a amizade e esconde as mensagens nos grupos', async () => {
     // Um grupo com os três.
     const groupId = uuid();
     await call('PUT', `/groups/${groupId}`, {
@@ -1421,16 +1424,14 @@ describe('bloquear e denunciar', () => {
     expect((await call('POST', `/users/${quim.user.id}/block`, { token: pia.access_token })).status).toBe(204);
     expect((await call('GET', '/friends', { token: pia.access_token })).body.friends).toEqual([]);
     const convs = (await call('GET', '/conversations', { token: pia.access_token })).body.map((c: { id: string }) => c.id);
-    expect(convs).not.toContain(direct);
     expect(convs).toContain(group.conversation_id);
     const groupMsgs = (await call('GET', `/conversations/${group.conversation_id}/messages`, { token: pia.access_token })).body.messages;
     expect(groupMsgs.map((m: { body: string }) => m.body)).toEqual(['Mensagem da Rute']);
     // Os outros continuam a ver tudo.
     expect((await call('GET', `/conversations/${group.conversation_id}/messages`, { token: rute.access_token })).body.messages).toHaveLength(2);
 
-    // Quem foi bloqueado não consegue pedir amizade nem escrever em privado.
+    // Quem foi bloqueado não consegue pedir amizade.
     expect((await call('POST', '/friends/requests', { token: quim.access_token, body: { user_id: pia.user.id } })).body.result).toBe('not_found');
-    expect((await say(quim, direct, 'Responde!')).body.error).toBe('not_friends');
     expect((await call('GET', '/blocks', { token: pia.access_token })).body).toMatchObject([{ user_id: quim.user.id, display_name: 'Quim' }]);
 
     // Desbloquear volta a mostrar as mensagens do grupo (a amizade não volta sozinha).
@@ -1573,7 +1574,7 @@ describe('notificações push', () => {
     bruno = await signup('Bruno Push', 'brunopush', 'brunopush@ex.pt');
     await call('POST', '/friends/requests', { token: ana.access_token, body: { user_id: bruno.user.id } });
     await call('POST', '/friends/requests', { token: bruno.access_token, body: { user_id: ana.user.id } });
-    conv = (await call('POST', '/conversations/direct', { token: ana.access_token, body: { user_id: bruno.user.id } })).body.id;
+    conv = await groupChat(ana, bruno);
   });
 
   const say = (s: Session, body: string) =>
@@ -1588,12 +1589,24 @@ describe('notificações push', () => {
     await say(bruno, 'Parabéns atrasados!');
     await new Promise((r) => setTimeout(r, 50));
     const p = toAna().at(-1)!;
-    expect(p.message).toMatchObject({ title: 'Bruno Push', body: 'Parabéns atrasados!', data: { type: 'chat', conversation_id: conv } });
+    expect(p.message).toMatchObject({ title: 'Prenda da Rita', body: 'Bruno: Parabéns atrasados!', data: { type: 'chat', conversation_id: conv } });
     expect(p.message.data.reply_token).toEqual(expect.any(String));
     const { rows } = await db.query('select token from push_tokens where user_id = $1', [ana.user.id]);
     expect(rows.map((r: { token: string }) => r.token)).toEqual([anaPhone]);
     // Quem envia não recebe a própria mensagem.
-    expect(pushes.filter((x) => x.message.body === 'Parabéns atrasados!')).toHaveLength(1);
+    expect(pushes.filter((x) => x.message.body === 'Bruno: Parabéns atrasados!')).toHaveLength(1);
+  });
+
+  it('avisa de parabéns novos no mural', async () => {
+    const personId = uuid();
+    await call('PUT', `/people/${personId}`, { token: bruno.access_token, body: { name: 'Ana', birth_day: 1, birth_month: 2 } });
+    const card = await call('POST', '/cards', {
+      token: bruno.access_token,
+      body: { id: uuid(), person_id: personId, recipient_name: 'Ana', body: 'Parabéns!', recipient_id: ana.user.id },
+    });
+    expect(card.status).toBe(201);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(toAna().at(-1)!.message).toMatchObject({ title: 'Bruno deixou-te parabéns no mural', data: { type: 'wall' } });
   });
 
   it('respeita a pré-visualização desligada e as conversas silenciadas', async () => {

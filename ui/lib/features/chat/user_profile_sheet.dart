@@ -13,23 +13,20 @@ import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import 'chat_format.dart';
 import 'chat_widgets.dart';
-import 'conversations_list.dart';
 import 'friends_screen.dart';
 import 'safety.dart';
 
 /// Perfil de outra pessoa (ao tocar no avatar no chat): fotografia, nome e o
 /// estado da amizade: pedir, aceitar, cancelar ou enviar mensagem.
-Future<void> showUserProfileSheet(BuildContext context, ChatUser user, {bool showMessageButton = true}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (_) => _UserProfileSheet(user: user, showMessageButton: showMessageButton),
-    );
+Future<void> showUserProfileSheet(BuildContext context, ChatUser user) => showModalBottomSheet<void>(
+  context: context,
+  builder: (_) => _UserProfileSheet(user: user),
+);
 
 class _UserProfileSheet extends ConsumerStatefulWidget {
-  const _UserProfileSheet({required this.user, required this.showMessageButton});
+  const _UserProfileSheet({required this.user});
 
   final ChatUser user;
-  final bool showMessageButton;
 
   @override
   ConsumerState<_UserProfileSheet> createState() => _UserProfileSheetState();
@@ -66,12 +63,19 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
       action = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Bloqueaste ${u.firstName}.', textAlign: TextAlign.center, style: TextStyle(color: muted)),
+          Text(
+            'Bloqueaste ${u.firstName}.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: muted),
+          ),
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: _busy
                 ? null
-                : () => _run(() => ref.read(blockedUsersProvider.notifier).unblock(u.userId), success: 'Desbloqueaste ${u.firstName}.'),
+                : () => _run(
+                    () => ref.read(blockedUsersProvider.notifier).unblock(u.userId),
+                    success: 'Desbloqueaste ${u.firstName}.',
+                  ),
             child: const Text('Desbloquear'),
           ),
         ],
@@ -88,19 +92,6 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
               foreground: context.palette.success,
             ),
           ),
-          if (widget.showMessageButton) ...[
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () {
-                      Navigator.pop(context);
-                      openDirectChat(context, ref, u.userId);
-                    },
-              icon: const Icon(LucideIcons.messageCircle, size: 18),
-              label: Text(context.tr(Keys.profileSheetSendMessage)),
-            ),
-          ],
         ],
       );
     } else if (incoming != null) {
@@ -186,7 +177,11 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-              child: ZoomablePhoto(url: u.photoUrl, title: u.name, child: PresenceAvatar(user: u, size: 88)),
+              child: ZoomablePhoto(
+                url: u.photoUrl,
+                title: u.name,
+                child: PresenceAvatar(user: u, size: 88),
+              ),
             ),
             const SizedBox(height: 14),
             Text(u.name, textAlign: TextAlign.center, style: AppTheme.display(context, size: 24)),

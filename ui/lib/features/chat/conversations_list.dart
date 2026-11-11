@@ -20,15 +20,13 @@ import 'chat_widgets.dart';
 
 enum ConversationFilter {
   all(Keys.chatFilterAll),
-  gifts(Keys.chatFilterGifts),
-  direct(Keys.chatFilterDirect),
   unread(Keys.chatFilterUnread);
 
   const ConversationFilter(this.labelKey);
   final String labelKey;
 }
 
-/// Uma linha da lista: uma prenda em grupo (com a sua conversa) ou uma conversa privada.
+/// Uma linha da lista: uma prenda em grupo (com a sua conversa).
 sealed class ConversationItem {
   const ConversationItem();
 
@@ -55,22 +53,7 @@ class GroupItem extends ConversationItem {
   bool get pinned => conversation?.pinned ?? false;
 }
 
-class DirectItem extends ConversationItem {
-  const DirectItem(this.conversation);
-
-  final Conversation conversation;
-
-  @override
-  DateTime get sortKey => conversation.sortKey;
-
-  @override
-  int get unread => conversation.unreadCount;
-
-  @override
-  bool get pinned => conversation.pinned;
-}
-
-/// Junta as prendas em grupo e as conversas privadas: as fixadas no topo e,
+/// As prendas em grupo (com a conversa de cada uma): as fixadas no topo e,
 /// depois, as mais recentes primeiro.
 List<ConversationItem> conversationItems(
   List<GiftGroup> groups,
@@ -79,11 +62,7 @@ List<ConversationItem> conversationItems(
 ) {
   final byId = {for (final c in conversations) c.id: c};
   final items = <ConversationItem>[
-    if (filter != ConversationFilter.direct)
-      for (final g in groups) GroupItem(g, g.conversationId == null ? null : byId[g.conversationId]),
-    if (filter != ConversationFilter.gifts)
-      for (final c in conversations)
-        if (!c.isGroup) DirectItem(c),
+    for (final g in groups) GroupItem(g, g.conversationId == null ? null : byId[g.conversationId]),
   ];
   return [
     for (final i in items)
@@ -138,8 +117,8 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
       );
     }
     final conversations = conversationsAsync.value ?? const <Conversation>[];
-    final items = conversationItems(groups, conversations, chat ? _filter : ConversationFilter.gifts);
-    final nothingAtAll = groups.isEmpty && !conversations.any((c) => !c.isGroup);
+    final items = conversationItems(groups, conversations, chat ? _filter : ConversationFilter.all);
+    final nothingAtAll = groups.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,8 +197,7 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
             child: Text(
               context.tr(switch (_filter) {
                 ConversationFilter.unread => Keys.chatFilterEmptyUnread,
-                ConversationFilter.direct => Keys.chatFilterEmptyDirect,
-                _ => Keys.chatFilterEmptyGifts,
+                ConversationFilter.all => Keys.chatFilterEmptyGifts,
               }),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.palette.mutedForeground),
@@ -234,7 +212,6 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
                 conversation: conversation,
                 myId: user?.id,
               ),
-              DirectItem(:final conversation) => ConversationTile(conversation: conversation, myId: user?.id),
             },
         ],
       ],
@@ -402,29 +379,6 @@ class _TileLayout extends StatelessWidget {
   }
 }
 
-/// Conversa privada com um amigo (com a bolinha verde se estiver online).
-class ConversationTile extends StatelessWidget {
-  const ConversationTile({super.key, required this.conversation, required this.myId});
-
-  final Conversation conversation;
-  final String? myId;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = conversation;
-    return _TileLayout(
-      avatar: ConversationAvatar(conversation: c),
-      title: c.title,
-      preview: _Preview(conversation: c, myId: myId, isGroup: false, fallback: context.tr(Keys.chatSayHello)),
-      time: c.lastMessage?.createdAt,
-      unread: c.unreadCount,
-      pinned: c.pinned,
-      muted: c.isMuted,
-      onTap: () => context.push('/chats/${c.id}'),
-    );
-  }
-}
-
 /// Prenda em grupo: a conversa do grupo e, por baixo, o estado do pagamento.
 /// Tocar abre a conversa; tocar no estado abre a prenda.
 class GroupConversationTile extends StatelessWidget {
@@ -525,9 +479,8 @@ class GroupConversationTile extends StatelessWidget {
   }
 }
 
-/// "Nova": prenda em grupo, conversa com um amigo ou entrar com código.
+/// "Nova": prenda em grupo ou entrar com código.
 Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async {
-  final chat = ref.read(chatRepositoryProvider) != null;
   final supportsInvites = ref.read(groupRepositoryProvider)?.supportsInvites ?? false;
   final action = await showModalBottomSheet<String>(
     context: context,
@@ -548,12 +501,6 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
               subtitle: Text(ctx.tr(Keys.chatNewGroupHint)),
               onTap: () => Navigator.pop(ctx, 'group'),
             ),
-            if (chat)
-              ListTile(
-                leading: const Icon(LucideIcons.messageCircle),
-                title: Text(ctx.tr(Keys.chatNewDirect)),
-                onTap: () => Navigator.pop(ctx, 'direct'),
-              ),
             if (supportsInvites)
               ListTile(
                 leading: const Icon(LucideIcons.ticket),
@@ -570,56 +517,7 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
   switch (action) {
     case 'group':
       context.push('/groups/new');
-    case 'direct':
-      await startDirectChat(context, ref);
     case 'code':
       await showJoinGroupSheet(context, ref);
   }
-}
-
-/// Escolher um amigo e abrir a conversa privada com ele.
-Future<void> startDirectChat(BuildContext context, WidgetRef ref) async {
-  final friends = ref.read(friendsProvider).value?.friends ?? const [];
-  if (friends.isEmpty) {
-    showMessage(context, context.tr(Keys.chatNewNeedFriend));
-    context.push('/friends');
-    return;
-  }
-  final friend = await showModalBottomSheet<ChatUser>(
-    context: context,
-    isScrollControlled: true,
-    builder: (ctx) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.6,
-      maxChildSize: 0.9,
-      builder: (ctx, scroll) => ListView(
-        controller: scroll,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text(ctx.tr(Keys.chatNewPickFriend), style: AppTheme.display(ctx, size: 22)),
-          ),
-          for (final f in friends)
-            ListTile(
-              leading: PresenceAvatar(user: f),
-              title: Text(f.name),
-              subtitle: f.username.isEmpty ? null : Text('@${f.username}'),
-              onTap: () => Navigator.pop(ctx, f),
-            ),
-        ],
-      ),
-    ),
-  );
-  if (friend == null || !context.mounted) return;
-  await openDirectChat(context, ref, friend.userId);
-}
-
-Future<void> openDirectChat(BuildContext context, WidgetRef ref, String userId) async {
-  final router = GoRouter.of(context);
-  String? id;
-  final ok = await runGuarded(
-    context,
-    () async => id = await ref.read(conversationsProvider.notifier).openDirect(userId),
-  );
-  if (ok && id != null) router.push('/chats/$id');
 }

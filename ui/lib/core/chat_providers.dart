@@ -244,12 +244,13 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
     final previous = state.value;
     if (previous != null) {
       state = AsyncData([
-        for (final c in previous)
-          c.id == conversationId ? c.copyWith(mutedUntil: mutedUntil, pinned: pinned) : c,
+        for (final c in previous) c.id == conversationId ? c.copyWith(mutedUntil: mutedUntil, pinned: pinned) : c,
       ]);
     }
     try {
-      final updated = await ref.read(chatRepositoryProvider)!.setPrefs(conversationId, mutedUntil: mutedUntil, pinned: pinned);
+      final updated = await ref
+          .read(chatRepositoryProvider)!
+          .setPrefs(conversationId, mutedUntil: mutedUntil, pinned: pinned);
       final list = state.value;
       if (list != null) state = AsyncData([for (final c in list) c.id == conversationId ? updated : c]);
     } catch (_) {
@@ -267,14 +268,6 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
       state = AsyncData([for (final c in list) c.id == conversationId ? c.copyWith(unreadCount: 0) : c]);
     }
     await ref.read(chatRepositoryProvider)?.markRead(conversationId);
-  }
-
-  /// Abre (ou cria) a conversa privada com um amigo e devolve o id.
-  Future<String> openDirect(String userId) async {
-    final c = await ref.read(chatRepositoryProvider)!.openDirect(userId);
-    final list = state.value ?? const [];
-    if (!list.any((x) => x.id == c.id)) state = AsyncData([c, ...list]);
-    return c.id;
   }
 }
 
@@ -771,7 +764,9 @@ typedef ShowChatNotification =
     Future<void> Function({required String conversationId, required String title, required String body});
 
 /// Quem mostra a notificação (o sistema; substituído nos testes).
-final showChatNotificationProvider = Provider<ShowChatNotification>((_) => NotificationService.instance.showChatMessage);
+final showChatNotificationProvider = Provider<ShowChatNotification>(
+  (_) => NotificationService.instance.showChatMessage,
+);
 
 /// Mostra uma notificação quando chega uma mensagem e não se está nessa
 /// conversa, salvo se estiver silenciada ou desligada nas definições.

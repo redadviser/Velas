@@ -267,7 +267,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         ),
         subtitle: Text(
           match != null
-              ? '${match.firstName} já está na Birthdayly: a mensagem chega logo ao mural e à vossa conversa.'
+              ? '${match.firstName} já está na Birthdayly: a mensagem chega logo ao mural.'
               : 'Para amigos que já estão na Birthdayly: a mensagem chega logo ao mural.',
         ),
         onTap: () => Navigator.pop(ctx, _SendAs.wall),

@@ -260,29 +260,22 @@ void main() {
     );
 
     final groups = [gift('prenda-rita', conversation: 'cg1'), gift('prenda-local', created: DateTime(2026, 10, 10))];
-    final conversations = [
-      conv('cg1', group: true, unread: 2, hour: 9),
-      conv('gil', unread: 1, hour: 12),
-      conv('ana', hour: 8),
-    ];
+    final conversations = [conv('cg1', group: true, unread: 2, hour: 9)];
 
     List<String> ids(ConversationFilter f) => [
       for (final i in conversationItems(groups, conversations, f))
         switch (i) {
           GroupItem(:final group) => group.id,
-          DirectItem(:final conversation) => conversation.id,
         },
     ];
 
-    test('mistura prendas e conversas privadas pela atividade mais recente', () {
+    test('só prendas em grupo, pela atividade mais recente (sem conversas privadas)', () {
       // A conversa do grupo não aparece duas vezes: vem dentro da prenda.
-      expect(ids(ConversationFilter.all), ['gil', 'prenda-rita', 'ana', 'prenda-local']);
+      expect(ids(ConversationFilter.all), ['prenda-rita', 'prenda-local']);
     });
 
-    test('filtra prendas, privadas e não lidas', () {
-      expect(ids(ConversationFilter.gifts), ['prenda-rita', 'prenda-local']);
-      expect(ids(ConversationFilter.direct), ['gil', 'ana']);
-      expect(ids(ConversationFilter.unread), ['gil', 'prenda-rita']);
+    test('filtra as não lidas', () {
+      expect(ids(ConversationFilter.unread), ['prenda-rita']);
     });
   });
 
@@ -409,13 +402,21 @@ void main() {
             child: MaterialApp(
               theme: ThemeData(extensions: const [AppPalette.light]),
               home: Scaffold(
-                body: ConversationTile(
+                body: GroupConversationTile(
                   myId: 'me',
+                  group: GiftGroup(
+                    id: 'g1',
+                    createdBy: 'me',
+                    title: 'Prenda da Rita',
+                    celebrantName: 'Rita',
+                    targetAmount: 50,
+                    createdAt: DateTime(2026),
+                    conversationId: 'c1',
+                  ),
                   conversation: Conversation(
                     id: 'c1',
-                    isGroup: false,
-                    title: 'Gil Costa',
-                    otherUser: const ChatUser(userId: 'gil', name: 'Gil Costa'),
+                    isGroup: true,
+                    title: 'Prenda da Rita',
                     createdAt: DateTime(2026),
                     lastMessage: LastMessage(
                       id: 'm',

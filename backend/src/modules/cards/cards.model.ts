@@ -68,8 +68,6 @@ export interface CardPreview {
 
 export interface ClaimResult {
   sender_id: string;
-  /** Conversa privada com quem enviou, já com a mensagem do cartão. */
-  conversation_id: string;
 }
 
 export const wallPhotoQuery = z.object({

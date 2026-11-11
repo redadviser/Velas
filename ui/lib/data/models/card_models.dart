@@ -144,10 +144,7 @@ class ReceivedCard {
 
 /// Resultado de guardar um cartão recebido.
 class ClaimedCard {
-  const ClaimedCard({required this.senderId, required this.conversationId});
+  const ClaimedCard({required this.senderId});
 
   final String senderId;
-
-  /// Conversa privada com quem enviou, que já começa com a mensagem do cartão.
-  final String conversationId;
 }

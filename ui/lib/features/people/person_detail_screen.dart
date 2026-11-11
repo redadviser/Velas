@@ -15,7 +15,6 @@ import '../special/special_dates_screen.dart';
 import '../../data/models/models.dart';
 import '../../data/models/group_models.dart';
 import '../chat/chat_widgets.dart';
-import '../chat/conversations_list.dart';
 import '../gifts/gift_widgets.dart';
 import '../gifts/wishlist_widgets.dart';
 import '../../core/wishlist_providers.dart';
@@ -158,13 +157,6 @@ class PersonDetailScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    // O tema dá largura infinita aos botões; numa Row tem de ter tamanho próprio.
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(88, 40)),
-                    onPressed: () => openDirectChat(context, ref, friend.userId),
-                    icon: const Icon(LucideIcons.messageCircle, size: 16),
-                    label: const Text('Conversar'),
                   ),
                 ],
               ),

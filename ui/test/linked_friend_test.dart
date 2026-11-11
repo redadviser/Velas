@@ -53,7 +53,12 @@ void main() {
     expect(p.copyWith(linkedUserId: () => null).linkedUserId, isNull);
   });
 
-  Future<List<String?>> pump(WidgetTester tester, {String? linked, String name = 'Ana Silva', List<Person> people = const []}) async {
+  Future<List<String?>> pump(
+    WidgetTester tester, {
+    String? linked,
+    String name = 'Ana Silva',
+    List<Person> people = const [],
+  }) async {
     final changes = <String?>[];
     await tester.pumpWidget(
       ProviderScope(
@@ -104,7 +109,14 @@ void main() {
   });
 
   testWidgets('o detalhe mostra o amigo ligado com o tema da app (sem erro de layout)', (tester) async {
-    final person = Person(id: 'p1', name: 'Ana Silva', day: 3, month: 5, linkedUserId: 'ana', createdAt: DateTime(2026));
+    final person = Person(
+      id: 'p1',
+      name: 'Ana Silva',
+      day: 3,
+      month: 5,
+      linkedUserId: 'ana',
+      createdAt: DateTime(2026),
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -113,12 +125,15 @@ void main() {
           chatEventsProvider.overrideWithValue(const Stream.empty()),
           dataProvider.overrideWithValue(AppData.empty.copyWith(people: [person])),
         ],
-        child: MaterialApp(theme: AppTheme.light(), home: const PersonDetailScreen(personId: 'p1')),
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const PersonDetailScreen(personId: 'p1'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('@ana.silva'), findsOneWidget);
-    expect(find.text('Conversar'), findsOneWidget);
+    expect(find.text('Conversar'), findsNothing);
   });
 }

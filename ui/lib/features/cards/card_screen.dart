@@ -44,19 +44,18 @@ class _CardScreenState extends ConsumerState<CardScreen> {
     ref.read(cardsRepositoryProvider)!.markOpened(widget.token).catchError((_) {});
   }
 
-  Future<void> _reply(GreetingCard card) async {
+  /// Guarda o cartão no meu mural (e ficamos amigos na Birthdayly).
+  Future<void> _keep(GreetingCard card) async {
     setState(() => _claiming = true);
     final router = GoRouter.of(context);
-    String? conversationId;
     final ok = await runGuarded(context, () async {
-      final claimed = await ref.read(cardsRepositoryProvider)!.claim(widget.token);
+      await ref.read(cardsRepositoryProvider)!.claim(widget.token);
       ref.invalidate(friendsProvider);
       ref.invalidate(wallProvider);
-      conversationId = await ref.read(conversationsProvider.notifier).openDirect(claimed.senderId);
     });
     if (!mounted) return;
     setState(() => _claiming = false);
-    if (ok && conversationId != null) router.pushReplacement('/chats/$conversationId');
+    if (ok) router.pushReplacement('/wall');
   }
 
   @override
@@ -80,17 +79,17 @@ class _CardScreenState extends ConsumerState<CardScreen> {
   List<Widget> _actions(GreetingCard card) {
     final me = ref.watch(currentUserProvider);
     final muted = context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground);
-    final reply = 'Responder a ${card.senderFirstName}';
+    const keep = 'Guardar no meu mural';
     if (me == null) {
       return [
         Text(
-          'Cria conta para agradecer a ${card.senderFirstName}, guardar a mensagem e não te esqueceres '
+          'Cria conta para guardares a mensagem de ${card.senderFirstName} e não te esqueceres '
           'dos aniversários de quem gostas.',
           textAlign: TextAlign.center,
           style: muted,
         ),
         const SizedBox(height: 16),
-        FilledButton(onPressed: () => context.go('/register'), child: Text(reply)),
+        FilledButton(onPressed: () => context.go('/register'), child: const Text('Criar conta')),
         const SizedBox(height: 8),
         TextButton(onPressed: () => context.go('/login'), child: const Text('Já tenho conta')),
       ];
@@ -104,12 +103,12 @@ class _CardScreenState extends ConsumerState<CardScreen> {
     }
     return [
       Text(
-        'A mensagem fica guardada na tua conversa com ${card.senderFirstName}.',
+        'Fica no teu mural e passas a ter ${card.senderFirstName} nos teus amigos da Birthdayly.',
         textAlign: TextAlign.center,
         style: muted,
       ),
       const SizedBox(height: 16),
-      LoadingButton(label: reply, icon: LucideIcons.messageCircle, loading: _claiming, onPressed: () => _reply(card)),
+      LoadingButton(label: keep, icon: LucideIcons.bookmark, loading: _claiming, onPressed: () => _keep(card)),
       const SizedBox(height: 8),
       TextButton(onPressed: _close, child: const Text('Agora não')),
     ];
@@ -143,7 +142,11 @@ class _CardBody extends StatelessWidget {
           style: TextStyle(color: muted),
         ),
         const SizedBox(height: 6),
-        Text('Parabéns, ${card.recipientName}! 🎉', textAlign: TextAlign.center, style: AppTheme.display(context, size: 28)),
+        Text(
+          'Parabéns, ${card.recipientName}! 🎉',
+          textAlign: TextAlign.center,
+          style: AppTheme.display(context, size: 28),
+        ),
         if (card.media != null) ...[const SizedBox(height: 20), CardMediaView(media: card.media!)],
         const SizedBox(height: 20),
         AppCard(

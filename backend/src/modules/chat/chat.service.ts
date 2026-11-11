@@ -206,25 +206,6 @@ export class ChatService {
     });
   }
 
-  /** Abre (ou cria) a conversa privada com um amigo. */
-  openDirect(userId: string, otherId: string): Promise<ConversationJson> {
-    return this.as(userId, async (c) => {
-      const friends = await c.query<{ ok: boolean }>('select are_friends($1, $2) as ok', [userId, otherId]);
-      if (!friends.rows[0]?.ok) throw new HttpError(403, 'not_friends');
-      const [a, b] = [userId, otherId].sort();
-      await c.query(
-        `insert into conversations (user_a, user_b) values ($1, $2)
-         on conflict (user_a, user_b) where group_id is null do nothing`,
-        [a, b],
-      );
-      const { rows } = await c.query<{ id: string }>(
-        'select id from conversations where group_id is null and user_a = $1 and user_b = $2',
-        [a, b],
-      );
-      return (await this.conversationsIn(c, userId, rows[0]!.id))[0]!;
-    });
-  }
-
   /** Silenciar e fixar (só para quem muda). */
   async setPrefs(
     userId: string,

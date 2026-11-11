@@ -5,8 +5,6 @@ import { HttpError } from '../../core/errors.js';
 import type { RealtimeHub } from '../../core/realtime.js';
 import { requirePlus } from '../../core/plus.js';
 import { imageType, kindOfKey, mediaType, PhotoStorage, type MediaKind } from '../../core/storage.js';
-import { sendSchema } from '../chat/chat.model.js';
-import type { ChatService } from '../chat/chat.service.js';
 import type { CardPreview, ClaimResult, CreateCardInput, ReceivedCard, SentCard, WallPhoto } from './cards.model.js';
 
 const sentColumns = 'id, token, person_id, recipient_name, body, via, created_at, opened_at, claimed_at, media_key, media_kind';
@@ -26,9 +24,11 @@ export class CardsService {
   constructor(
     private readonly db: Db,
     private readonly storage: PhotoStorage,
-    private readonly chat: ChatService,
     private readonly hub: RealtimeHub,
   ) {}
+
+  /** Parabéns novos no mural de [recipientId] (o container liga-o às notificações). */
+  onWallCard: (recipientId: string, senderId: string) => void = () => {};
 
   /** O media_key passa a URL assinado (a chave nunca sai do servidor). */
   private withMedia<T extends { media_key: string | null }>({ media_key, ...row }: T) {
@@ -76,7 +76,7 @@ export class CardsService {
     if (rows[0]) {
       if (recipientId) {
         await this.linkPerson(this.db, userId, input.person_id, recipientId);
-        await this.deliver({ id: rows[0].id, sender_id: userId, body: rows[0].body }, recipientId);
+        this.onWallCard(recipientId, userId);
         this.hub.send([userId, recipientId], { type: 'cards' });
       }
       return this.withMedia(rows[0]);
@@ -218,9 +218,8 @@ export class CardsService {
       return card;
     });
     this.hub.send([userId, card.sender_id], { type: 'friends' });
-    const conversationId = await this.deliver(card, userId);
     this.hub.send([userId, card.sender_id], { type: 'cards' });
-    return { sender_id: card.sender_id, conversation_id: conversationId };
+    return { sender_id: card.sender_id };
   }
 
   /**
@@ -234,16 +233,6 @@ export class CardsService {
          and not exists (select 1 from people where user_id = $1 and linked_user_id = $3)`,
       [senderId, personId, recipientId],
     );
-  }
-
-  /**
-   * Põe a mensagem na conversa privada entre os dois (já amigos), em nome de
-   * quem escreveu o cartão. O id do cartão evita duplicá-la. Devolve a conversa.
-   */
-  private async deliver(card: { id: string; sender_id: string; body: string }, recipientId: string): Promise<string> {
-    const conversation = await this.chat.openDirect(recipientId, card.sender_id);
-    await this.chat.send(card.sender_id, conversation.id, sendSchema.parse({ id: card.id, kind: 'text', body: card.body }));
-    return conversation.id;
   }
 
   // Mural com fotografias (Birthdayly+) -----------------------------------

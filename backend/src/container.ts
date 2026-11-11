@@ -63,7 +63,8 @@ export function createServices(deps: Deps) {
   const push = new PushService(db, deps.push, new ReplyTokens(deps.config.jwtSecret));
   push.isOnline = (userId) => hub.isOnline(userId);
   chat.onSent = (message, ids) => void push.chatMessage(message, ids).catch((e) => push.onError(e));
-  const cards = new CardsService(db, storage, chat, hub);
+  const cards = new CardsService(db, storage, hub);
+  cards.onWallCard = (to, from) => void push.wallCard(to, from).catch((e) => push.onError(e));
   messages.scheduled = { cards, push, hub };
   // Mudar a privacidade da presença avisa logo quem a estava a ver.
   users.onUpdated = async (userId, patch) => {

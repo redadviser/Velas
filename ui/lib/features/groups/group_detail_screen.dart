@@ -578,7 +578,7 @@ class _Header extends StatelessWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(99),
-                        gradient: LinearGradient(colors: [context.colors.primary, const Color(0xFFFF8B76)]),
+                        gradient: context.palette.brand,
                       ),
                       child: const SizedBox.expand(),
                     ),

@@ -320,11 +320,15 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _MiniStat(value: '${data.people.length}', label: 'pessoas'),
+              _MiniStat(value: '${data.people.length}', label: 'pessoas', onTap: () => context.go('/people')),
               const SizedBox(width: 10),
-              _MiniStat(value: '${data.gifts.length}', label: 'ideias'),
+              _MiniStat(value: '${data.gifts.length}', label: 'ideias', onTap: () => context.go('/gifts?tab=ideas')),
               const SizedBox(width: 10),
-              _MiniStat(value: '${data.messages.length}', label: 'mensagens'),
+              _MiniStat(
+                value: '${data.messages.length}',
+                label: 'mensagens',
+                onTap: () => _showMessages(context, data),
+              ),
             ],
           ),
           if (auth.isLocal) ...[
@@ -396,11 +400,7 @@ class ProfileScreen extends ConsumerWidget {
                 onTap: () => context.push('/profile/preferences'),
               ),
               if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
-                _Tile(
-                  icon: LucideIcons.layoutGrid,
-                  title: 'Widgets',
-                  onTap: () => context.push('/profile/widget'),
-                ),
+                _Tile(icon: LucideIcons.layoutGrid, title: 'Widgets', onTap: () => context.push('/profile/widget')),
               _Tile(
                 icon: LucideIcons.shieldCheck,
                 title: 'Privacidade e dados',
@@ -466,15 +466,69 @@ class ProfileSectionScreen extends ConsumerWidget {
   }
 }
 
+/// As mensagens de parabéns guardadas; cada uma abre o editor dessa pessoa.
+void _showMessages(BuildContext context, AppData data) {
+  final withMessage = [
+    for (final p in data.upcoming)
+      if (data.messageFor(p.id) case final m?) (p, m),
+  ];
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Mensagens guardadas', style: AppTheme.display(ctx, size: 22)),
+            ),
+            if (withMessage.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                child: Text(
+                  'Ainda não escreveste nenhuma. Abre uma pessoa e toca em "Ver mensagem".',
+                  style: TextStyle(color: ctx.palette.mutedForeground),
+                ),
+              ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final (p, m) in withMessage)
+                    ListTile(
+                      title: Text(p.name),
+                      subtitle: Text(m.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/person/${p.id}/message');
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.value, required this.label});
+  const _MiniStat({required this.value, required this.label, this.onTap});
 
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Expanded(
     child: AppCard(
+      onTap: onTap,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       child: Column(
         children: [

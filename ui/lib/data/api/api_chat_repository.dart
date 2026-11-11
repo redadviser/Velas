@@ -45,24 +45,11 @@ class ApiChatRepository implements ChatRepository {
       Conversation.fromJson(_map(await _api.get('/conversations/$conversationId')));
 
   @override
-  Future<Conversation> openDirect(String userId) async {
-    try {
-      return Conversation.fromJson(_map(await _api.post('/conversations/direct', {'user_id': userId})));
-    } on ApiException catch (e) {
-      if (e.code == 'not_friends') throw AppException(tr(Keys.errorDirectOnlyFriends));
-      rethrow;
-    }
-  }
-
-  @override
   Future<void> markRead(String conversationId) => _api.post('/conversations/$conversationId/read');
 
   @override
   Future<Conversation> setPrefs(String conversationId, {DateTime? Function()? mutedUntil, bool? pinned}) async {
-    final body = {
-      if (mutedUntil != null) 'muted_until': mutedUntil()?.toUtc().toIso8601String(),
-      'pinned': ?pinned,
-    };
+    final body = {if (mutedUntil != null) 'muted_until': mutedUntil()?.toUtc().toIso8601String(), 'pinned': ?pinned};
     return Conversation.fromJson(_map(await _api.patch('/conversations/$conversationId/prefs', body)));
   }
 

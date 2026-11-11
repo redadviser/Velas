@@ -127,6 +127,7 @@ class PushService {
     final target = switch (d['type']) {
       'chat' => 'chat:${d['conversation_id']}',
       'scheduled_sent' || 'scheduled_failed' => 'message:${d['person_id']}',
+      'wall' => 'wall:me',
       _ => null,
     };
     if (target != null) NotificationService.instance.openTarget(target);

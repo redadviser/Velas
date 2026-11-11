@@ -138,7 +138,7 @@ class ConversationInfoScreen extends ConsumerWidget {
                 : other == null
                 ? const SizedBox.shrink()
                 : OutlinedButton.icon(
-                    onPressed: () => showUserProfileSheet(context, other, showMessageButton: false),
+                    onPressed: () => showUserProfileSheet(context, other),
                     icon: const Icon(LucideIcons.user, size: 18),
                     label: Text(context.tr(Keys.chatInfoViewProfile)),
                   ),

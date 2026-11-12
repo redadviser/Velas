@@ -9,6 +9,7 @@ import 'package:aniversarios/data/api/chat_socket.dart';
 import 'package:aniversarios/data/models/chat_models.dart';
 import 'package:aniversarios/data/models/group_models.dart';
 import 'package:aniversarios/data/models/models.dart';
+import 'package:aniversarios/data/models/party_models.dart';
 import 'package:aniversarios/data/repositories/chat_repository.dart';
 import 'package:aniversarios/features/chat/chat_screen.dart';
 import 'package:aniversarios/core/utils/text.dart';
@@ -54,9 +55,7 @@ class FakeChatRepository implements ChatRepository {
   @override
   Future<Conversation> fetchConversation(String id) async => Conversation(
     id: id,
-    isGroup: false,
     title: 'Gil Costa',
-    otherUser: const ChatUser(userId: 'gil', name: 'Gil Costa', username: 'gil'),
     createdAt: DateTime(2026),
     participants: [
       Participant(
@@ -219,7 +218,6 @@ void main() {
         'last_message_at': '2026-10-15T10:00:00+00:00',
         'created_at': '2026-10-01T10:00:00+00:00',
       });
-      expect(c.isGroup, isTrue);
       expect(c.lastMessage!.preview, 'GIF');
       expect(c.unreadCount, 3);
 
@@ -241,41 +239,62 @@ void main() {
   });
 
   group('Lista de conversas', () {
-    Conversation conv(String id, {bool group = false, int unread = 0, int? hour}) => Conversation(
+    Conversation conv(String id, {int unread = 0, int? hour}) => Conversation(
       id: id,
-      isGroup: group,
       title: id,
       unreadCount: unread,
       lastMessageAt: hour == null ? null : DateTime(2026, 10, 15, hour),
       createdAt: DateTime(2026, 10, 1),
     );
-    GiftGroup gift(String id, {String? conversation, DateTime? created}) => GiftGroup(
+    final now = DateTime.now();
+    GiftGroup gift(String id, {String? conversation, int? inDays, DateTime? purchased}) {
+      final day = inDays == null ? null : now.add(Duration(days: inDays));
+      return GiftGroup(
+        id: id,
+        createdBy: 'me',
+        title: id,
+        celebrantName: 'Rita',
+        celebrantDay: day?.day,
+        celebrantMonth: day?.month,
+        targetAmount: 50,
+        createdAt: DateTime(2026, 9, 1),
+        conversationId: conversation,
+        purchasedAt: purchased,
+      );
+    }
+
+    Party party(String id, int inDays) => Party(
       id: id,
       createdBy: 'me',
       title: id,
-      celebrantName: 'Rita',
-      targetAmount: 50,
-      createdAt: created ?? DateTime(2026, 9, 1),
-      conversationId: conversation,
+      celebrantName: 'Pedro',
+      startsAt: now.add(Duration(days: inDays)),
     );
 
-    final groups = [gift('prenda-rita', conversation: 'cg1'), gift('prenda-local', created: DateTime(2026, 10, 10))];
-    final conversations = [conv('cg1', group: true, unread: 2, hour: 9)];
+    final groups = [
+      gift('prenda-sem-data', conversation: 'cg1'),
+      gift('prenda-longe', inDays: 40),
+      gift('prenda-comprada', purchased: now.subtract(const Duration(days: 3))),
+    ];
+    final parties = [party('festa-perto', 5), party('festa-passada', -10)];
+    final conversations = [conv('cg1', unread: 2, hour: 9)];
 
-    List<String> ids(ConversationFilter f) => [
-      for (final i in conversationItems(groups, conversations, f))
+    List<String> ids({required bool done}) => [
+      for (final i in planItems(groups, parties, conversations, done: done))
         switch (i) {
           GroupItem(:final group) => group.id,
+          PartyItem(:final party) => party.id,
         },
     ];
 
-    test('só prendas em grupo, pela atividade mais recente (sem conversas privadas)', () {
-      // A conversa do grupo não aparece duas vezes: vem dentro da prenda.
-      expect(ids(ConversationFilter.all), ['prenda-rita', 'prenda-local']);
+    test('em curso: prendas por comprar e festas por vir, a mais próxima primeiro', () {
+      expect(ids(done: false), ['festa-perto', 'prenda-longe', 'prenda-sem-data']);
+      final withChat = planItems(groups, parties, conversations, done: false).whereType<GroupItem>().last;
+      expect(withChat.conversation?.unreadCount, 2);
     });
 
-    test('filtra as não lidas', () {
-      expect(ids(ConversationFilter.unread), ['prenda-rita']);
+    test('concluídos: compradas e festas passadas, a mais recente primeiro', () {
+      expect(ids(done: true), ['prenda-comprada', 'festa-passada']);
     });
   });
 
@@ -323,24 +342,18 @@ void main() {
         events.close();
       });
       container.listen(typingProvider, (_, _) {});
-      container.listen(presenceProvider, (_, _) {});
 
       events.add(const Typing(conversationId: 'c1', userId: 'gil', name: 'Gil'));
       events.add(const Typing(conversationId: 'c2', userId: 'ana', name: 'Ana'));
-      events.add(const PresenceChanged(userId: 'gil', online: true));
       await pumpEventQueue();
       expect(container.read(conversationTypingProvider('c1')), {'gil': 'Gil'});
       expect(container.read(conversationTypingProvider('c2')), {'ana': 'Ana'});
-      expect(container.read(userPresenceProvider('gil')).online, isTrue);
 
       // Enviar uma mensagem termina o "a escrever" dessa pessoa, só nessa conversa.
       events.add(MessageReceived(msg('x', minute: 9)));
-      final last = DateTime(2026, 10, 15, 11);
-      events.add(PresenceChanged(userId: 'gil', online: false, lastSeenAt: last));
       await pumpEventQueue();
       expect(container.read(conversationTypingProvider('c1')), isEmpty);
       expect(container.read(conversationTypingProvider('c2')), {'ana': 'Ana'});
-      expect(container.read(userPresenceProvider('gil')), (online: false, lastSeenAt: last));
     });
 
     test('"Vista por" na lista atualiza-se quando alguém lê e volta a zero com uma mensagem nova', () async {
@@ -350,7 +363,6 @@ void main() {
         ..conversations = [
           Conversation(
             id: 'c1',
-            isGroup: true,
             title: 'Prenda',
             createdAt: DateTime(2026),
             lastMessage: LastMessage(
@@ -391,52 +403,6 @@ void main() {
       await pumpEventQueue();
       expect(seenBy(), isEmpty);
     });
-
-    for (final (lang, expected) in [('pt', 'Vista por Gil'), ('en', 'Seen by Gil')]) {
-      testWidgets('a pré-visualização diz "$expected" ($lang)', (tester) async {
-        await tester.runAsync(() => Translations.load(Locale(lang)));
-        final sent = DateTime(2026, 10, 15, 10, 5);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [chatEventsProvider.overrideWithValue(const Stream.empty())],
-            child: MaterialApp(
-              theme: ThemeData(extensions: const [AppPalette.light]),
-              home: Scaffold(
-                body: GroupConversationTile(
-                  myId: 'me',
-                  group: GiftGroup(
-                    id: 'g1',
-                    createdBy: 'me',
-                    title: 'Prenda da Rita',
-                    celebrantName: 'Rita',
-                    targetAmount: 50,
-                    createdAt: DateTime(2026),
-                    conversationId: 'c1',
-                  ),
-                  conversation: Conversation(
-                    id: 'c1',
-                    isGroup: true,
-                    title: 'Prenda da Rita',
-                    createdAt: DateTime(2026),
-                    lastMessage: LastMessage(
-                      id: 'm',
-                      senderId: 'me',
-                      senderName: 'Eu',
-                      kind: MessageKind.text,
-                      body: 'Olá',
-                      createdAt: sent,
-                    ),
-                    seenBy: const [ChatUser(userId: 'gil', name: 'Gil Costa')],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-        expect(find.text(expected), findsOneWidget);
-        await tester.runAsync(() => Translations.load(const Locale('pt')));
-      });
-    }
   });
 
   group('ChatController', () {

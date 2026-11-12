@@ -11,23 +11,12 @@ int? _int(Object? v) => (v as num?)?.toInt();
 /// Outra conta, com o mínimo para a reconhecer.
 @immutable
 class ChatUser {
-  const ChatUser({
-    required this.userId,
-    required this.name,
-    this.username = '',
-    this.photoUrl,
-    this.online = false,
-    this.lastSeenAt,
-  });
+  const ChatUser({required this.userId, required this.name, this.username = '', this.photoUrl});
 
   final String userId;
   final String name;
   final String username;
   final String? photoUrl;
-
-  /// Presença no momento em que foi lida (atualizada em tempo real por [presenceProvider]).
-  final bool online;
-  final DateTime? lastSeenAt;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
 
@@ -39,8 +28,6 @@ class ChatUser {
     name: j['display_name'] as String? ?? '',
     username: j['username'] as String? ?? '',
     photoUrl: j['photo_url'] as String?,
-    online: j['online'] as bool? ?? false,
-    lastSeenAt: _dt(j['last_seen_at']),
   );
 }
 
@@ -375,12 +362,10 @@ class Participant {
 class Conversation {
   const Conversation({
     required this.id,
-    required this.isGroup,
     this.groupId,
     required this.title,
     this.celebrantName,
     this.photoUrl,
-    this.otherUser,
     this.lastMessage,
     this.lastMessageAt,
     this.unreadCount = 0,
@@ -392,16 +377,13 @@ class Conversation {
   });
 
   final String id;
-  final bool isGroup;
   final String? groupId;
 
-  /// Título do grupo ou nome da outra pessoa.
+  /// Título do grupo.
   final String title;
   final String? celebrantName;
 
-  /// Fotografia do grupo (nas privadas usa-se a de [otherUser]).
   final String? photoUrl;
-  final ChatUser? otherUser;
   final LastMessage? lastMessage;
   final DateTime? lastMessageAt;
   final int unreadCount;
@@ -436,12 +418,10 @@ class Conversation {
     bool? pinned,
   }) => Conversation(
     id: id,
-    isGroup: isGroup,
     groupId: groupId,
     title: title,
     celebrantName: celebrantName,
     photoUrl: photoUrl,
-    otherUser: otherUser,
     lastMessage: lastMessage ?? this.lastMessage,
     lastMessageAt: lastMessage?.createdAt ?? lastMessageAt,
     unreadCount: unreadCount ?? this.unreadCount,
@@ -454,12 +434,10 @@ class Conversation {
 
   factory Conversation.fromJson(Map<String, dynamic> j) => Conversation(
     id: j['id'] as String,
-    isGroup: j['kind'] == 'group',
     groupId: j['group_id'] as String?,
     title: j['title'] as String? ?? '',
     celebrantName: j['celebrant_name'] as String?,
     photoUrl: j['photo_url'] as String?,
-    otherUser: j['other_user'] == null ? null : ChatUser.fromJson((j['other_user'] as Map).cast()),
     lastMessage: j['last_message'] == null ? null : LastMessage.fromJson((j['last_message'] as Map).cast()),
     lastMessageAt: _dt(j['last_message_at']),
     unreadCount: _int(j['unread_count']) ?? 0,

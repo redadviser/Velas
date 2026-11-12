@@ -55,16 +55,6 @@ abstract final class ChatFormat {
     return _t.get(Keys.commonDateAt, {'date': DateFormat.MMMd(_locale).format(local), 'time': time(local)});
   }
 
-  /// "Online" ou "Visto por último hoje às 14:05"; `null` se não se souber.
-  static String? presence({required bool online, DateTime? lastSeenAt}) {
-    if (online) return _t.get(Keys.chatOnline);
-    if (lastSeenAt == null) return null;
-    final days = _daysAgo(lastSeenAt);
-    if (days <= 0) return _t.get(Keys.chatLastSeenToday, {'time': time(lastSeenAt)});
-    if (days == 1) return _t.get(Keys.chatLastSeenYesterday, {'time': time(lastSeenAt)});
-    return _t.get(Keys.chatLastSeenDate, {'date': DateFormat.yMMMd(_locale).format(lastSeenAt)});
-  }
-
   static String _first(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     return parts.first.isEmpty ? name : parts.first;

@@ -67,12 +67,7 @@ class ApiChatRepository implements ChatRepository {
 
   @override
   Future<ChatMessage> sendMessage(String conversationId, OutgoingMessage message) async {
-    try {
-      return ChatMessage.fromJson(_map(await _api.post('/conversations/$conversationId/messages', message.toJson())));
-    } on ApiException catch (e) {
-      if (e.code == 'not_friends') throw AppException(tr(Keys.errorNotFriendsAnymore));
-      rethrow;
-    }
+    return ChatMessage.fromJson(_map(await _api.post('/conversations/$conversationId/messages', message.toJson())));
   }
 
   @override

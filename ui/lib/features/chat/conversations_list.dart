@@ -13,29 +13,20 @@ import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/models/group_models.dart';
+import '../../data/models/party_models.dart';
 import '../groups/group_widgets.dart';
 import '../groups/invite_widgets.dart';
-import 'chat_format.dart';
 import 'chat_widgets.dart';
 
-enum ConversationFilter {
-  all(Keys.chatFilterAll),
-  unread(Keys.chatFilterUnread);
+/// Uma linha da lista: uma prenda em grupo ou uma festa surpresa.
+sealed class PlanItem {
+  const PlanItem();
 
-  const ConversationFilter(this.labelKey);
-  final String labelKey;
+  /// Em curso: a data que vem aí. Concluídos: quando acabou.
+  DateTime? get date;
 }
 
-/// Uma linha da lista: uma prenda em grupo (com a sua conversa).
-sealed class ConversationItem {
-  const ConversationItem();
-
-  DateTime get sortKey;
-  int get unread;
-  bool get pinned;
-}
-
-class GroupItem extends ConversationItem {
+class GroupItem extends PlanItem {
   const GroupItem(this.group, this.conversation);
 
   final GiftGroup group;
@@ -44,32 +35,37 @@ class GroupItem extends ConversationItem {
   final Conversation? conversation;
 
   @override
-  DateTime get sortKey => conversation?.lastMessageAt ?? group.createdAt;
-
-  @override
-  int get unread => conversation?.unreadCount ?? 0;
-
-  @override
-  bool get pinned => conversation?.pinned ?? false;
+  DateTime? get date => group.purchasedAt ?? group.nextBirthday;
 }
 
-/// As prendas em grupo (com a conversa de cada uma): as fixadas no topo e,
-/// depois, as mais recentes primeiro.
-List<ConversationItem> conversationItems(
+class PartyItem extends PlanItem {
+  const PartyItem(this.party);
+
+  final Party party;
+
+  @override
+  DateTime? get date => party.startsAt;
+}
+
+/// Em curso (prendas por comprar e festas por acontecer), da mais próxima
+/// para a mais longe; ou concluídos, do mais recente para o mais antigo.
+List<PlanItem> planItems(
   List<GiftGroup> groups,
-  List<Conversation> conversations,
-  ConversationFilter filter,
-) {
+  List<Party> parties,
+  List<Conversation> conversations, {
+  required bool done,
+}) {
   final byId = {for (final c in conversations) c.id: c};
-  final items = <ConversationItem>[
-    for (final g in groups) GroupItem(g, g.conversationId == null ? null : byId[g.conversationId]),
+  final items = <PlanItem>[
+    for (final g in groups)
+      if ((g.purchasedAt != null) == done) GroupItem(g, g.conversationId == null ? null : byId[g.conversationId]),
+    for (final p in parties)
+      if (p.isPast == done) PartyItem(p),
   ];
-  return [
-    for (final i in items)
-      if (filter != ConversationFilter.unread || i.unread > 0) i,
-  ]..sort((a, b) {
-    if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
-    return b.sortKey.compareTo(a.sortKey);
+  return items..sort((a, b) {
+    final (x, y) = (a.date, b.date);
+    if (x == null || y == null) return x == y ? 0 : (x == null ? 1 : -1);
+    return done ? y.compareTo(x) : x.compareTo(y);
   });
 }
 
@@ -85,23 +81,18 @@ final conversationsBadgeProvider = Provider<int>((ref) {
   return toPay + unread + requests;
 });
 
-/// Separador "Conversas" dos Presentes: prendas em grupo e conversas privadas
-/// numa só lista, com filtros (como no WhatsApp).
-class ConversationsList extends ConsumerStatefulWidget {
-  const ConversationsList({super.key});
+/// Prendas em grupo e festas surpresa, em curso ou concluídas.
+class PlansList extends ConsumerWidget {
+  const PlansList({super.key, required this.done});
+
+  final bool done;
 
   @override
-  ConsumerState<ConversationsList> createState() => _ConversationsListState();
-}
-
-class _ConversationsListState extends ConsumerState<ConversationsList> {
-  var _filter = ConversationFilter.all;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final chat = ref.watch(chatRepositoryProvider) != null;
     final groupsAsync = ref.watch(groupsProvider);
-    final conversationsAsync = ref.watch(conversationsProvider);
+    final parties = ref.watch(partiesProvider).value ?? const <Party>[];
+    final conversations = ref.watch(conversationsProvider).value ?? const <Conversation>[];
     final user = ref.watch(currentUserProvider);
     final requests = ref.watch(incomingFriendRequestsProvider);
     final supportsInvites = ref.watch(groupRepositoryProvider)?.supportsInvites ?? false;
@@ -116,17 +107,16 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
         child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
       );
     }
-    final conversations = conversationsAsync.value ?? const <Conversation>[];
-    final items = conversationItems(groups, conversations, chat ? _filter : ConversationFilter.all);
-    final nothingAtAll = groups.isEmpty;
+    final items = planItems(groups, parties, conversations, done: done);
+    final nothingAtAll = groups.isEmpty && parties.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InvitationsInbox(onAccepted: (id) => context.push('/groups/$id')),
-        if (requests > 0)
+        if (!done) InvitationsInbox(onAccepted: (id) => context.push('/groups/$id')),
+        if (!done && requests > 0)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: AppCard(
               color: context.palette.accent,
               onTap: () => context.push('/friends'),
@@ -145,27 +135,9 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
               ),
             ),
           ),
-        if (chat && !nothingAtAll)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-            child: Row(
-              children: [
-                for (final f in ConversationFilter.values) ...[
-                  ChoiceChip(
-                    label: Text(context.tr(f.labelKey)),
-                    selected: _filter == f,
-                    showCheckmark: false,
-                    onSelected: (_) => setState(() => _filter = f),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ],
-            ),
-          ),
-        if (nothingAtAll)
+        if (nothingAtAll && !done)
           EmptyState(
-            icon: LucideIcons.messagesSquare,
+            icon: LucideIcons.gift,
             title: context.tr(Keys.chatEmptyTitle),
             message: context.tr(chat ? Keys.chatEmptyMessage : Keys.chatEmptyMessageLocal),
             action: Column(
@@ -176,13 +148,16 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
                   label: Text(context.tr(Keys.chatEmptyCreateGroup)),
                   style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
                 ),
-                if (supportsInvites) ...[
-                  const SizedBox(height: 8),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => context.push('/parties/new'),
+                  child: const Text('Organizar uma festa surpresa'),
+                ),
+                if (supportsInvites)
                   TextButton(
                     onPressed: () => showJoinGroupSheet(context, ref),
                     child: Text(context.tr(Keys.chatEmptyHaveCode)),
                   ),
-                ],
                 if (chat)
                   TextButton(
                     onPressed: () => context.push('/friends'),
@@ -195,194 +170,102 @@ class _ConversationsListState extends ConsumerState<ConversationsList> {
           Padding(
             padding: const EdgeInsets.all(40),
             child: Text(
-              context.tr(switch (_filter) {
-                ConversationFilter.unread => Keys.chatFilterEmptyUnread,
-                ConversationFilter.all => Keys.chatFilterEmptyGifts,
-              }),
+              done ? 'Ainda não há prendas compradas nem festas passadas.' : 'Nada em curso de momento.',
               textAlign: TextAlign.center,
               style: TextStyle(color: context.palette.mutedForeground),
             ),
           )
-        else ...[
-          const SizedBox(height: 4),
+        else
           for (final item in items)
-            switch (item) {
-              GroupItem(:final group, :final conversation) => GroupConversationTile(
-                group: group,
-                conversation: conversation,
-                myId: user?.id,
-              ),
-            },
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: switch (item) {
+                GroupItem(:final group, :final conversation) => GiftPlanCard(
+                  group: group,
+                  conversation: conversation,
+                  myId: user?.id,
+                ),
+                PartyItem(:final party) => PartyPlanCard(party: party),
+              },
+            ),
       ],
     );
   }
 }
 
-/// Segunda linha de uma conversa: quem está a escrever, se a minha última
-/// mensagem já foi vista ("Vista por …"), ou a última mensagem.
-class _Preview extends ConsumerWidget {
-  const _Preview({
-    required this.conversation,
-    required this.myId,
-    required this.isGroup,
-    required this.fallback,
-    this.others,
-  });
-
-  final Conversation? conversation;
-  final String? myId;
-  final bool isGroup;
-
-  /// Sem mensagens.
-  final String fallback;
-
-  /// Quantas pessoas (além de mim) podem ver ("Vista por todos").
-  final int? others;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = conversation;
-    final muted = context.palette.mutedForeground;
-    final unread = (c?.unreadCount ?? 0) > 0;
-    final style = context.text.bodyMedium?.copyWith(color: unread ? context.colors.onSurface : muted);
-    final typing = c == null ? const <String, String>{} : ref.watch(conversationTypingProvider(c.id));
-
-    Widget line(String text, {IconData? icon, Color? color, bool italic = false}) => Row(
-      children: [
-        if (icon != null) ...[Icon(icon, size: 15, color: color ?? muted), const SizedBox(width: 4)],
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style?.copyWith(color: color, fontStyle: italic ? FontStyle.italic : null),
-          ),
-        ),
-      ],
-    );
-
-    if (typing.isNotEmpty) {
-      return line(
-        isGroup ? ChatFormat.typing(typing.values) : context.tr(Keys.chatTypingSelf),
-        color: context.colors.primary,
-        italic: true,
-      );
-    }
-    final last = c?.lastMessage;
-    if (last == null) return line(fallback);
-    if (last.senderId == myId && !last.deleted) {
-      if (c!.seenBy.isNotEmpty) {
-        return line(
-          ChatFormat.seenBy(c.seenBy, others: others),
-          icon: LucideIcons.checkCheck,
-          color: context.colors.primary,
-        );
-      }
-      return line(context.tr(Keys.chatPreviewYou, {'text': last.preview}), icon: LucideIcons.check);
-    }
-    final text = isGroup && last.senderName.isNotEmpty && last.senderId != myId
-        ? context.tr(Keys.chatPreviewSender, {'name': last.senderName.split(' ').first, 'text': last.preview})
-        : last.preview;
-    return line(text, italic: last.deleted);
-  }
-}
-
-class _TileLayout extends StatelessWidget {
-  const _TileLayout({
-    required this.avatar,
+/// Moldura comum: ícone à esquerda, texto ao meio, contador e seta à direita.
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.eyebrow,
+    required this.eyebrowColor,
     required this.title,
-    required this.preview,
     required this.onTap,
-    this.time,
+    this.eyebrowIcon,
+    this.children = const [],
     this.unread = 0,
-    this.footer,
-    this.pinned = false,
-    this.muted = false,
   });
 
-  final bool pinned;
-  final bool muted;
-  final Widget avatar;
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
+  final IconData? eyebrowIcon;
+  final String eyebrow;
+  final Color eyebrowColor;
   final String title;
-  final Widget preview;
-  final VoidCallback onTap;
-  final DateTime? time;
+  final List<Widget> children;
   final int unread;
-  final Widget? footer;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final muted = context.palette.mutedForeground;
-    final hasUnread = unread > 0;
-    return InkWell(
+    return AppCard(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            avatar,
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.text.titleSmall?.copyWith(fontWeight: hasUnread ? FontWeight.w800 : null),
-                        ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+      child: Row(
+        children: [
+          IconBadge(icon: icon, size: 56, background: iconBackground, foreground: iconColor),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (eyebrowIcon != null) ...[
+                      Icon(eyebrowIcon, size: 13, color: eyebrowColor),
+                      const SizedBox(width: 4),
+                    ],
+                    Flexible(
+                      child: Text(
+                        eyebrow,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.eyebrow(context, color: eyebrowColor).copyWith(fontSize: 11),
                       ),
-                      if (time != null)
-                        Text(
-                          ChatFormat.listTime(time!),
-                          style: context.text.labelSmall?.copyWith(
-                            color: hasUnread && !this.muted ? context.colors.primary : muted,
-                            fontWeight: hasUnread ? FontWeight.w700 : null,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Expanded(child: preview),
-                      if (this.muted) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          LucideIcons.bellOff,
-                          size: 15,
-                          color: muted,
-                          semanticLabel: context.tr(Keys.chatInfoMutedAlways),
-                        ),
-                      ],
-                      if (pinned) ...[
-                        const SizedBox(width: 6),
-                        Icon(LucideIcons.pin, size: 15, color: muted, semanticLabel: context.tr(Keys.chatInfoPinned)),
-                      ],
-                      if (hasUnread) ...[const SizedBox(width: 8), CountBadge(count: unread, muted: this.muted)],
-                    ],
-                  ),
-                  if (footer != null) ...[const SizedBox(height: 6), footer!],
-                ],
-              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTheme.display(context, size: 17)),
+                ...children,
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          if (unread > 0) ...[CountBadge(count: unread), const SizedBox(width: 4)],
+          Icon(LucideIcons.chevronRight, size: 20, color: context.colors.onSurface),
+        ],
       ),
     );
   }
 }
 
-/// Prenda em grupo: a conversa do grupo e, por baixo, o estado do pagamento.
-/// Tocar abre a conversa; tocar no estado abre a prenda.
-class GroupConversationTile extends StatelessWidget {
-  const GroupConversationTile({super.key, required this.group, required this.conversation, required this.myId});
+/// Prenda em grupo: o que se oferece, quanto já se juntou e quem falta pagar.
+class GiftPlanCard extends StatelessWidget {
+  const GiftPlanCard({super.key, required this.group, required this.conversation, required this.myId});
 
   final GiftGroup group;
   final Conversation? conversation;
@@ -391,95 +274,104 @@ class GroupConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final g = group;
-    final c = conversation;
-    final next = g.nextBirthday;
-    final me = g.memberFor(myId);
     final muted = context.palette.mutedForeground;
-    void openGroup() => context.push('/groups/${g.id}');
+    final me = g.memberFor(myId);
+    final bought = g.purchasedAt != null;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ratio = g.targetAmount <= 0 ? 0.0 : (g.confirmedAmount / g.targetAmount).clamp(0.0, 1.0);
+    final next = g.nextBirthday;
+    final subtitle = g.giftDescription.trim().isNotEmpty
+        ? g.giftDescription.trim()
+        : next == null
+        ? 'Para ${g.celebrantName}'
+        : 'Para ${g.celebrantName} · ${Fmt.dayMonth(next)}';
+    final mustPay = !bought && me != null && g.statusOf(me) == ContributionStatus.pending;
 
-    final (String label, Color bg, Color fg) status = g.purchasedAt != null
-        ? (context.tr(Keys.chatGiftPurchased), context.palette.success.withValues(alpha: 0.14), context.palette.success)
-        : me != null && g.isBuyer(me)
-        ? (
-            g.awaitingConfirmationCount > 0
-                ? context.trPlural(Keys.chatGiftAwaiting, g.awaitingConfirmationCount)
-                : context.tr(Keys.chatGiftYouBuy),
-            context.palette.accent,
-            context.palette.accentForeground,
-          )
-        : me == null
-        ? (
-            context.tr(Keys.chatGiftCollected, {
-              'confirmed': Fmt.money(g.confirmedAmount),
-              'target': Fmt.money(g.targetAmount),
-            }),
-            context.palette.muted,
-            muted,
-          )
-        : switch (g.statusOf(me)) {
-            ContributionStatus.pending => (
-              context.tr(Keys.chatGiftPay, {'amount': Fmt.money(g.shareOf(me))}),
-              context.colors.primary,
-              context.colors.onPrimary,
-            ),
-            ContributionStatus.paid => (
-              context.tr(Keys.chatGiftToConfirm),
-              statusStyle(context, ContributionStatus.paid).bg,
-              statusStyle(context, ContributionStatus.paid).fg,
-            ),
-            ContributionStatus.confirmed => (
-              context.tr(Keys.chatGiftPaid),
-              statusStyle(context, ContributionStatus.confirmed).bg,
-              statusStyle(context, ContributionStatus.confirmed).fg,
-            ),
-          };
-    // Quem mais pode ver as mensagens do grupo (para "Vista por todos").
-    final others = g.members.where((m) => m.userId != null && m.userId != myId).length;
-
-    return _TileLayout(
-      avatar: GroupAvatar(photoUrl: g.photoUrl ?? c?.photoUrl, purchased: g.purchasedAt != null),
+    return _PlanCard(
+      icon: bought ? LucideIcons.packageCheck : LucideIcons.gift,
+      iconBackground: dark ? context.palette.muted : const Color(0xFFF4EADC),
+      iconColor: dark ? context.colors.onSurface : const Color(0xFF7A570C),
+      eyebrowIcon: bought ? LucideIcons.check : LucideIcons.lock,
+      eyebrow: bought ? 'COMPRADA' : 'SECRETO',
+      eyebrowColor: bought ? context.palette.success : context.colors.primary,
       title: g.title,
-      preview: _Preview(
-        conversation: c,
-        myId: myId,
-        isGroup: true,
-        others: others,
-        fallback: c == null
-            ? context.trPlural(Keys.commonPeople, g.members.length)
-            : context.tr(Keys.chatGroupTalkHere),
-      ),
-      time: c?.lastMessage?.createdAt,
-      unread: c?.unreadCount ?? 0,
-      pinned: c?.pinned ?? false,
-      muted: c?.isMuted ?? false,
-      // Sem conversa (modo local) abre logo a prenda.
-      onTap: c == null ? openGroup : () => context.push('/chats/${c.id}'),
-      footer: Row(
-        children: [
-          Flexible(
-            child: GestureDetector(
-              onTap: openGroup,
-              child: Pill(label: status.$1, background: status.$2, foreground: status.$3, dense: true),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              next == null
-                  ? context.tr(Keys.chatGiftForName, {'name': g.celebrantName})
-                  : context.tr(Keys.chatGiftForNameDate, {'name': g.celebrantName, 'date': Fmt.dayMonth(next)}),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      unread: conversation?.unreadCount ?? 0,
+      onTap: () => context.push('/groups/${g.id}'),
+      children: [
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.text.bodySmall?.copyWith(color: muted),
+        ),
+        if (!bought && g.targetAmount > 0) ...[
+          const SizedBox(height: 10),
+          SoftProgress(value: ratio, semanticsLabel: 'Valor juntado'),
+        ],
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              [
+                '${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}',
+                if (!bought && g.pendingCount > 0)
+                  g.pendingCount == 1 ? 'falta 1 pagamento' : 'faltam ${g.pendingCount} pagamentos',
+              ].join(' · '),
               style: context.text.labelSmall?.copyWith(color: muted),
             ),
-          ),
-        ],
-      ),
+            if (mustPay)
+              Pill(
+                label: 'Pagar ${Fmt.money(g.shareOf(me))}',
+                background: context.colors.primary,
+                foreground: context.colors.onPrimary,
+                dense: true,
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-/// "Nova": prenda em grupo ou entrar com código.
+/// Festa surpresa: quando é e quantos convidados.
+class PartyPlanCard extends StatelessWidget {
+  const PartyPlanCard({super.key, required this.party});
+
+  final Party party;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = party;
+    final n = p.guests.length;
+    return _PlanCard(
+      icon: LucideIcons.sparkles,
+      iconBackground: context.palette.violetSoft,
+      iconColor: context.colors.secondary,
+      eyebrow: 'SURPRESA',
+      eyebrowColor: context.colors.secondary,
+      title: p.title,
+      onTap: () => context.push('/parties/${p.id}'),
+      children: [
+        const SizedBox(height: 2),
+        Text(
+          [
+            p.startsAt == null ? 'Data por marcar' : Fmt.dayMonth(p.startsAt!),
+            n == 1 ? '1 convidado' : '$n convidados',
+          ].join(' · '),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
+        ),
+      ],
+    );
+  }
+}
+
+/// "Nova": prenda em grupo, festa surpresa ou entrar com código.
 Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async {
   final supportsInvites = ref.read(groupRepositoryProvider)?.supportsInvites ?? false;
   final action = await showModalBottomSheet<String>(
@@ -501,6 +393,12 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
               subtitle: Text(ctx.tr(Keys.chatNewGroupHint)),
               onTap: () => Navigator.pop(ctx, 'group'),
             ),
+            ListTile(
+              leading: const Icon(LucideIcons.sparkles),
+              title: const Text('Festa surpresa'),
+              subtitle: const Text('Convidados, tarefas e a hora certa'),
+              onTap: () => Navigator.pop(ctx, 'party'),
+            ),
             if (supportsInvites)
               ListTile(
                 leading: const Icon(LucideIcons.ticket),
@@ -517,6 +415,8 @@ Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async
   switch (action) {
     case 'group':
       context.push('/groups/new');
+    case 'party':
+      context.push('/parties/new');
     case 'code':
       await showJoinGroupSheet(context, ref);
   }

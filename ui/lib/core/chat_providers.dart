@@ -56,45 +56,8 @@ final dataSyncProvider = Provider<void>((ref) {
 Stream<ChatEvent> _events(Ref ref) => ref.watch(chatEventsProvider);
 
 // ---------------------------------------------------------------------------
-// Presença e "a escrever…"
+// "A escrever…"
 // ---------------------------------------------------------------------------
-
-typedef Presence = ({bool online, DateTime? lastSeenAt});
-
-/// Quem está online (ou quando foi visto por último), por utilizador. Começa
-/// com o que vem nas listas da API e atualiza-se com os eventos em tempo real.
-class PresenceController extends Notifier<Map<String, Presence>> {
-  @override
-  Map<String, Presence> build() {
-    final sub = _events(ref).listen((e) {
-      if (e is PresenceChanged) {
-        state = {...state, e.userId: (online: e.online, lastSeenAt: e.lastSeenAt ?? state[e.userId]?.lastSeenAt)};
-      }
-    });
-    ref.onDispose(sub.cancel);
-    return const {};
-  }
-
-  void seed(Iterable<ChatUser> users) {
-    final next = {...state};
-    var changed = false;
-    for (final u in users) {
-      final p = (online: u.online, lastSeenAt: u.lastSeenAt);
-      if (next[u.userId] != p) {
-        next[u.userId] = p;
-        changed = true;
-      }
-    }
-    if (changed) state = next;
-  }
-}
-
-final presenceProvider = NotifierProvider<PresenceController, Map<String, Presence>>(PresenceController.new);
-
-/// Presença de uma pessoa (offline e sem data se ainda não se souber).
-final userPresenceProvider = Provider.family<Presence, String>(
-  (ref, userId) => ref.watch(presenceProvider.select((m) => m[userId])) ?? (online: false, lastSeenAt: null),
-);
 
 /// Quem está a escrever em cada conversa (conversa → utilizador → nome).
 /// Cada aviso dura 5 s; uma mensagem dessa pessoa termina-o logo.
@@ -167,11 +130,7 @@ class ConversationsController extends AsyncNotifier<List<Conversation>> {
     return _fetch(repo);
   }
 
-  Future<List<Conversation>> _fetch(ChatRepository repo) async {
-    final list = await repo.fetchConversations();
-    ref.read(presenceProvider.notifier).seed(list.map((c) => c.otherUser).whereType<ChatUser>());
-    return list;
-  }
+  Future<List<Conversation>> _fetch(ChatRepository repo) => repo.fetchConversations();
 
   String? get _me => ref.read(currentUserProvider)?.id;
 
@@ -350,11 +309,7 @@ class FriendsController extends AsyncNotifier<FriendsList> {
 
   ChatRepository get _repo => ref.read(chatRepositoryProvider)!;
 
-  Future<FriendsList> _fetch() async {
-    final list = await _repo.fetchFriends();
-    ref.read(presenceProvider.notifier).seed(list.friends);
-    return list;
-  }
+  Future<FriendsList> _fetch() => _repo.fetchFriends();
 
   Future<void> refresh() async => state = AsyncData(await _fetch());
 
@@ -512,7 +467,6 @@ class ChatController extends Notifier<ChatState> {
     try {
       final (conv, page) = await (_repo.fetchConversation(conversationId), _repo.fetchMessages(conversationId)).wait;
       final local = state.messages.where((m) => m.state != SendState.sent);
-      ref.read(presenceProvider.notifier).seed(conv.participants.map((p) => p.user));
       state = state.copyWith(
         conversation: conv,
         messages: mergeMessages(page.messages, local),
@@ -782,13 +736,10 @@ final chatNotificationsProvider = Provider<void>((ref) {
     final conv = ref.read(conversationsProvider).value?.where((c) => c.id == m.conversationId).firstOrNull;
     if (conv?.isMuted ?? false) return;
 
-    final isGroup = conv?.isGroup ?? false;
     final title = conv?.title.isNotEmpty ?? false ? conv!.title : m.senderName;
     final body = !user.messagePreviews
         ? tr(Keys.notifyNewMessage)
-        : isGroup
-        ? tr(Keys.chatPreviewSender, {'name': m.senderName.split(' ').first, 'text': m.preview})
-        : m.preview;
+        : tr(Keys.chatPreviewSender, {'name': m.senderName.split(' ').first, 'text': m.preview});
     ref.read(showChatNotificationProvider)(conversationId: m.conversationId, title: title, body: body);
   });
   ref.onDispose(sub.cancel);

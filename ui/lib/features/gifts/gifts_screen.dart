@@ -24,20 +24,27 @@ class GiftsScreen extends ConsumerStatefulWidget {
   ConsumerState<GiftsScreen> createState() => _GiftsScreenState();
 }
 
+enum _View { ongoing, done, ideas }
+
 class _GiftsScreenState extends ConsumerState<GiftsScreen> {
   bool _showPurchased = false;
-  // As conversas são o primeiro separador (o que se procura mais vezes).
-  bool _chatsTab = true;
+  var _view = _View.ongoing;
   String? _tabParam;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Permite abrir diretamente um separador: /gifts?tab=chats (ou o antigo tab=groups) ou ?tab=ideas
+    // Permite abrir diretamente um separador: /gifts?tab=chats (ou groups), ?tab=done ou ?tab=ideas
     final tab = GoRouterState.of(context).uri.queryParameters['tab'];
     if (tab != _tabParam) {
       _tabParam = tab;
-      if (tab != null) _chatsTab = tab != 'ideas';
+      if (tab != null) {
+        _view = switch (tab) {
+          'ideas' => _View.ideas,
+          'done' => _View.done,
+          _ => _View.ongoing,
+        };
+      }
     }
   }
 
@@ -46,14 +53,15 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
     final badge = ref.watch(conversationsBadgeProvider);
     final requests = ref.watch(incomingFriendRequestsProvider);
     final chat = ref.watch(chatRepositoryProvider) != null;
+    final plans = _view != _View.ideas;
 
     final header = [
       Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, _chatsTab && chat ? 8 : 20, 12),
+        padding: EdgeInsets.fromLTRB(20, 16, chat ? 8 : 20, 12),
         child: Row(
           children: [
             Expanded(child: Text('Prendas', style: AppTheme.display(context, size: 30))),
-            if (_chatsTab && chat)
+            if (chat)
               IconButton(
                 tooltip: context.tr(Keys.chatFriendsTooltip),
                 onPressed: () => context.push('/friends'),
@@ -64,7 +72,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                 ),
               ),
             // Definições gerais das conversas (privacidade e notificações).
-            if (_chatsTab && chat)
+            if (chat)
               IconButton(
                 tooltip: context.tr(Keys.chatInfoAllSettings),
                 onPressed: () => context.push('/chat-settings'),
@@ -74,19 +82,23 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
         ),
       ),
       const Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 14), child: _StatsBanner()),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-        child: Wrap(
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+        child: Row(
           spacing: 8,
-          runSpacing: 8,
           children: [
-            _Tab(
-              label: context.tr(Keys.chatTab),
-              badge: badge,
-              selected: _chatsTab,
-              onTap: () => setState(() => _chatsTab = true),
-            ),
-            _Tab(label: 'Ideias', selected: !_chatsTab, onTap: () => setState(() => _chatsTab = false)),
+            for (final (v, label) in const [
+              (_View.ongoing, 'Em curso'),
+              (_View.done, 'Concluídos'),
+              (_View.ideas, 'Ideias guardadas'),
+            ])
+              _Tab(
+                label: label,
+                badge: v == _View.ongoing ? badge : 0,
+                selected: _view == v,
+                onTap: () => setState(() => _view = v),
+              ),
           ],
         ),
       ),
@@ -95,24 +107,28 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-gifts',
-        onPressed: () => _chatsTab ? showNewConversationSheet(context, ref) : pickPersonThenAddGift(context, ref),
+        onPressed: () => plans ? showNewConversationSheet(context, ref) : pickPersonThenAddGift(context, ref),
         icon: const Icon(LucideIcons.plus, size: 20),
-        label: Text(_chatsTab ? context.tr(Keys.chatNewTitle) : 'Nova ideia'),
+        label: Text(plans ? context.tr(Keys.chatNewTitle) : 'Nova ideia'),
       ),
       body: SafeArea(
         bottom: false,
-        child: _chatsTab
+        child: plans
             ? RefreshIndicator(
                 onRefresh: () async {
                   await Future.wait([
                     ref.read(groupsProvider.notifier).refresh(),
+                    if (ref.read(partyRepositoryProvider) != null) ref.read(partiesProvider.notifier).refresh(),
                     if (chat) ref.read(conversationsProvider.notifier).refresh(),
                     if (chat) ref.read(friendsProvider.notifier).refresh(),
                   ]);
                 },
                 child: ListView(
                   padding: const EdgeInsets.only(bottom: 100),
-                  children: [...header, const ConversationsList()],
+                  children: [
+                    ...header,
+                    PlansList(done: _view == _View.done),
+                  ],
                 ),
               )
             : DataGate(
@@ -319,9 +335,10 @@ class _StatsBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final active = (ref.watch(groupsProvider).value ?? const []).where((g) => g.purchasedAt == null).toList();
-    final collected = active.fold<double>(0, (a, g) => a + g.confirmedAmount);
-    final ideas = ref.watch(dataProvider).gifts.where((g) => !g.purchased).length;
+    final groups = (ref.watch(groupsProvider).value ?? const []).where((g) => g.purchasedAt == null).toList();
+    final parties = (ref.watch(partiesProvider).value ?? const []).where((p) => !p.isPast).length;
+    final active = groups.length + parties;
+    final collected = groups.fold<double>(0, (a, g) => a + g.confirmedAmount);
 
     Widget stat(String value, String label) => Expanded(
       child: Column(
@@ -351,11 +368,9 @@ class _StatsBanner extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          stat('${active.length}', active.length == 1 ? 'grupo ativo' : 'grupos ativos'),
+          stat('$active', active == 1 ? 'grupo ativo' : 'grupos ativos'),
           divider(),
           stat(Fmt.money(collected), 'reunidos'),
-          divider(),
-          stat('$ideas', ideas == 1 ? 'ideia guardada' : 'ideias guardadas'),
         ],
       ),
     );

@@ -101,13 +101,6 @@ void main() {
       expect(ChatFormat.seenBy([gil, ana]), 'Vista por Gil e Ana');
       expect(ChatFormat.seenBy([gil, ana, rui]), 'Vista por Gil e mais 2');
       expect(ChatFormat.seenBy([gil, ana], others: 2), 'Vista por todos');
-      expect(ChatFormat.presence(online: true), 'Online');
-      final now = DateTime.now();
-      expect(
-        ChatFormat.presence(online: false, lastSeenAt: DateTime(now.year, now.month, now.day, 9, 5)),
-        'Visto por último hoje às 09:05',
-      );
-      expect(ChatFormat.presence(online: false), isNull);
 
       await Translations.load(const Locale('en'));
       expect(ChatFormat.typing(['Gil', 'Ana']), 'Gil and Ana are typing…');

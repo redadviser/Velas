@@ -6,11 +6,9 @@ import 'package:aniversarios/core/providers.dart';
 import 'package:aniversarios/core/theme/app_colors.dart';
 import 'package:aniversarios/data/api/chat_socket.dart';
 import 'package:aniversarios/data/models/chat_models.dart';
-import 'package:aniversarios/data/models/group_models.dart';
 import 'package:aniversarios/data/models/models.dart';
 import 'package:aniversarios/data/repositories/chat_repository.dart';
 import 'package:aniversarios/features/chat/conversation_info_screen.dart';
-import 'package:aniversarios/features/chat/conversations_list.dart';
 import 'package:aniversarios/features/home/home_inbox.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,7 +20,6 @@ const me = UserProfile(id: 'me', email: 'eu@ex.pt', name: 'Eu');
 
 Conversation conv(
   String id, {
-  bool group = false,
   int unread = 0,
   int hour = 10,
   bool pinned = false,
@@ -30,7 +27,6 @@ Conversation conv(
   String title = '',
 }) => Conversation(
   id: id,
-  isGroup: group,
   title: title.isEmpty ? id : title,
   unreadCount: unread,
   pinned: pinned,
@@ -95,29 +91,7 @@ void main() {
     await Translations.load(const Locale('pt'));
   });
 
-  test('fixadas primeiro; silenciadas não contam nas não lidas', () async {
-    final list = [
-      conv('a', group: true, hour: 9),
-      conv('b', group: true, hour: 11),
-      conv('c', group: true, hour: 8, pinned: true),
-    ];
-    final groups = [
-      for (final c in list)
-        GiftGroup(
-          id: c.id,
-          createdBy: 'me',
-          title: c.id,
-          celebrantName: 'Rita',
-          targetAmount: 50,
-          createdAt: DateTime(2026, 9, 1),
-          conversationId: c.id,
-        ),
-    ];
-    expect(
-      [for (final i in conversationItems(groups, list, ConversationFilter.all)) (i as GroupItem).group.id],
-      ['c', 'b', 'a'],
-    );
-
+  test('silenciadas não contam nas não lidas', () async {
     final container = ProviderContainer(
       overrides: [
         currentUserProvider.overrideWithValue(me),
@@ -168,21 +142,21 @@ void main() {
 
     test('avisa, exceto na conversa aberta, nas silenciadas e nas minhas mensagens', () async {
       final container = make(me, [
-        conv('dm', title: 'Gil Costa'),
-        conv('grupo', group: true, title: 'Prenda da Rita'),
+        conv('livro', title: 'Livro do Rui'),
+        conv('grupo', title: 'Prenda da Rita'),
         conv('calado', mutedUntil: Conversation.mutedForever),
       ]);
       await container.read(conversationsProvider.future);
       container.read(conversationsProvider.notifier).setOpen('aberta');
 
       events
-        ..add(MessageReceived(incoming('dm')))
+        ..add(MessageReceived(incoming('livro')))
         ..add(MessageReceived(incoming('grupo', body: 'Encomendei!')))
         ..add(MessageReceived(incoming('calado')))
         ..add(MessageReceived(incoming('aberta')))
-        ..add(MessageReceived(incoming('dm', sender: 'me')));
+        ..add(MessageReceived(incoming('livro', sender: 'me')));
       await pumpEventQueue();
-      expect(shown, [('dm', 'Gil Costa', 'Já compraste?'), ('grupo', 'Prenda da Rita', 'Gil: Encomendei!')]);
+      expect(shown, [('livro', 'Livro do Rui', 'Gil: Já compraste?'), ('grupo', 'Prenda da Rita', 'Gil: Encomendei!')]);
     });
 
     test('sem pré-visualização diz só "Nova mensagem"; desligadas não avisa', () async {
@@ -212,7 +186,7 @@ void main() {
     ),
   );
 
-  testWidgets('detalhes da conversa: silenciar "sempre" e fixar', (tester) async {
+  testWidgets('detalhes da conversa: silenciar "sempre"', (tester) async {
     final repo = FakeChat([conv('dm', title: 'Gil Costa')]);
     await tester.pumpWidget(app(repo, const ConversationInfoScreen(conversationId: 'dm')));
     await tester.pumpAndSettle();
@@ -224,17 +198,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.prefs.single, ('dm', Conversation.mutedForever, null));
     expect(find.text('Silenciada'), findsOneWidget);
-
-    await tester.tap(find.byType(Switch));
-    await tester.pumpAndSettle();
-    expect(repo.prefs.last, ('dm', null, true));
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('a caixa de mensagens do Início mostra as conversas por ler (sem as silenciadas)', (tester) async {
     final repo = FakeChat([
       conv('a', unread: 2, title: 'Ana Lopes'),
-      conv('b', unread: 1, group: true, title: 'Prenda da Rita'),
+      conv('b', unread: 1, title: 'Prenda da Rita'),
       conv('c', unread: 4, title: 'Calado', mutedUntil: Conversation.mutedForever),
       conv('d', title: 'Lida'),
     ]);

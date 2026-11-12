@@ -183,11 +183,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
         if (ok && mounted) await runGuarded(context, () => _chat.delete(m));
       case 'report':
-        final known = ref.read(chatProvider(widget.conversationId)).conversation?.participants
+        final known = ref
+            .read(chatProvider(widget.conversationId))
+            .conversation
+            ?.participants
             .where((p) => p.user.userId == m.senderId)
             .firstOrNull
             ?.user;
-        await showReportSheet(context, ref, known ?? ChatUser(userId: m.senderId!, name: m.senderName), messageId: m.id);
+        await showReportSheet(
+          context,
+          ref,
+          known ?? ChatUser(userId: m.senderId!, name: m.senderName),
+          messageId: m.id,
+        );
       case 'react-more':
         final emoji = await _pickEmoji();
         if (emoji != null && mounted) await runGuarded(context, () => _chat.react(m, emoji));
@@ -233,7 +241,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   children: [
                     for (final p in readers)
                       ListTile(
-                        leading: PresenceAvatar(user: p.user),
+                        leading: UserAvatar(user: p.user),
                         title: Text(p.user.name),
                         trailing: Text(
                           ChatFormat.seenAt(p.lastReadAt!),
@@ -281,14 +289,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final summary =
         state.conversation ??
         ref.watch(conversationsProvider).value?.where((c) => c.id == widget.conversationId).firstOrNull;
-    final isGroup = summary?.isGroup ?? false;
     final groupId = summary?.groupId;
     final group = groupId == null ? null : ref.watch(groupsProvider).value?.where((g) => g.id == groupId).firstOrNull;
-    final other = summary?.otherUser;
-    final friends = ref.watch(friendsProvider).value;
-    final presence = ref.watch(presenceProvider);
-    // Deixaram de ser amigos: a conversa fica, mas não se escreve.
-    final blocked = summary != null && !isGroup && other != null && friends != null && !friends.isFriend(other.userId);
 
     final participants = state.conversation?.participants ?? const <Participant>[];
     final seenAt = ReadReceipts.positions(state.messages, participants, me);
@@ -322,13 +324,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             style: context.text.titleMedium,
                           ),
                           Text(
-                            _subtitle(context, summary, participants, me, typing, presence),
+                            _subtitle(context, summary, participants, me, typing),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: context.text.bodySmall?.copyWith(
-                              color: typing.isNotEmpty || (other != null && (presence[other.userId]?.online ?? false))
-                                  ? context.colors.primary
-                                  : context.palette.mutedForeground,
+                              color: typing.isNotEmpty ? context.colors.primary : context.palette.mutedForeground,
                             ),
                           ),
                         ],
@@ -368,7 +368,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     itemCount: state.messages.length + extra + (state.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (extra == 1 && index == 0) return _TypingBubble(users: typingUsers, isGroup: isGroup);
+                      if (extra == 1 && index == 0) return _TypingBubble(users: typingUsers);
                       final i = index - extra;
                       final list = state.messages;
                       if (i == list.length) {
@@ -392,7 +392,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             key: ValueKey(m.id),
                             message: m,
                             myId: me,
-                            isGroup: isGroup,
                             firstInRun: newDay || !_sameRun(older, m),
                             lastInRun: !_sameRun(m, newer),
                             seen: mine && ReadReceipts.seenByAll(m, participants, me),
@@ -403,7 +402,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 : null,
                             onRetry: () => _chat.retry(m).catchError((_) {}),
                             onTapSender: mine ? null : () => _openSender(m, state),
-                            onSwipeReply: blocked ? null : () => setState(() => _replyTo = m),
+                            onSwipeReply: () => setState(() => _replyTo = m),
                           ),
                           if (readers.isNotEmpty) _SeenRow(readers: readers, onTap: () => _showSeenBy(m)),
                         ],
@@ -411,24 +410,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     },
                   ),
           ),
-          if (blocked)
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  context.tr(Keys.chatBlocked),
-                  textAlign: TextAlign.center,
-                  style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-                ),
-              ),
-            )
-          else
-            Composer(
-              conversationId: widget.conversationId,
-              replyTo: _replyTo,
-              onCancelReply: () => setState(() => _replyTo = null),
-            ),
+          Composer(
+            conversationId: widget.conversationId,
+            replyTo: _replyTo,
+            onCancelReply: () => setState(() => _replyTo = null),
+          ),
         ],
       ),
     );
@@ -443,24 +429,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _sameDay(older.createdAt, newer.createdAt) &&
       newer.createdAt.difference(older.createdAt) < _runGap;
 
-  /// Por baixo do nome: quem está a escrever; numa privada, se está online
-  /// ou quando foi visto; num grupo, quem participa e quantos estão online.
+  /// Por baixo do nome: quem está a escrever ou quem participa.
   String _subtitle(
     BuildContext context,
     Conversation c,
     List<Participant> participants,
     String me,
     Map<String, String> typing,
-    Map<String, Presence> presence,
   ) {
-    if (typing.isNotEmpty) return c.isGroup ? ChatFormat.typing(typing.values) : context.tr(Keys.chatTypingSelf);
-    if (!c.isGroup) {
-      final other = c.otherUser;
-      final p = other == null ? null : presence[other.userId];
-      final status = p == null ? null : ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
-      if (status != null) return status;
-      return other?.username.isNotEmpty ?? false ? '@${other!.username}' : context.tr(Keys.chatHeaderDirect);
-    }
+    if (typing.isNotEmpty) return ChatFormat.typing(typing.values);
     final others = participants.where((p) => p.user.userId != me).toList();
     if (others.isEmpty) {
       return c.celebrantName == null
@@ -468,26 +445,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           : context.tr(Keys.chatHeaderGiftFor, {'name': c.celebrantName});
     }
     final names = others.map((p) => p.user.firstName).toList();
-    final members = names.length <= 3
+    return names.length <= 3
         ? context.tr(Keys.chatHeaderMembers, {'names': names.join(', ')})
         : context.tr(Keys.chatHeaderMembersMore, {'names': names.take(3).join(', '), 'count': names.length - 3});
-    final online = others.where((p) => presence[p.user.userId]?.online ?? false).length;
-    return online == 0 ? members : '$members · ${context.tr(Keys.chatOnlineCount, {'count': online})}';
   }
 }
 
 /// "Está a escrever…": avatar(es) e três pontos, no fundo da conversa.
 class _TypingBubble extends StatelessWidget {
-  const _TypingBubble({required this.users, required this.isGroup});
+  const _TypingBubble({required this.users});
 
   final List<ChatUser> users;
-  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       liveRegion: true,
-      label: isGroup ? ChatFormat.typing(users.map((u) => u.name)) : context.tr(Keys.chatTypingSelf),
+      label: ChatFormat.typing(users.map((u) => u.name)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
         child: Row(
@@ -687,17 +661,14 @@ class _EmptyChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isGroup = conversation?.isGroup ?? false;
     return Center(
       child: SingleChildScrollView(
         child: EmptyState(
-          icon: isGroup ? LucideIcons.messagesSquare : LucideIcons.hand,
-          title: isGroup ? context.tr(Keys.chatEmptyGroupTitle) : context.tr(Keys.chatSayHello),
-          message: isGroup
-              ? group == null
-                    ? context.tr(Keys.chatEmptyGroupMessage)
-                    : context.tr(Keys.chatEmptyGroupMessageFor, {'name': group!.celebrantName})
-              : context.tr(Keys.chatEmptyDirectMessage),
+          icon: LucideIcons.messagesSquare,
+          title: context.tr(Keys.chatEmptyGroupTitle),
+          message: group == null
+              ? context.tr(Keys.chatEmptyGroupMessage)
+              : context.tr(Keys.chatEmptyGroupMessageFor, {'name': group!.celebrantName}),
         ),
       ),
     );

@@ -23,6 +23,7 @@ abstract final class Keys {
   static const commonYesterday = 'common.yesterday';
   static const commonYesterdayAt = 'common.yesterdayAt';
   static const commonDateAt = 'common.dateAt';
+
   /// Plural (`.one` / `.other`).
   static const commonPeople = 'common.people';
   static const commonSave = 'common.save';
@@ -38,12 +39,8 @@ abstract final class Keys {
   static const languageFr = 'language.fr';
 
   // Conversas -------------------------------------------------------------
-  static const chatTab = 'chat.tab';
   static const chatFriendsTooltip = 'chat.friendsTooltip';
-  static const chatFilterAll = 'chat.filter.all';
-  static const chatFilterGifts = 'chat.filter.gifts';
-  static const chatFilterDirect = 'chat.filter.direct';
-  static const chatFilterUnread = 'chat.filter.unread';
+
   /// Plural (`.one` / `.other`).
   static const chatFriendRequests = 'chat.friendRequests';
   static const chatEmptyTitle = 'chat.empty.title';
@@ -52,39 +49,16 @@ abstract final class Keys {
   static const chatEmptyCreateGroup = 'chat.empty.createGroup';
   static const chatEmptyHaveCode = 'chat.empty.haveCode';
   static const chatEmptyAddFriends = 'chat.empty.addFriends';
-  static const chatFilterEmptyUnread = 'chat.filterEmpty.unread';
-  static const chatFilterEmptyDirect = 'chat.filterEmpty.direct';
-  static const chatFilterEmptyGifts = 'chat.filterEmpty.gifts';
-  static const chatSayHello = 'chat.sayHello';
   static const chatPreviewYou = 'chat.previewYou';
   static const chatPreviewSender = 'chat.previewSender';
-  static const chatGroupTalkHere = 'chat.group.talkHere';
-  static const chatGiftPurchased = 'chat.gift.purchased';
-  /// Plural (`.one` / `.other`).
-  static const chatGiftAwaiting = 'chat.gift.awaiting';
-  static const chatGiftYouBuy = 'chat.gift.youBuy';
   static const chatGiftCollected = 'chat.gift.collected';
-  static const chatGiftPay = 'chat.gift.pay';
-  static const chatGiftPaid = 'chat.gift.paid';
-  static const chatGiftToConfirm = 'chat.gift.toConfirm';
-  static const chatGiftForName = 'chat.gift.forName';
-  static const chatGiftForNameDate = 'chat.gift.forNameDate';
   static const chatNewTitle = 'chat.new.title';
   static const chatNewGroup = 'chat.new.group';
   static const chatNewGroupHint = 'chat.new.groupHint';
-  static const chatNewDirect = 'chat.new.direct';
   static const chatNewCode = 'chat.new.code';
-  static const chatNewNeedFriend = 'chat.new.needFriend';
-  static const chatNewPickFriend = 'chat.new.pickFriend';
-  static const chatTypingSelf = 'chat.typingSelf';
   static const chatTypingOne = 'chat.typingOne';
   static const chatTypingTwo = 'chat.typingTwo';
   static const chatTypingMany = 'chat.typingMany';
-  static const chatOnline = 'chat.online';
-  static const chatOnlineCount = 'chat.onlineCount';
-  static const chatLastSeenToday = 'chat.lastSeen.today';
-  static const chatLastSeenYesterday = 'chat.lastSeen.yesterday';
-  static const chatLastSeenDate = 'chat.lastSeen.date';
   static const chatSeen = 'chat.seen';
   static const chatSeenByOne = 'chat.seenByOne';
   static const chatSeenByTwo = 'chat.seenByTwo';
@@ -92,17 +66,14 @@ abstract final class Keys {
   static const chatSeenByEveryone = 'chat.seenByEveryone';
   static const chatSeenSheetTitle = 'chat.seenSheet.title';
   static const chatSeenSheetNobody = 'chat.seenSheet.nobody';
-  static const chatHeaderDirect = 'chat.header.direct';
   static const chatHeaderGroup = 'chat.header.group';
   static const chatHeaderGiftFor = 'chat.header.giftFor';
   static const chatHeaderMembers = 'chat.header.members';
   static const chatHeaderMembersMore = 'chat.header.membersMore';
   static const chatHeaderSeeGift = 'chat.header.seeGift';
-  static const chatBlocked = 'chat.blocked';
   static const chatEmptyGroupTitle = 'chat.emptyGroup.title';
   static const chatEmptyGroupMessage = 'chat.emptyGroup.message';
   static const chatEmptyGroupMessageFor = 'chat.emptyGroup.messageFor';
-  static const chatEmptyDirectMessage = 'chat.emptyDirect.message';
   static const chatBannerPurchased = 'chat.banner.purchased';
   static const chatBannerProgress = 'chat.banner.progress';
   static const chatBannerFor = 'chat.banner.for';
@@ -164,8 +135,6 @@ abstract final class Keys {
   static const friendsList = 'friends.list';
   static const friendsListCount = 'friends.listCount';
   static const friendsEmpty = 'friends.empty';
-  static const friendsChat = 'friends.chat';
-  static const friendsChatWith = 'friends.chatWith';
   static const friendsRemoveAction = 'friends.removeAction';
   static const friendsRemoveTitle = 'friends.remove.title';
   static const friendsRemoveMessage = 'friends.remove.message';
@@ -182,7 +151,6 @@ abstract final class Keys {
   // Perfil de outra pessoa (aberto no chat) -------------------------------
   static const profileSheetYou = 'profileSheet.you';
   static const profileSheetFriends = 'profileSheet.friends';
-  static const profileSheetSendMessage = 'profileSheet.sendMessage';
   static const profileSheetWantsFriend = 'profileSheet.wantsFriend';
   static const profileSheetRequestSent = 'profileSheet.requestSent';
   static const profileSheetCancelRequest = 'profileSheet.cancelRequest';
@@ -190,16 +158,12 @@ abstract final class Keys {
 
   // Erros -----------------------------------------------------------------
   static const errorFriendRequestGone = 'error.friendRequestGone';
-  static const errorDirectOnlyFriends = 'error.directOnlyFriends';
-  static const errorNotFriendsAnymore = 'error.notFriendsAnymore';
   static const errorTooManyStickers = 'error.tooManyStickers';
   static const errorGifsUnavailable = 'error.gifsUnavailable';
 
   // chatSettings ----------------------------------------------------------
   static const chatSettingsTitle = 'chatSettings.title';
   static const chatSettingsPrivacy = 'chatSettings.privacy';
-  static const chatSettingsPresenceTitle = 'chatSettings.presenceTitle';
-  static const chatSettingsPresenceHint = 'chatSettings.presenceHint';
   static const chatSettingsReceiptsTitle = 'chatSettings.receiptsTitle';
   static const chatSettingsReceiptsHint = 'chatSettings.receiptsHint';
   static const chatSettingsTypingTitle = 'chatSettings.typingTitle';
@@ -222,12 +186,8 @@ abstract final class Keys {
   static const chatInfoMute1w = 'chatInfo.mute1w';
   static const chatInfoMuteAlways = 'chatInfo.muteAlways';
   static const chatInfoUnmute = 'chatInfo.unmute';
-  static const chatInfoPin = 'chatInfo.pin';
-  static const chatInfoPinHint = 'chatInfo.pinHint';
-  static const chatInfoPinned = 'chatInfo.pinned';
   static const chatInfoMembers = 'chatInfo.members';
   static const chatInfoYou = 'chatInfo.you';
-  static const chatInfoViewProfile = 'chatInfo.viewProfile';
   static const chatInfoAllSettings = 'chatInfo.allSettings';
 
   // notify ----------------------------------------------------------------
@@ -241,8 +201,10 @@ abstract final class Keys {
 
   // homeInbox -------------------------------------------------------------
   static const homeInboxTitle = 'homeInbox.title';
+
   /// Plural (`.one` / `.other`).
   static const homeInboxUnread = 'homeInbox.unread';
+
   /// Plural (`.one` / `.other`).
   static const homeInboxMore = 'homeInbox.more';
   static const homeInboxSeeAll = 'homeInbox.seeAll';

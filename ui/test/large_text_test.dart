@@ -88,8 +88,20 @@ final _party = {
   'notes': 'Levem velas. Ninguém diz nada!',
   'invite_code': 'ABCDEF1234',
   'guests': [
-    {'id': 'g1', 'user_id': 'me', 'display_name': 'Margarida Albuquerque', 'username': 'margarida.albuquerque', 'rsvp': 'yes'},
-    {'id': 'g2', 'user_id': null, 'display_name': 'Tia Rosa Maria de Albuquerque e Castro', 'username': null, 'rsvp': 'maybe'},
+    {
+      'id': 'g1',
+      'user_id': 'me',
+      'display_name': 'Margarida Albuquerque',
+      'username': 'margarida.albuquerque',
+      'rsvp': 'yes',
+    },
+    {
+      'id': 'g2',
+      'user_id': null,
+      'display_name': 'Tia Rosa Maria de Albuquerque e Castro',
+      'username': null,
+      'rsvp': 'maybe',
+    },
   ],
   'tasks': [
     {'id': 't1', 'title': 'Encomendar o bolo de chocolate com frutos vermelhos', 'assignee_id': 'g2', 'done': false},
@@ -119,20 +131,48 @@ final data = AppData(
     PersonCategory(id: 'c3', name: 'Trabalho', color: 2),
   ],
   people: [
-    person('p1', 'Maria Constança Vasconcelos', 0, year: 1990, category: 'c1', notes: 'Gosta de livros e de plantas.')
-        .copyWith(interests: ['books', 'crafts', 'outdoors'], linkedUserId: () => 'u1'),
+    person(
+      'p1',
+      'Maria Constança Vasconcelos',
+      0,
+      year: 1990,
+      category: 'c1',
+      notes: 'Gosta de livros e de plantas.',
+    ).copyWith(interests: ['books', 'crafts', 'outdoors'], linkedUserId: () => 'u1'),
     person('p2', 'Bartolomeu Figueiredo', 1, year: 1985, category: 'c2'),
     person('p3', 'Ana', 5, category: 'c3'),
     person('p4', 'Guilherme Albuquerque Sampaio', 12, year: 2001),
     person('p5', 'Rita', 40),
   ],
   gifts: [
-    GiftIdea(id: 'g1', personId: 'p1', title: 'Livro de receitas tradicionais portuguesas', price: 24.9, createdAt: DateTime(2026)),
+    GiftIdea(
+      id: 'g1',
+      personId: 'p1',
+      title: 'Livro de receitas tradicionais portuguesas',
+      price: 24.9,
+      createdAt: DateTime(2026),
+    ),
     GiftIdea(id: 'g2', personId: 'p2', title: 'Bilhetes para o concerto', price: 120, createdAt: DateTime(2026)),
   ],
   specialDates: [
-    SpecialDate(id: 's1', title: 'Aniversário de casamento dos avós maternos', kind: SpecialDateKind.wedding, day: now.day, month: now.month, year: 1975, personId: 'p1', createdAt: DateTime(2026)),
-    SpecialDate(id: 's2', title: 'Dia da Mãe', kind: SpecialDateKind.family, day: 3, month: 5, createdAt: DateTime(2026)),
+    SpecialDate(
+      id: 's1',
+      title: 'Aniversário de casamento dos avós maternos',
+      kind: SpecialDateKind.wedding,
+      day: now.day,
+      month: now.month,
+      year: 1975,
+      personId: 'p1',
+      createdAt: DateTime(2026),
+    ),
+    SpecialDate(
+      id: 's2',
+      title: 'Dia da Mãe',
+      kind: SpecialDateKind.family,
+      day: 3,
+      month: 5,
+      createdAt: DateTime(2026),
+    ),
   ],
   messages: [
     BirthdayMessage(
@@ -260,7 +300,13 @@ final _conversations = [
     'group_id': 'g1',
     'title': 'Prenda de anos da Maria Constança',
     'celebrant_name': 'Maria Constança Vasconcelos',
-    'last_message': _msg('m2', 'c2', 'u2', 'Guilherme Albuquerque', 'Já encomendei o livro, falta pagar a parte da Rita'),
+    'last_message': _msg(
+      'm2',
+      'c2',
+      'u2',
+      'Guilherme Albuquerque',
+      'Já encomendei o livro, falta pagar a parte da Rita',
+    ),
     'last_message_at': _iso,
     'unread_count': 3,
     'created_at': _iso,
@@ -336,7 +382,13 @@ Object? _serve(String method, String path) => switch (path) {
   '/conversations/c2' => _conversations[1],
   '/conversations/c1/messages' || '/conversations/c2/messages' => {
     'messages': [
-      _msg('x1', path.split('/')[2], 'u1', _long, 'Olá! Já viste a ideia para a prenda? Acho que ela ia adorar, mas é um bocadinho cara.'),
+      _msg(
+        'x1',
+        path.split('/')[2],
+        'u1',
+        _long,
+        'Olá! Já viste a ideia para a prenda? Acho que ela ia adorar, mas é um bocadinho cara.',
+      ),
       _msg('x2', path.split('/')[2], 'me', me.name, 'Sim, gosto muito! Podemos dividir por todos.'),
     ],
     'has_more': false,
@@ -379,6 +431,7 @@ Object? _serve(String method, String path) => switch (path) {
   '/legal/info' => {'terms_version': 'x', 'support_email': 'apoio@birthdayly.pt'},
   '/stickers' => [],
   '/me/wishlist' => [_wish],
+  '/parties' => [_party],
   '/friends/u1/wishlist' => {
     'interests': ['music', 'coffee_tea', 'photography'],
     'items': [_wish],
@@ -392,7 +445,14 @@ Future<ApiClient> fakeServer() async {
     'https://api.test',
     client: MockClient((req) async {
       if (req.url.path == '/auth/refresh') {
-        return http.Response(jsonEncode({'access_token': 'a', 'refresh_token': 'r2', 'user': {'id': 'me'}}), 200);
+        return http.Response(
+          jsonEncode({
+            'access_token': 'a',
+            'refresh_token': 'r2',
+            'user': {'id': 'me'},
+          }),
+          200,
+        );
       }
       final body = _serve(req.method, req.url.path);
       if (body == null) return http.Response(jsonEncode({'error': 'not_found'}), 404);

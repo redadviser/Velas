@@ -10,8 +10,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import '../groups/invite_widgets.dart';
-import 'chat_format.dart';
 import 'chat_widgets.dart';
+import 'user_profile_sheet.dart';
 
 String friendRequestMessage(FriendRequestResult r, String name) => tr(
   switch (r) {
@@ -27,35 +27,6 @@ String friendRequestMessage(FriendRequestResult r, String name) => tr(
 
 class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
-
-  Future<void> _friendMenu(BuildContext context, WidgetRef ref, ChatUser f) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(LucideIcons.userMinus, color: ctx.colors.error),
-              title: Text(ctx.tr(Keys.friendsRemoveAction), style: TextStyle(color: ctx.colors.error)),
-              onTap: () => Navigator.pop(ctx, 'remove'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (!context.mounted) return;
-    if (action == 'remove') {
-      final ok = await confirmDialog(
-        context,
-        title: context.tr(Keys.friendsRemoveTitle, {'name': f.firstName}),
-        message: context.tr(Keys.friendsRemoveMessage),
-        confirm: context.tr(Keys.commonRemove),
-      );
-      if (ok && context.mounted) await runGuarded(context, () => ref.read(friendsProvider.notifier).remove(f.userId));
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -139,10 +110,12 @@ class FriendsScreen extends ConsumerWidget {
                     for (final (i, f) in list.friends.indexed) ...[
                       if (i > 0) const Divider(indent: 16, endIndent: 16),
                       ListTile(
-                        leading: PresenceAvatar(user: f),
+                        leading: UserAvatar(user: f),
                         title: Text(f.name),
-                        subtitle: _FriendStatus(user: f),
-                        onTap: () => _friendMenu(context, ref, f),
+                        subtitle: f.username.isEmpty
+                            ? null
+                            : Text('@${f.username}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                        onTap: () => showUserProfileSheet(context, f),
                       ),
                     ],
                   ],
@@ -187,26 +160,4 @@ class _Name extends StatelessWidget {
         Text('@${user.username}', style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground)),
     ],
   );
-}
-
-/// "Online", "Visto por último …" ou o @username.
-class _FriendStatus extends ConsumerWidget {
-  const _FriendStatus({required this.user});
-
-  final ChatUser user;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = ref.watch(userPresenceProvider(user.userId));
-    context.translations;
-    final status = ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
-    final text = status ?? (user.username.isEmpty ? null : '@${user.username}');
-    if (text == null) return const SizedBox.shrink();
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: p.online ? context.palette.success : context.palette.mutedForeground),
-    );
-  }
 }

@@ -16,7 +16,6 @@ class MessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     required this.myId,
-    required this.isGroup,
     this.firstInRun = true,
     this.lastInRun = true,
     this.seen = false,
@@ -31,7 +30,6 @@ class MessageBubble extends StatelessWidget {
 
   final ChatMessage message;
   final String myId;
-  final bool isGroup;
   final bool firstInRun;
   final bool lastInRun;
 
@@ -56,7 +54,7 @@ class MessageBubble extends StatelessWidget {
     final m = message;
     final mine = _mine;
     final maxWidth = MediaQuery.sizeOf(context).width * 0.76;
-    final showAvatar = isGroup && !mine;
+    final showAvatar = !mine;
 
     final content = GestureDetector(
       onLongPress: m.deleted || m.state == SendState.sending ? null : onLongPress,
@@ -102,7 +100,7 @@ class MessageBubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                if (isGroup && !mine && firstInRun)
+                if (!mine && firstInRun)
                   GestureDetector(
                     onTap: onTapSender,
                     child: Padding(

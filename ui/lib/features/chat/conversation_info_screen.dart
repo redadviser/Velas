@@ -86,15 +86,9 @@ class ConversationInfoScreen extends ConsumerWidget {
         body: const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
       );
     }
-    final other = c.otherUser;
     final participants = state.conversation?.participants ?? const <Participant>[];
     final muted = context.palette.mutedForeground;
-    final otherPresence = other == null ? null : ref.watch(userPresenceProvider(other.userId));
-    final subtitle = c.isGroup
-        ? (c.celebrantName == null ? null : context.tr(Keys.chatHeaderGiftFor, {'name': c.celebrantName}))
-        : otherPresence == null
-        ? null
-        : ChatFormat.presence(online: otherPresence.online, lastSeenAt: otherPresence.lastSeenAt);
+    final subtitle = c.celebrantName == null ? null : context.tr(Keys.chatHeaderGiftFor, {'name': c.celebrantName});
 
     return Scaffold(
       appBar: AppBar(title: Text(context.tr(Keys.chatInfoTitle))),
@@ -103,46 +97,31 @@ class ConversationInfoScreen extends ConsumerWidget {
         children: [
           Center(
             child: ZoomablePhoto(
-              url: c.isGroup ? c.photoUrl : other?.photoUrl,
+              url: c.photoUrl,
               title: c.title,
               child: ConversationAvatar(conversation: c, size: 88),
             ),
           ),
           const SizedBox(height: 14),
           Text(c.title, textAlign: TextAlign.center, style: AppTheme.display(context, size: 24)),
-          if (other != null && other.username.isNotEmpty)
-            Text(
-              '@${other.username}',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: muted),
-            ),
           if (subtitle != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: context.text.bodySmall?.copyWith(
-                  color: otherPresence?.online ?? false ? context.palette.success : muted,
-                ),
+                style: context.text.bodySmall?.copyWith(color: muted),
               ),
             ),
           const SizedBox(height: 16),
-          Center(
-            child: c.isGroup && c.groupId != null
-                ? OutlinedButton.icon(
-                    onPressed: () => context.push('/groups/${c.groupId}'),
-                    icon: const Icon(LucideIcons.gift, size: 18),
-                    label: Text(context.tr(Keys.chatHeaderSeeGift)),
-                  )
-                : other == null
-                ? const SizedBox.shrink()
-                : OutlinedButton.icon(
-                    onPressed: () => showUserProfileSheet(context, other),
-                    icon: const Icon(LucideIcons.user, size: 18),
-                    label: Text(context.tr(Keys.chatInfoViewProfile)),
-                  ),
-          ),
+          if (c.groupId != null)
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/groups/${c.groupId}'),
+                icon: const Icon(LucideIcons.gift, size: 18),
+                label: Text(context.tr(Keys.chatHeaderSeeGift)),
+              ),
+            ),
           const SizedBox(height: 20),
           AppCard(
             padding: EdgeInsets.zero,
@@ -162,21 +141,10 @@ class ConversationInfoScreen extends ConsumerWidget {
                   trailing: Icon(LucideIcons.chevronRight, size: 18, color: muted),
                   onTap: () => _mute(context, ref, c),
                 ),
-                const Divider(indent: 16, endIndent: 16),
-                SwitchListTile(
-                  secondary: const Icon(LucideIcons.pin),
-                  title: Text(context.tr(Keys.chatInfoPin)),
-                  subtitle: Text(context.tr(Keys.chatInfoPinHint), style: TextStyle(color: muted)),
-                  value: c.pinned,
-                  onChanged: (v) => runGuarded(
-                    context,
-                    () => ref.read(conversationsProvider.notifier).setPrefs(conversationId, pinned: v),
-                  ),
-                ),
               ],
             ),
           ),
-          if (c.isGroup && participants.isNotEmpty) ...[
+          if (participants.isNotEmpty) ...[
             SectionTitle(
               context.tr(Keys.chatInfoMembers, {'count': participants.length}),
               padding: const EdgeInsets.fromLTRB(4, 24, 0, 8),
@@ -208,17 +176,12 @@ class _Member extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final u = participant.user;
-    final p = ref.watch(userPresenceProvider(u.userId));
-    final status = isMe ? null : ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
     return ListTile(
-      leading: PresenceAvatar(user: u),
+      leading: UserAvatar(user: u),
       title: Text(isMe ? '${u.name} (${context.tr(Keys.chatInfoYou)})' : u.name),
-      subtitle: status == null && u.username.isEmpty
+      subtitle: u.username.isEmpty
           ? null
-          : Text(
-              status ?? '@${u.username}',
-              style: TextStyle(color: p.online && !isMe ? context.palette.success : context.palette.mutedForeground),
-            ),
+          : Text('@${u.username}', style: TextStyle(color: context.palette.mutedForeground)),
       onTap: isMe ? null : () => showUserProfileSheet(context, u),
     );
   }

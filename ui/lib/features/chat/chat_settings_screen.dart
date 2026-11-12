@@ -36,14 +36,6 @@ class ChatSettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _Switch(
-                  icon: LucideIcons.radio,
-                  title: context.tr(Keys.chatSettingsPresenceTitle),
-                  hint: context.tr(Keys.chatSettingsPresenceHint),
-                  value: user.showPresence,
-                  onChanged: (v) => _save(context, ref, user.copyWith(showPresence: v)),
-                ),
-                const Divider(indent: 16, endIndent: 16),
-                _Switch(
                   icon: LucideIcons.checkCheck,
                   title: context.tr(Keys.chatSettingsReceiptsTitle),
                   hint: context.tr(Keys.chatSettingsReceiptsHint),
@@ -57,6 +49,24 @@ class ChatSettingsScreen extends ConsumerWidget {
                   hint: context.tr(Keys.chatSettingsTypingHint),
                   value: user.typingIndicator,
                   onChanged: (v) => _save(context, ref, user.copyWith(typingIndicator: v)),
+                ),
+                const Divider(indent: 16, endIndent: 16),
+                ListTile(
+                  leading: const Icon(LucideIcons.ban, size: 20),
+                  title: const Text('Bloqueados'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if ((ref.watch(blockedUsersProvider).value ?? const []).isNotEmpty)
+                        Text(
+                          '${ref.watch(blockedUsersProvider).value!.length}',
+                          style: TextStyle(color: context.palette.mutedForeground),
+                        ),
+                      const SizedBox(width: 4),
+                      Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
+                    ],
+                  ),
+                  onTap: () => context.push('/chat-settings/blocked'),
                 ),
               ],
             ),
@@ -95,37 +105,6 @@ class ChatSettingsScreen extends ConsumerWidget {
             child: Text(
               context.tr(Keys.chatSettingsWhileOpen),
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-            ),
-          ),
-          SectionTitle(context.tr(Keys.friendsTitle), padding: const EdgeInsets.fromLTRB(4, 24, 0, 8)),
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(LucideIcons.usersRound),
-              title: Text(context.tr(Keys.friendsTitle)),
-              trailing: Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
-              onTap: () => context.push('/friends'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(LucideIcons.ban),
-              title: const Text('Bloqueados'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if ((ref.watch(blockedUsersProvider).value ?? const []).isNotEmpty)
-                    Text(
-                      '${ref.watch(blockedUsersProvider).value!.length}',
-                      style: TextStyle(color: context.palette.mutedForeground),
-                    ),
-                  const SizedBox(width: 4),
-                  Icon(LucideIcons.chevronRight, size: 18, color: context.palette.mutedForeground),
-                ],
-              ),
-              onTap: () => context.push('/chat-settings/blocked'),
             ),
           ),
         ],

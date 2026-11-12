@@ -49,10 +49,7 @@ class HomeInbox extends ConsumerWidget {
                   Container(
                     width: 34,
                     height: 34,
-                    decoration: BoxDecoration(
-                      gradient: context.palette.brand,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    decoration: BoxDecoration(gradient: context.palette.brand, borderRadius: BorderRadius.circular(10)),
                     child: const Icon(LucideIcons.mail, color: Colors.white, size: 18),
                   ),
                   const SizedBox(width: 12),
@@ -128,10 +125,10 @@ class _InboxRow extends ConsumerWidget {
     final typing = ref.watch(conversationTypingProvider(c.id));
     final muted = context.palette.mutedForeground;
     final preview = typing.isNotEmpty
-        ? (c.isGroup ? ChatFormat.typing(typing.values) : context.tr(Keys.chatTypingSelf))
+        ? ChatFormat.typing(typing.values)
         : last == null
         ? ''
-        : c.isGroup && last.senderId != myId && last.senderName.isNotEmpty
+        : last.senderId != myId && last.senderName.isNotEmpty
         ? context.tr(Keys.chatPreviewSender, {'name': last.senderName.split(' ').first, 'text': last.preview})
         : last.preview;
 

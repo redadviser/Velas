@@ -5,11 +5,9 @@ import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/chat_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/chat_models.dart';
 
@@ -51,40 +49,6 @@ class UserAvatar extends StatelessWidget {
         user.initials,
         style: TextStyle(fontWeight: FontWeight.w700, fontSize: size * 0.36, color: color),
       ),
-    );
-  }
-}
-
-/// Avatar com a bolinha verde quando a pessoa está online.
-class PresenceAvatar extends ConsumerWidget {
-  const PresenceAvatar({super.key, required this.user, this.size = 40});
-
-  final ChatUser user;
-  final double size;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final online = ref.watch(userPresenceProvider(user.userId)).online;
-    final dot = (size * 0.28).clamp(9.0, 16.0);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        UserAvatar(user: user, size: size),
-        if (online)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: dot,
-              height: dot,
-              decoration: BoxDecoration(
-                color: context.palette.success,
-                shape: BoxShape.circle,
-                border: Border.all(color: context.palette.card, width: 2),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
@@ -179,7 +143,7 @@ class GroupAvatar extends StatelessWidget {
   }
 }
 
-/// Avatar de uma conversa: a fotografia do grupo ou a da pessoa (ou as iniciais).
+/// Avatar de uma conversa: a fotografia do grupo (ou o ícone).
 class ConversationAvatar extends StatelessWidget {
   const ConversationAvatar({super.key, required this.conversation, this.size = 48});
 
@@ -188,8 +152,6 @@ class ConversationAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final other = conversation.otherUser;
-    if (!conversation.isGroup && other != null) return PresenceAvatar(user: other, size: size);
     return GroupAvatar(photoUrl: conversation.photoUrl, size: size);
   }
 }

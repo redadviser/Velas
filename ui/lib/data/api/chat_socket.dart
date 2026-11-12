@@ -36,14 +36,6 @@ class ReadReceipt extends ChatEvent {
   final DateTime lastReadAt;
 }
 
-/// Alguém ficou online ou offline.
-class PresenceChanged extends ChatEvent {
-  const PresenceChanged({required this.userId, required this.online, this.lastSeenAt});
-  final String userId;
-  final bool online;
-  final DateTime? lastSeenAt;
-}
-
 class Typing extends ChatEvent {
   const Typing({required this.conversationId, required this.userId, required this.name});
   final String conversationId;
@@ -80,11 +72,6 @@ ChatEvent? parseChatEvent(Map<String, dynamic> j) {
       userId: j['user_id'] as String,
       name: j['name'] as String? ?? '',
       lastReadAt: DateTime.parse(j['last_read_at'] as String).toLocal(),
-    ),
-    'presence' => PresenceChanged(
-      userId: j['user_id'] as String,
-      online: j['online'] as bool? ?? false,
-      lastSeenAt: j['last_seen_at'] == null ? null : DateTime.parse(j['last_seen_at'] as String).toLocal(),
     ),
     'typing' => Typing(
       conversationId: j['conversation_id'] as String,

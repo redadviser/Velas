@@ -10,16 +10,18 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/errors.dart';
 import '../../core/widgets/common.dart';
+import '../../core/wishlist_providers.dart';
 import '../../data/models/chat_models.dart';
-import 'chat_format.dart';
+import '../gifts/wishlist_widgets.dart';
 import 'chat_widgets.dart';
 import 'friends_screen.dart';
 import 'safety.dart';
 
-/// Perfil de outra pessoa (ao tocar no avatar no chat): fotografia, nome e o
-/// estado da amizade: pedir, aceitar, cancelar ou enviar mensagem.
+/// Perfil de outra pessoa (no chat ou nos amigos): fotografia, nome, o estado
+/// da amizade e, se for amiga, os gostos e a lista de desejos.
 Future<void> showUserProfileSheet(BuildContext context, ChatUser user) => showModalBottomSheet<void>(
   context: context,
+  isScrollControlled: true,
   builder: (_) => _UserProfileSheet(user: user),
 );
 
@@ -41,6 +43,19 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
     if (mounted) setState(() => _busy = false);
   }
 
+  Future<void> _removeFriend(ChatUser u) async {
+    final ok = await confirmDialog(
+      context,
+      title: context.tr(Keys.friendsRemoveTitle, {'name': u.firstName}),
+      message: context.tr(Keys.friendsRemoveMessage),
+      confirm: context.tr(Keys.commonRemove),
+    );
+    if (!ok || !mounted) return;
+    final navigator = Navigator.of(context);
+    await _run(() => ref.read(friendsProvider.notifier).remove(u.userId));
+    if (mounted && !ref.read(friendsProvider).requireValue.isFriend(u.userId)) navigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final u = widget.user;
@@ -51,9 +66,6 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
     final outgoing = friends.outgoing.where((r) => r.user.userId == u.userId).firstOrNull;
     final isFriend = friends.isFriend(u.userId);
     final muted = context.palette.mutedForeground;
-    final p = ref.watch(userPresenceProvider(u.userId));
-    final online = p.online;
-    final presence = u.userId == me ? null : ChatFormat.presence(online: p.online, lastSeenAt: p.lastSeenAt);
 
     final blocked = ref.watch(blockedIdsProvider).contains(u.userId);
     Widget action;
@@ -91,6 +103,14 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
               background: context.palette.success.withValues(alpha: 0.14),
               foreground: context.palette.success,
             ),
+          ),
+          _FriendWishes(user: u),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _busy ? null : () => _removeFriend(u),
+            style: TextButton.styleFrom(foregroundColor: context.colors.error),
+            icon: const Icon(LucideIcons.userMinus, size: 18),
+            label: Text(context.tr(Keys.friendsRemoveAction)),
           ),
         ],
       );
@@ -170,7 +190,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
     }
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -180,7 +200,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
               child: ZoomablePhoto(
                 url: u.photoUrl,
                 title: u.name,
-                child: PresenceAvatar(user: u, size: 88),
+                child: UserAvatar(user: u, size: 88),
               ),
             ),
             const SizedBox(height: 14),
@@ -190,15 +210,6 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                 '@${u.username}',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: muted),
-              ),
-            if (presence != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  presence,
-                  textAlign: TextAlign.center,
-                  style: context.text.bodySmall?.copyWith(color: online ? context.palette.success : muted),
-                ),
               ),
             const SizedBox(height: 20),
             action,
@@ -232,6 +243,52 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Gostos e lista de desejos de um amigo (vêm do servidor).
+class _FriendWishes extends ConsumerWidget {
+  const _FriendWishes({required this.user});
+
+  final ChatUser user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(friendWishlistProvider(user.userId));
+    final muted = context.palette.mutedForeground;
+    final data = async.value;
+    if (data == null) {
+      return async.isLoading
+          ? const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+            )
+          : const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (data.interests.isNotEmpty) ...[
+          const SectionTitle('Gostos e hobbies', padding: EdgeInsets.fromLTRB(4, 24, 0, 8)),
+          InterestChips(keys: data.interests),
+        ],
+        SectionTitle('Lista de desejos', padding: const EdgeInsets.fromLTRB(4, 24, 0, 6)),
+        if (data.items.isEmpty)
+          Text('${user.firstName} ainda não pôs nada na lista.', style: TextStyle(color: muted))
+        else
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (final (i, w) in data.items.indexed) ...[
+                  if (i > 0) const Divider(indent: 16, endIndent: 16),
+                  WishRow(item: w),
+                ],
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
+import '../groups/group_widgets.dart';
 import 'party_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 class PartiesScreen extends ConsumerWidget {
   const PartiesScreen({super.key});
@@ -17,12 +19,12 @@ class PartiesScreen extends ConsumerWidget {
     final parties = [...?async.value]..sort((a, b) => a.isPast == b.isPast ? 0 : (a.isPast ? 1 : -1));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Festas surpresa'),
+        title: Text(context.tr('Festas surpresa')),
         actions: [
           IconButton(
-            tooltip: 'Entrar com código',
+            tooltip: context.tr('Entrar com código'),
             icon: const Icon(LucideIcons.ticket),
-            onPressed: () => joinPartyWithCode(context, ref),
+            onPressed: () => showJoinCodeSheet(context, ref),
           ),
         ],
       ),
@@ -36,13 +38,14 @@ class PartiesScreen extends ConsumerWidget {
                   if (parties.isEmpty && !async.isLoading)
                     EmptyState(
                       icon: LucideIcons.partyPopper,
-                      title: 'Surpresas que ficam na memória',
-                      message:
-                          'Convida os amigos, vê quem vai e dividam as tarefas, longe dos olhos do aniversariante.',
+                      title: context.tr('Surpresas que ficam na memória'),
+                      message: context.tr(
+                        'Convida os amigos, vê quem vai e dividam as tarefas, longe dos olhos do aniversariante.',
+                      ),
                       action: FilledButton.icon(
                         onPressed: () => context.push('/parties/new'),
-                        icon: const Icon(LucideIcons.sparkles, size: 18),
-                        label: const Text('Organizar uma festa'),
+                        icon: const Icon(LucideIcons.partyPopper, size: 18),
+                        label: Text(context.tr('Organizar uma festa')),
                         style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
                       ),
                     )
@@ -56,16 +59,16 @@ class PartiesScreen extends ConsumerWidget {
                     ],
                     DashedButton(
                       icon: LucideIcons.plus,
-                      label: 'Organizar outra festa',
+                      label: context.tr('Organizar outra festa'),
                       onTap: () => context.push('/parties/new'),
                     ),
                   ],
                   const SizedBox(height: 16),
                   Center(
                     child: TextButton.icon(
-                      onPressed: () => joinPartyWithCode(context, ref),
+                      onPressed: () => showJoinCodeSheet(context, ref),
                       icon: Icon(LucideIcons.ticket, size: 18, color: context.palette.accentForeground),
-                      label: const Text('Tenho um código de convite'),
+                      label: Text(context.tr('Tenho um código de convite')),
                     ),
                   ),
                 ],

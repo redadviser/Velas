@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -48,22 +49,24 @@ class HomeScreen extends ConsumerWidget {
                   if (data.people.isEmpty)
                     EmptyState(
                       icon: LucideIcons.cake,
-                      title: 'Começa por quem importa',
-                      message: 'Adiciona os aniversários da família e dos amigos. Nós tratamos de te lembrar a tempo.',
+                      title: context.tr('Começa por quem importa'),
+                      message: context.tr(
+                        'Adiciona os aniversários da família e dos amigos. Nós tratamos de te lembrar a tempo.',
+                      ),
                       action: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           FilledButton.icon(
                             onPressed: () => context.push('/people/import'),
                             icon: const Icon(LucideIcons.contactRound, size: 18),
-                            label: const Text('Adicionar dos contactos'),
+                            label: Text(context.tr('Adicionar dos contactos')),
                             style: FilledButton.styleFrom(minimumSize: const Size(260, 52)),
                           ),
                           const SizedBox(height: 8),
                           TextButton.icon(
                             onPressed: () => context.push('/person/new'),
                             icon: const Icon(LucideIcons.userPlus, size: 18),
-                            label: const Text('Adicionar à mão'),
+                            label: Text(context.tr('Adicionar à mão')),
                           ),
                         ],
                       ),
@@ -81,8 +84,8 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     _Upcoming(data: data, exclude: {...todays.map((p) => p.id), ?next?.id}),
                     SectionTitle(
-                      'Datas especiais',
-                      action: data.specialDates.isEmpty ? null : 'Gerir',
+                      context.tr('Datas especiais'),
+                      action: data.specialDates.isEmpty ? null : context.tr('Gerir'),
                       onAction: () => context.push('/special'),
                     ),
                     Padding(
@@ -90,7 +93,7 @@ class HomeScreen extends ConsumerWidget {
                       child: data.specialDates.isEmpty
                           ? DashedButton(
                               icon: LucideIcons.heart,
-                              label: 'Guardar um casamento, namoro ou outra data',
+                              label: context.tr('Guardar um casamento, namoro ou outra data'),
                               onTap: () => showSpecialDateEditor(context, ref),
                             )
                           : Column(
@@ -125,14 +128,14 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12
-        ? 'Bom dia'
+        ? context.tr('Bom dia')
         : hour < 20
-        ? 'Boa tarde'
-        : 'Boa noite';
+        ? context.tr('Boa tarde')
+        : context.tr('Boa noite');
     final line = switch (thisMonth) {
-      0 => 'Um mês calmo. Aproveita para pôr a agenda em dia.',
-      1 => 'Este mês há um aniversário para celebrar.',
-      _ => 'Este mês há $thisMonth aniversários para celebrar.',
+      0 => context.tr('Um mês calmo. Aproveita para pôr a agenda em dia.'),
+      1 => context.tr('Este mês há um aniversário para celebrar.'),
+      _ => context.tr('Este mês há {count} aniversários para celebrar.', {'count': thisMonth}),
     };
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -144,7 +147,12 @@ class _Header extends StatelessWidget {
               children: [
                 Text(Fmt.weekdayDayMonth(date).toUpperCase(), style: AppTheme.eyebrow(context)),
                 const SizedBox(height: 4),
-                Text(name.isEmpty ? '$greeting!' : '$greeting, $name!', style: AppTheme.display(context, size: 29)),
+                Text(
+                  name.isEmpty
+                      ? context.tr('{greeting}!', {'greeting': greeting})
+                      : context.tr('{greeting}, {name}!', {'greeting': greeting, 'name': name}),
+                  style: AppTheme.display(context, size: 29),
+                ),
                 const SizedBox(height: 4),
                 Text(line, style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground)),
               ],
@@ -167,7 +175,9 @@ class _Bell extends ConsumerWidget {
     final pending = pendingActionsCount(ref);
     return Semantics(
       button: true,
-      label: pending == 0 ? 'Notificações' : 'Notificações, $pending por tratar',
+      label: pending == 0
+          ? context.tr('Notificações')
+          : context.tr('Notificações, {count} por tratar', {'count': pending}),
       excludeSemantics: true,
       child: Material(
         color: context.palette.card,
@@ -304,7 +314,7 @@ class _HeroCard extends StatelessWidget {
                                 border: Border.all(color: white.withValues(alpha: 0.25)),
                               ),
                               child: Text(
-                                isToday ? 'HOJE É DIA DE FESTA' : 'PRÓXIMO ANIVERSÁRIO',
+                                isToday ? context.tr('HOJE É DIA DE FESTA') : context.tr('PRÓXIMO ANIVERSÁRIO'),
                                 style: AppTheme.eyebrow(context, color: white).copyWith(fontSize: 10),
                               ),
                             ),
@@ -319,7 +329,9 @@ class _HeroCard extends StatelessWidget {
                             Text(
                               [
                                 if (person.turningAge != null)
-                                  isToday ? 'Faz ${person.turningAge} anos hoje' : 'Faz ${person.turningAge} anos',
+                                  isToday
+                                      ? context.tr('Faz {age} anos hoje', {'age': person.turningAge})
+                                      : context.tr('Faz {age} anos', {'age': person.turningAge}),
                                 if (!isToday) Fmt.dayMonth(date),
                                 if (isToday && person.relation.isNotEmpty) person.relation,
                               ].join(' · '),
@@ -335,7 +347,10 @@ class _HeroCard extends StatelessWidget {
                                 '$days',
                                 style: AppTheme.display(context, size: 40, color: white).copyWith(height: 1),
                               ),
-                              Text(days == 1 ? 'dia' : 'dias', style: context.text.labelSmall?.copyWith(color: soft)),
+                              Text(
+                                days == 1 ? context.tr('dia') : context.tr('dias'),
+                                style: context.text.labelSmall?.copyWith(color: soft),
+                              ),
                             ],
                           ],
                         ),
@@ -347,17 +362,19 @@ class _HeroCard extends StatelessWidget {
                         children: [
                           action(
                             hasMessage ? LucideIcons.circleCheck : LucideIcons.messageSquareHeart,
-                            hasMessage ? 'Mensagem pronta' : 'Enviar parabéns',
+                            hasMessage ? context.tr('Mensagem pronta') : context.tr('Enviar parabéns'),
                             () => context.push('/person/${person.id}/message'),
                           ),
                           Container(width: 1, height: 28, color: white.withValues(alpha: 0.2)),
                           action(
                             giftReady ? LucideIcons.circleCheck : LucideIcons.gift,
                             giftReady
-                                ? 'Prenda comprada'
+                                ? context.tr('Prenda comprada')
                                 : gifts.isEmpty
-                                ? 'Ideias de prenda'
-                                : '${gifts.length} ${gifts.length == 1 ? 'ideia' : 'ideias'}',
+                                ? context.tr('Ideias de prenda')
+                                : gifts.length == 1
+                                ? context.tr('1 ideia')
+                                : context.tr('{count} ideias', {'count': gifts.length}),
                             () => context.push('/person/${person.id}'),
                           ),
                         ],
@@ -405,17 +422,21 @@ class _UpcomingState extends State<_Upcoming> {
     for (final p in list) {
       final d = p.daysUntil();
       final key = d <= 7
-          ? 'ESTA SEMANA'
+          ? context.tr('ESTA SEMANA')
           : p.nextBirthday().month == today.month
-          ? 'ESTE MÊS'
-          : 'MAIS TARDE';
+          ? context.tr('ESTE MÊS')
+          : context.tr('MAIS TARDE');
       (groups[key] ??= []).add(p);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Próximos aniversários', action: 'Ver todos', onAction: () => context.go('/people')),
+        SectionTitle(
+          context.tr('Próximos aniversários'),
+          action: context.tr('Ver todos'),
+          onAction: () => context.go('/people'),
+        ),
         if (cats.isNotEmpty)
           SizedBox(
             height: 48,
@@ -423,7 +444,7 @@ class _UpcomingState extends State<_Upcoming> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                for (final (id, name) in [(null, 'Todos'), for (final c in cats) (c.id, c.name)])
+                for (final (id, name) in [(null, context.tr('Todos')), for (final c in cats) (c.id, c.name)])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
@@ -439,7 +460,7 @@ class _UpcomingState extends State<_Upcoming> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Text(
-              'Ainda não há ninguém nesta categoria.',
+              context.tr('Ainda não há ninguém nesta categoria.'),
               style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
             ),
           ),
@@ -470,8 +491,8 @@ class _ActiveGroups extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(
-          'Prendas e festas em curso',
-          action: parties.isEmpty ? null : 'Festas',
+          context.tr('Prendas e festas em curso'),
+          action: parties.isEmpty ? null : context.tr('Festas'),
           onAction: () => context.push('/parties'),
         ),
         // Altura pelo conteúdo (texto grande não transborda); os cartões ficam iguais.
@@ -515,7 +536,7 @@ class _GroupCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'PARA ${g.celebrantName.toUpperCase()}',
+              context.tr('PARA {name}', {'name': g.celebrantName.toUpperCase()}),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTheme.eyebrow(context, color: context.palette.accentForeground).copyWith(fontSize: 10),
@@ -524,18 +545,23 @@ class _GroupCard extends StatelessWidget {
             Text(g.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTheme.display(context, size: 16)),
             const SizedBox(height: 16),
             const Spacer(),
-            SoftProgress(value: progress, semanticsLabel: 'Valor juntado'),
+            SoftProgress(value: progress, semanticsLabel: context.tr('Valor juntado')),
             const SizedBox(height: 8),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               spacing: 8,
               children: [
                 Text(
-                  target > 0 ? '${Fmt.money(g.reportedAmount)} de ${Fmt.money(target)}' : 'Valor por definir',
+                  target > 0
+                      ? context.tr('{amount} de {target}', {
+                          'amount': Fmt.money(g.reportedAmount),
+                          'target': Fmt.money(target),
+                        })
+                      : context.tr('Valor por definir'),
                   style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
                 ),
                 Text(
-                  '$paid de ${g.members.length} pagaram',
+                  context.tr('{paid} de {total} pagaram', {'paid': paid, 'total': g.members.length}),
                   style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
                 ),
               ],
@@ -570,10 +596,15 @@ class _NewGroupCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Spacer(),
-            Text(first ? 'Juntem-se para uma prenda' : 'Novo grupo', style: AppTheme.display(context, size: 16)),
+            Text(
+              first ? context.tr('Juntem-se para uma prenda') : context.tr('Novo grupo'),
+              style: AppTheme.display(context, size: 16),
+            ),
             const SizedBox(height: 4),
             Text(
-              first ? 'Convida amigos, divide o valor e acompanha quem já pagou.' : 'Divide o valor com amigos',
+              first
+                  ? context.tr('Convida amigos, divide o valor e acompanha quem já pagou.')
+                  : context.tr('Divide o valor com amigos'),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
@@ -630,20 +661,31 @@ class _GroupsBanner extends ConsumerWidget {
                   if (invitations.isNotEmpty)
                     Text(
                       invitations.length == 1
-                          ? '${invitations.first.inviterName} convidou-te para "${invitations.first.title}"'
-                          : 'Tens ${invitations.length} convites para prendas em grupo',
+                          ? context.tr('{name} convidou-te para "{title}"', {
+                              'name': invitations.first.inviterName,
+                              'title': invitations.first.title,
+                            })
+                          : context.tr('Tens {count} convites para prendas em grupo', {'count': invitations.length}),
                       style: context.text.titleSmall?.copyWith(color: context.palette.accentForeground),
                     ),
                   if (toPay.isNotEmpty)
                     Text(
                       toPay.length == 1
-                          ? 'Falta pagares ${Fmt.money(total)} · ${toPay.first.$1.title}'
-                          : 'Tens ${toPay.length} prendas em grupo por pagar · ${Fmt.money(total)}',
+                          ? context.tr('Falta pagares {amount} · {title}', {
+                              'amount': Fmt.money(total),
+                              'title': toPay.first.$1.title,
+                            })
+                          : context.tr('Tens {count} prendas em grupo por pagar · {amount}', {
+                              'count': toPay.length,
+                              'amount': Fmt.money(total),
+                            }),
                       style: context.text.titleSmall?.copyWith(color: context.palette.accentForeground),
                     ),
                   if (confirmCount > 0)
                     Text(
-                      '$confirmCount pagamento${confirmCount == 1 ? '' : 's'} para confirmares que recebeste',
+                      confirmCount == 1
+                          ? context.tr('1 pagamento para confirmares que recebeste')
+                          : context.tr('{count} pagamentos para confirmares que recebeste', {'count': confirmCount}),
                       style: (toPay.isEmpty ? context.text.titleSmall : context.text.bodySmall)?.copyWith(
                         color: context.palette.accentForeground,
                       ),

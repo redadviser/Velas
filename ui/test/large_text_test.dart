@@ -483,6 +483,7 @@ void main() {
     double scale, {
     double height = 780,
     ApiClient? api,
+    String lang = 'pt',
   }) async {
     // O rootBundle guarda os ficheiros já pedidos (com o relógio do teste anterior).
     rootBundle.clear();
@@ -493,6 +494,7 @@ void main() {
       'velas.a11y.textScale': scale,
       'velas.onboarded.me': true,
       'velas.local.parties': jsonEncode([_party]),
+      'velas.locale': lang, // o ambiente de teste é en_US
     });
     final prefs = await SharedPreferences.getInstance();
 
@@ -539,7 +541,8 @@ void main() {
       }
 
       await settle();
-      final sheets = api == null ? localSheets : serverSheets;
+      // Os botões das folhas procuram-se pelo texto em português.
+      final sheets = lang != 'pt' ? const <String, List<String>>{} : (api == null ? localSheets : serverSheets);
       for (final label in sheets[r.split('?').first] ?? const <String>[]) {
         final button = label.endsWith(' ') ? find.textContaining(label) : find.text(label);
         // Nas listas, o botão só existe depois de deslizar até ele (a partir do topo).
@@ -595,6 +598,19 @@ void main() {
       debugPrint(problems.join('\n'));
       expect(problems, isEmpty);
     });
+
+    if (scale == 1.3) {
+      // O alemão é das línguas mais compridas: se couber, as outras cabem quase sempre.
+      testWidgets('com servidor, em alemão, texto a 130%: nada transborda', (tester) async {
+        final api = await fakeServer();
+        final problems = [
+          ...await visit(tester, meOnline, serverRoutes, scale, api: api, lang: 'de'),
+          ...await visit(tester, meOnline, serverRoutes, scale, height: 4000, api: api, lang: 'de'),
+        ];
+        debugPrint(problems.join('\n'));
+        expect(problems, isEmpty);
+      });
+    }
 
     testWidgets('sem sessão, texto a ${(scale * 100).round()}%: nada transborda', (tester) async {
       final problems = [

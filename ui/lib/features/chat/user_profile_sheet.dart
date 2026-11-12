@@ -76,7 +76,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Bloqueaste ${u.firstName}.',
+            context.tr('Bloqueaste {name}.', {'name': u.firstName}),
             textAlign: TextAlign.center,
             style: TextStyle(color: muted),
           ),
@@ -86,9 +86,9 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                 ? null
                 : () => _run(
                     () => ref.read(blockedUsersProvider.notifier).unblock(u.userId),
-                    success: 'Desbloqueaste ${u.firstName}.',
+                    success: context.tr('Desbloqueaste {name}.', {'name': u.firstName}),
                   ),
-            child: const Text('Desbloquear'),
+            child: Text(context.tr('Desbloquear')),
           ),
         ],
       );
@@ -225,7 +225,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                     },
                     style: TextButton.styleFrom(foregroundColor: muted),
                     icon: const Icon(LucideIcons.flag, size: 16),
-                    label: const Text('Denunciar'),
+                    label: Text(context.tr('Denunciar')),
                   ),
                   if (!blocked)
                     TextButton.icon(
@@ -235,7 +235,7 @@ class _UserProfileSheetState extends ConsumerState<_UserProfileSheet> {
                       },
                       style: TextButton.styleFrom(foregroundColor: context.colors.error),
                       icon: const Icon(LucideIcons.ban, size: 16),
-                      label: const Text('Bloquear'),
+                      label: Text(context.tr('Bloquear')),
                     ),
                 ],
               ),
@@ -270,12 +270,15 @@ class _FriendWishes extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (data.interests.isNotEmpty) ...[
-          const SectionTitle('Gostos e hobbies', padding: EdgeInsets.fromLTRB(4, 24, 0, 8)),
+          SectionTitle(context.tr('Gostos e hobbies'), padding: const EdgeInsets.fromLTRB(4, 24, 0, 8)),
           InterestChips(keys: data.interests),
         ],
-        SectionTitle('Lista de desejos', padding: const EdgeInsets.fromLTRB(4, 24, 0, 6)),
+        SectionTitle(context.tr('Lista de desejos'), padding: const EdgeInsets.fromLTRB(4, 24, 0, 6)),
         if (data.items.isEmpty)
-          Text('${user.firstName} ainda não pôs nada na lista.', style: TextStyle(color: muted))
+          Text(
+            context.tr('{name} ainda não pôs nada na lista.', {'name': user.firstName}),
+            style: TextStyle(color: muted),
+          )
         else
           AppCard(
             padding: EdgeInsets.zero,

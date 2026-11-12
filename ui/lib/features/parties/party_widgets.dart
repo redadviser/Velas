@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/party_models.dart';
+import '../../core/i18n/translations.dart';
 
 /// "Sábado, 24 de maio · 19:30" (ou "Data por marcar").
 String partyWhen(Party p) {
   final d = p.startsAt;
-  if (d == null) return 'Data por marcar';
+  if (d == null) return tr('Data por marcar');
   final time = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   return '${Fmt.weekdayDayMonth(d)} · $time';
 }
@@ -40,14 +39,17 @@ class PartyCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(LucideIcons.sparkles, size: 14, color: context.colors.secondary),
+                Icon(LucideIcons.cake, size: 14, color: context.colors.secondary),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    'SURPRESA PARA ${p.celebrantName.toUpperCase()}',
+                    context.tr('Surpresa para {name}', {'name': p.celebrantName}),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTheme.eyebrow(context, color: context.colors.secondary).copyWith(fontSize: 10),
+                    style: context.text.labelMedium?.copyWith(
+                      color: context.colors.secondary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -66,12 +68,12 @@ class PartyCard extends StatelessWidget {
               runSpacing: 4,
               children: [
                 Text(
-                  going == 1 ? '1 vai' : '$going vão',
+                  going == 1 ? context.tr('1 vai') : context.tr('{count} vão', {'count': going}),
                   style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
                 ),
                 if (p.tasks.isNotEmpty)
                   Text(
-                    '${p.doneTasks} de ${p.tasks.length} tarefas',
+                    context.tr('{done} de {total} tarefas', {'done': p.doneTasks, 'total': p.tasks.length}),
                     style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
                   ),
               ],
@@ -81,40 +83,6 @@ class PartyCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Pede o código e entra na festa.
-Future<void> joinPartyWithCode(BuildContext context, WidgetRef ref) async {
-  final code = await showDialog<String>(
-    context: context,
-    builder: (ctx) {
-      final c = TextEditingController();
-      return AlertDialog(
-        title: Text('Entrar numa festa', style: AppTheme.display(ctx, size: 22)),
-        content: TextField(
-          controller: c,
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(hintText: 'Código que te enviaram'),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, c.text),
-            style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
-            child: const Text('Entrar'),
-          ),
-        ],
-      );
-    },
-  );
-  if (code == null || code.trim().isEmpty || !context.mounted) return;
-  Party? joined;
-  final ok = await runGuarded(context, () async {
-    joined = await ref.read(partiesProvider.notifier).run((repo) => repo.join(code.trim()));
-  });
-  if (ok && joined != null && context.mounted) context.push('/parties/${joined!.id}');
 }
 
 /// Cores de cada resposta (fundo, letra).

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -61,26 +62,26 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
                     child: Row(
                       children: [
-                        Expanded(child: Text('Pessoas', style: AppTheme.display(context, size: 30))),
+                        Expanded(child: Text(context.tr('Pessoas'), style: AppTheme.display(context, size: 30))),
                         // O link de pedido está no ecrã dos contactos.
                         IconButton(
-                          tooltip: 'Importar do calendário',
+                          tooltip: context.tr('Importar do calendário'),
                           icon: const Icon(LucideIcons.calendarDays, size: 20),
                           onPressed: () => context.push('/people/import?from=calendar'),
                         ),
                         IconButton(
-                          tooltip: 'Adicionar dos contactos',
+                          tooltip: context.tr('Adicionar dos contactos'),
                           icon: const Icon(LucideIcons.contactRound, size: 20),
                           onPressed: () => context.push('/people/import'),
                         ),
                         PopupMenuButton<_Sort>(
-                          tooltip: 'Ordenar',
+                          tooltip: context.tr('Ordenar'),
                           icon: const Icon(LucideIcons.arrowUpDown, size: 20),
                           initialValue: _sort,
                           onSelected: (s) => setState(() => _sort = s),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: _Sort.upcoming, child: Text('Próximo aniversário')),
-                            PopupMenuItem(value: _Sort.name, child: Text('Nome (A–Z)')),
+                          itemBuilder: (_) => [
+                            PopupMenuItem(value: _Sort.upcoming, child: Text(context.tr('Próximo aniversário'))),
+                            PopupMenuItem(value: _Sort.name, child: Text(context.tr('Nome (A–Z)'))),
                           ],
                         ),
                       ],
@@ -95,7 +96,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       onChanged: (v) => setState(() => _query = v),
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'Pesquisar por nome, relação ou nota',
+                        hintText: context.tr('Pesquisar por nome, relação ou nota'),
                         prefixIcon: const Icon(LucideIcons.search, size: 18),
                         suffixIcon: _query.isEmpty
                             ? null
@@ -126,7 +127,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
                       children: [
                         _FilterChip(
-                          label: 'Todos · ${data.people.length}',
+                          label: context.tr('Todos · {count}', {'count': data.people.length}),
                           selected: _category == null,
                           onTap: () => setState(() => _category = null),
                         ),
@@ -150,29 +151,29 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: LucideIcons.usersRound,
-                      title: 'Ainda não há ninguém',
-                      message: 'Adiciona familiares, amigos e colegas para nunca falhares um aniversário.',
+                      title: context.tr('Ainda não há ninguém'),
+                      message: context.tr('Adiciona familiares, amigos e colegas para nunca falhares um aniversário.'),
                       action: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           FilledButton.icon(
                             onPressed: () => context.push('/people/import'),
                             icon: const Icon(LucideIcons.contactRound, size: 18),
-                            label: const Text('Adicionar dos contactos'),
+                            label: Text(context.tr('Adicionar dos contactos')),
                             style: FilledButton.styleFrom(minimumSize: const Size(240, 52)),
                           ),
                           const SizedBox(height: 8),
                           OutlinedButton.icon(
                             onPressed: () => context.push('/people/import?from=calendar'),
                             icon: const Icon(LucideIcons.calendarDays, size: 18),
-                            label: const Text('Importar do calendário'),
+                            label: Text(context.tr('Importar do calendário')),
                             style: OutlinedButton.styleFrom(minimumSize: const Size(240, 48)),
                           ),
                           const SizedBox(height: 4),
                           TextButton.icon(
                             onPressed: () => context.push('/person/new'),
                             icon: const Icon(LucideIcons.userPlus, size: 18),
-                            label: const Text('Adicionar pessoa'),
+                            label: Text(context.tr('Adicionar pessoa')),
                           ),
                         ],
                       ),
@@ -183,8 +184,8 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: LucideIcons.searchX,
-                      title: 'Sem resultados',
-                      message: 'Não encontrámos ninguém com esses critérios.',
+                      title: context.tr('Sem resultados'),
+                      message: context.tr('Não encontrámos ninguém com esses critérios.'),
                     ),
                   )
                 else
@@ -297,7 +298,9 @@ class _PendingBanner extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              count == 1 ? '1 aniversário à espera de confirmação' : '$count aniversários à espera de confirmação',
+              count == 1
+                  ? context.tr('1 aniversário à espera de confirmação')
+                  : context.tr('{count} aniversários à espera de confirmação', {'count': count}),
               style: context.text.titleSmall?.copyWith(color: fg),
             ),
           ),
@@ -326,9 +329,9 @@ class _CollectBanner extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Faltam-te algumas datas?', style: context.text.titleSmall),
+                Text(context.tr('Faltam-te algumas datas?'), style: context.text.titleSmall),
                 Text(
-                  'Pede aos teus amigos por link.',
+                  context.tr('Pede aos teus amigos por link.'),
                   style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                 ),
               ],
@@ -343,7 +346,7 @@ class _CollectBanner extends ConsumerWidget {
               minimumSize: const Size(0, 40),
               padding: const EdgeInsets.symmetric(horizontal: 14),
             ),
-            child: const Text('Criar link'),
+            child: Text(context.tr('Criar link')),
           ),
         ],
       ),

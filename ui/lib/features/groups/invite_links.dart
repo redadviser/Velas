@@ -1,4 +1,5 @@
 import '../../core/config/env.dart';
+import '../../core/i18n/translations.dart';
 import '../../data/models/group_models.dart';
 
 /// Links e códigos de convite para grupos.
@@ -36,16 +37,34 @@ class InviteLinks {
   }
 
   /// Mensagem para partilhar o link.
-  static String linkMessage(GiftGroup g) =>
-      'Junta-te à prenda em grupo "${g.title}" na Birthdayly 🎁\n${shareLink(g.inviteCode)}';
+  static String linkMessage(GiftGroup g) => tr('Junta-te à prenda em grupo "{title}" na Birthdayly 🎁\n{link}', {
+    'title': g.title,
+    'link': shareLink(g.inviteCode),
+  });
 
   /// Mensagem para partilhar o código. Nas apps de mensagens não há texto com
   /// link escondido, por isso o link (que já contém o código) vai no fim.
-  static String codeMessage(GiftGroup g) =>
-      'Junta-te à prenda em grupo "${g.title}" na Birthdayly 🎁\n\n'
-      'Código do grupo: ${formatCode(g.inviteCode)}\n'
-      'Na app: Presentes → Conversas → Nova → Entrar com código.\n\n'
-      'Ou entra diretamente: ${shareLink(g.inviteCode)}';
+  static String codeMessage(GiftGroup g) => tr(
+    'Junta-te à prenda em grupo "{title}" na Birthdayly 🎁\n\n'
+    'Código do grupo: {code}\n'
+    'Na app: + → Um grupo de prenda → Tenho um código.\n\n'
+    'Ou entra diretamente: {link}',
+    {'title': g.title, 'code': formatCode(g.inviteCode), 'link': shareLink(g.inviteCode)},
+  );
+
+  /// Link para partilhar uma festa surpresa (`/f/CODIGO`): abre a app ou a loja.
+  static String partyShareLink(String code) {
+    final base = (Env.inviteBaseUrl.isNotEmpty ? Env.inviteBaseUrl : Env.apiUrl).replaceFirst(RegExp(r'/+$'), '');
+    return base.isEmpty ? 'com.eupasoft.velas://app/party/$code' : '$base/f/$code';
+  }
+
+  /// Código de festa contido num link, se for um convite para uma festa.
+  static String? partyCodeFrom(Uri uri) {
+    final s = uri.pathSegments.where((p) => p.isNotEmpty).toList();
+    if (uri.scheme == 'com.eupasoft.velas' && uri.host == 'app' && s.length == 2 && s[0] == 'party') return s[1];
+    if ((uri.scheme == 'https' || uri.scheme == 'http') && s.length == 2 && s[0] == 'f') return s[1];
+    return null;
+  }
 
   /// Código de convite contido num link, se for um link de convite.
   static String? codeFrom(Uri uri) {

@@ -238,12 +238,12 @@ class ErrorRetry extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: EmptyState(
       icon: LucideIcons.cloudOff,
-      title: 'Algo correu mal',
+      title: context.tr('Algo correu mal'),
       message: friendlyError(error),
       action: OutlinedButton.icon(
         onPressed: onRetry,
         icon: const Icon(LucideIcons.refreshCw, size: 18),
-        label: const Text('Tentar novamente'),
+        label: Text(context.tr('Tentar novamente')),
         style: OutlinedButton.styleFrom(minimumSize: const Size(200, 48)),
       ),
     ),
@@ -388,7 +388,10 @@ class DashedButton extends StatelessWidget {
                   Icon(icon, size: 18, color: fg),
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(label, style: context.text.labelLarge?.copyWith(color: fg, fontWeight: FontWeight.w700)),
+                    child: Text(
+                      label,
+                      style: context.text.labelLarge?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
               ),

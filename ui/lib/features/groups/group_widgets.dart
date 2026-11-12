@@ -7,36 +7,51 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
+import '../../core/utils/errors.dart';
 import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
+import '../../data/api/api_client.dart';
 import '../../data/models/group_models.dart';
 import '../auth/auth_widgets.dart';
 import '../chat/chat_widgets.dart';
 import 'invite_links.dart';
 import '../../core/utils/text.dart';
+import '../../core/i18n/translations.dart';
 
 /// Mensagem para lembrar quem ainda não pagou.
 String reminderText(GiftGroup g, List<GroupMember> pending) {
-  final buyer = g.buyer?.name ?? 'quem compra';
+  final buyer = g.buyer?.name ?? tr('quem compra');
   final lines = [for (final m in pending) '• ${m.name}: ${Fmt.money(g.shareOf(m))}'];
   return [
-    'Olá! 🎁 Falta pouco para a prenda "${g.title}".',
-    if (pending.length == 1) 'A tua parte é ${Fmt.money(g.shareOf(pending.first))}.' else ...['Ainda falta:', ...lines],
-    'O pagamento é para $buyer${g.deadline == null ? '' : ' até ${Fmt.dayMonth(g.deadline!)}'}. Obrigado!',
+    tr('Olá! 🎁 Falta pouco para a prenda "{title}".', {'title': g.title}),
+    if (pending.length == 1)
+      tr('A tua parte é {amount}.', {'amount': Fmt.money(g.shareOf(pending.first))})
+    else ...[
+      tr('Ainda falta:'),
+      ...lines,
+    ],
+    if (g.deadline == null)
+      tr('O pagamento é para {buyer}. Obrigado!', {'buyer': buyer})
+    else
+      tr('O pagamento é para {buyer} até {date}. Obrigado!', {'buyer': buyer, 'date': Fmt.dayMonth(g.deadline!)}),
   ].join('\n');
 }
 
 ({String label, Color bg, Color fg}) statusStyle(BuildContext context, ContributionStatus s, {bool isBuyer = false}) {
-  if (isBuyer) return (label: 'Compra', bg: context.palette.accent, fg: context.palette.accentForeground);
+  if (isBuyer) return (label: context.tr('Compra'), bg: context.palette.accent, fg: context.palette.accentForeground);
   return switch (s) {
-    ContributionStatus.pending => (label: 'Por pagar', bg: context.palette.muted, fg: context.palette.mutedForeground),
+    ContributionStatus.pending => (
+      label: context.tr('Por pagar'),
+      bg: context.palette.muted,
+      fg: context.palette.mutedForeground,
+    ),
     ContributionStatus.paid => (
-      label: 'Por confirmar',
+      label: context.tr('Por confirmar'),
       bg: AppColors.amber.withValues(alpha: 0.16),
       fg: Color.lerp(AppColors.amber, context.colors.onSurface, 0.35)!,
     ),
     ContributionStatus.confirmed => (
-      label: 'Pago',
+      label: context.tr('Pago'),
       bg: context.palette.success.withValues(alpha: 0.14),
       fg: context.palette.success,
     ),
@@ -65,9 +80,9 @@ class MemberRow extends StatelessWidget {
     final style = statusStyle(context, group.statusOf(member), isBuyer: isBuyer);
     final tags = [
       if (member.username.isNotEmpty) '@${member.username}',
-      if (isMe) 'Tu',
-      if (member.userId == group.createdBy) 'Administrador',
-      if (!member.hasAccount) 'Sem conta',
+      if (isMe) context.tr('Tu'),
+      if (member.userId == group.createdBy) context.tr('Administrador'),
+      if (!member.hasAccount) context.tr('Sem conta'),
       if (member.paidMethod != null && !isBuyer) member.paidMethod!.label,
     ];
     return InkWell(
@@ -138,10 +153,12 @@ class GroupCard extends StatelessWidget {
     final next = g.nextBirthday;
 
     final (String label, Color bg, Color fg) chip = g.purchasedAt != null
-        ? ('Prenda comprada', context.palette.success.withValues(alpha: 0.14), context.palette.success)
+        ? (context.tr('Prenda comprada'), context.palette.success.withValues(alpha: 0.14), context.palette.success)
         : iAmBuyer
         ? (
-            g.awaitingConfirmationCount > 0 ? '${g.awaitingConfirmationCount} por confirmar' : 'Tu compras',
+            g.awaitingConfirmationCount > 0
+                ? context.tr('{count} por confirmar', {'count': g.awaitingConfirmationCount})
+                : context.tr('Tu compras'),
             context.palette.accent,
             context.palette.accentForeground,
           )
@@ -149,17 +166,17 @@ class GroupCard extends StatelessWidget {
         ? ('', Colors.transparent, Colors.transparent)
         : switch (g.statusOf(me)) {
             ContributionStatus.pending => (
-              'Pagar ${Fmt.money(g.shareOf(me))}',
+              context.tr('Pagar {amount}', {'amount': Fmt.money(g.shareOf(me))}),
               context.colors.primary,
               context.colors.onPrimary,
             ),
             ContributionStatus.paid => (
-              'A confirmar',
+              context.tr('A confirmar'),
               AppColors.amber.withValues(alpha: 0.16),
               Color.lerp(AppColors.amber, context.colors.onSurface, 0.35)!,
             ),
             ContributionStatus.confirmed => (
-              'Pago',
+              context.tr('Pago'),
               context.palette.success.withValues(alpha: 0.14),
               context.palette.success,
             ),
@@ -193,7 +210,7 @@ class GroupCard extends StatelessWidget {
                     Text(
                       [
                         if (next != null) '${g.celebrantName} · ${Fmt.dayMonth(next)}' else g.celebrantName,
-                        '${g.members.length} pessoas',
+                        context.tr('{count} pessoas', {'count': g.members.length}),
                       ].join(' · '),
                       style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                     ),
@@ -204,13 +221,18 @@ class GroupCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          SoftProgress(value: ratio, semanticsLabel: 'Valor recebido'),
+          SoftProgress(value: ratio, semanticsLabel: context.tr('Valor recebido')),
           const SizedBox(height: 6),
           Text(
             [
-              '${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}',
+              context.tr('{confirmed} de {target}', {
+                'confirmed': Fmt.money(g.confirmedAmount),
+                'target': Fmt.money(g.targetAmount),
+              }),
               if (g.purchasedAt == null && g.pendingCount > 0)
-                g.pendingCount == 1 ? 'falta 1 pagamento' : 'faltam ${g.pendingCount} pagamentos',
+                g.pendingCount == 1
+                    ? context.tr('falta 1 pagamento')
+                    : context.tr('faltam {count} pagamentos', {'count': g.pendingCount}),
             ].join(' · '),
             style: context.text.labelSmall?.copyWith(color: context.palette.mutedForeground),
           ),
@@ -220,14 +242,16 @@ class GroupCard extends StatelessWidget {
   }
 }
 
-Future<void> showJoinGroupSheet(BuildContext context, WidgetRef ref) async {
+/// Entrar com um código ou link de convite, de uma prenda em grupo ou de uma
+/// festa surpresa: tenta primeiro como grupo e, se não for, como festa.
+Future<void> showJoinCodeSheet(BuildContext context, WidgetRef ref) async {
   final router = GoRouter.of(context);
-  final groupId = await showModalBottomSheet<String>(
+  final route = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     builder: (ctx) => const _JoinSheet(),
   );
-  if (groupId != null) router.push('/groups/$groupId');
+  if (route != null) router.push(route);
 }
 
 class _JoinSheet extends ConsumerStatefulWidget {
@@ -249,21 +273,44 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
     super.dispose();
   }
 
-  Future<void> _join() async {
-    final code = InviteLinks.normalizeCode(_code.text);
-    if (code.length < 4) return;
-    setState(() => _loading = true);
-    final nav = Navigator.of(context);
+  Future<String?> _joinGroup(String code) async {
     String? id;
-    await runGuarded(context, () async {
+    try {
       final user = ref.read(currentUserProvider)!;
       await ref.read(groupsProvider.notifier).mutate((repo) async {
         id = await repo.joinByCode(code, user.name);
       });
+    } on AppException catch (e) {
+      if (!identical(e, invalidInviteCode)) rethrow;
+    }
+    return id == null ? null : '/groups/$id';
+  }
+
+  Future<String> _joinParty(String code) async {
+    try {
+      final party = await ref.read(partiesProvider.notifier).run((repo) => repo.join(code));
+      return '/parties/${party!.id}';
+    } on ApiException catch (e) {
+      if (e.status == 404) throw invalidInviteCode;
+      rethrow;
+    }
+  }
+
+  Future<void> _join() async {
+    final text = _code.text.trim();
+    final uri = Uri.tryParse(text);
+    final partyLink = uri != null && uri.hasScheme ? InviteLinks.partyCodeFrom(uri) : null;
+    final code = partyLink?.toUpperCase() ?? InviteLinks.normalizeCode(text);
+    if (code.length < 4) return;
+    setState(() => _loading = true);
+    final nav = Navigator.of(context);
+    String? route;
+    await runGuarded(context, () async {
+      route = (partyLink == null ? await _joinGroup(code) : null) ?? await _joinParty(code);
     });
     if (!mounted) return;
     setState(() => _loading = false);
-    if (id != null) nav.pop(id);
+    if (route != null) nav.pop(route);
   }
 
   @override
@@ -275,10 +322,12 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Entrar num grupo', style: AppTheme.display(context, size: 22)),
+            Text(context.tr('Tenho um código'), style: AppTheme.display(context, size: 22)),
             const SizedBox(height: 4),
             Text(
-              'Escreve o código que te enviaram ou cola o link do convite.',
+              context.tr(
+                'Serve para prendas em grupo e festas surpresa. Escreve o código que te enviaram ou cola o link.',
+              ),
               style: TextStyle(color: context.palette.mutedForeground),
             ),
             const SizedBox(height: 16),
@@ -293,7 +342,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
               decoration: const InputDecoration(hintText: 'K7P2 QX9M'),
             ),
             const SizedBox(height: 16),
-            LoadingButton(label: 'Entrar', loading: _loading, onPressed: _join),
+            LoadingButton(label: context.tr('Entrar'), loading: _loading, onPressed: _join),
           ],
         ),
       ),

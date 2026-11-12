@@ -17,6 +17,17 @@ void main() {
     expect(birthdayNameFromTitle('Cumpleaños de María'), 'María');
     expect(birthdayNameFromTitle('Anniversaire de Léa'), 'Léa');
     expect(birthdayNameFromTitle('Aniversário da Ana (30)'), 'Ana');
+    expect(birthdayNameFromTitle('Geburtstag von Lena'), 'Lena');
+    expect(birthdayNameFromTitle('Compleanno di Giulia'), 'Giulia');
+    expect(birthdayNameFromTitle('Verjaardag van Anna'), 'Anna');
+    expect(birthdayNameFromTitle('Urodziny: Kasia'), 'Kasia');
+    expect(birthdayNameFromTitle('Ziua lui Ion'), 'Ion');
+    expect(birthdayNameFromTitle('День рождения Ольга'), 'Ольга');
+    expect(birthdayNameFromTitle("Ayşe'nin doğum günü"), 'Ayşe');
+    expect(birthdayNameFromTitle('安娜的生日'), '安娜');
+    expect(birthdayNameFromTitle('花子の誕生日'), '花子');
+    expect(isBirthdayCalendar('Verjaardagen'), isTrue);
+    expect(isBirthdayCalendar('誕生日'), isTrue);
     // Não são aniversários.
     expect(birthdayNameFromTitle('Reunião de equipa'), isNull);
     expect(birthdayNameFromTitle('Aniversário'), isNull);

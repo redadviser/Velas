@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../data/models/chat_models.dart';
+import '../../core/i18n/translations.dart';
 
 /// Cor estável para cada pessoa (nome no balão e avatar).
 Color userColor(BuildContext context, String userId) {
@@ -294,7 +295,7 @@ class ZoomablePhoto extends StatelessWidget {
     final tag = 'photo:${Uri.tryParse(photo)?.path ?? photo}';
     return Semantics(
       button: true,
-      label: 'Ver fotografia de $title',
+      label: context.tr('Ver fotografia de {title}', {'title': title}),
       child: GestureDetector(
         onTap: () => openPhotoViewer(context, url: photo, title: title, heroTag: tag),
         child: Hero(tag: tag, child: child),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -22,12 +23,19 @@ class HistoryYear {
 
   factory HistoryYear.fromJson(Map<String, dynamic> j) {
     DateTime d(Object? v) => DateTime.parse(v as String).toLocal();
-    List<Map<String, dynamic>> rows(String k) => [for (final r in (j[k] as List? ?? const [])) (r as Map).cast<String, dynamic>()];
+    List<Map<String, dynamic>> rows(String k) => [
+      for (final r in (j[k] as List? ?? const [])) (r as Map).cast<String, dynamic>(),
+    ];
     return HistoryYear(
       year: (j['year'] as num).toInt(),
       cards: [
         for (final r in rows('cards'))
-          (body: r['body'] as String? ?? '', date: d(r['created_at']), onWall: r['via'] == 'wall', mediaKind: r['media_kind'] as String?),
+          (
+            body: r['body'] as String? ?? '',
+            date: d(r['created_at']),
+            onWall: r['via'] == 'wall',
+            mediaKind: r['media_kind'] as String?,
+          ),
       ],
       gifts: [
         for (final r in rows('gifts'))
@@ -67,23 +75,31 @@ class HistoryScreen extends ConsumerWidget {
     final person = ref.watch(dataProvider).person(personId);
     final history = ref.watch(personHistoryProvider(personId));
     return Scaffold(
-      appBar: AppBar(title: Text(person == null ? 'Histórico' : 'Histórico de ${person.firstName}')),
+      appBar: AppBar(
+        title: Text(
+          person == null ? context.tr('Histórico') : context.tr('Histórico de {name}', {'name': person.firstName}),
+        ),
+      ),
       body: history.when(
         loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(personHistoryProvider(personId))),
         data: (h) {
           if (h == null) {
-            return const EmptyState(
+            return EmptyState(
               icon: LucideIcons.history,
-              title: 'Só com conta online',
-              message: 'O histórico guarda-se no servidor, com os cartões que enviaste e as prendas que compraste.',
+              title: context.tr('Só com conta online'),
+              message: context.tr(
+                'O histórico guarda-se no servidor, com os cartões que enviaste e as prendas que compraste.',
+              ),
             );
           }
           if (h.years.every((y) => y.isEmpty) && h.lockedYears.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: LucideIcons.history,
-              title: 'Ainda sem histórico',
-              message: 'Os cartões que enviares e as prendas que marcares como compradas ficam aqui, ano a ano.',
+              title: context.tr('Ainda sem histórico'),
+              message: context.tr(
+                'Os cartões que enviares e as prendas que marcares como compradas ficam aqui, ano a ano.',
+              ),
             );
           }
           return ListView(
@@ -112,7 +128,10 @@ class _YearSection extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon, size: 18, color: context.colors.primary)),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 18, color: context.colors.primary),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -147,12 +166,23 @@ class _YearSection extends StatelessWidget {
                       _ => LucideIcons.mailOpen,
                     },
                     c.body,
-                    '${c.onWall ? 'No mural' : 'Cartão'} · ${Fmt.dayMonth(c.date)}',
+                    '${c.onWall ? context.tr('No mural') : context.tr('Cartão')} · ${Fmt.dayMonth(c.date)}',
                   ),
                 for (final g in year.gifts)
-                  row(LucideIcons.gift, g.title, [if (g.price != null) Fmt.money(g.price!), Fmt.dayMonth(g.date)].join(' · ')),
+                  row(
+                    LucideIcons.gift,
+                    g.title,
+                    [if (g.price != null) Fmt.money(g.price!), Fmt.dayMonth(g.date)].join(' · '),
+                  ),
                 for (final g in year.groupGifts)
-                  row(LucideIcons.usersRound, g.title, 'Prenda em grupo · ${Fmt.money(g.amount)} · ${Fmt.dayMonth(g.date)}'),
+                  row(
+                    LucideIcons.usersRound,
+                    g.title,
+                    context.tr('Prenda em grupo · {amount} · {date}', {
+                      'amount': Fmt.money(g.amount),
+                      'date': Fmt.dayMonth(g.date),
+                    }),
+                  ),
               ],
             ),
           ),
@@ -182,19 +212,26 @@ class _LockedYears extends ConsumerWidget {
             const PlusBadge(),
             const SizedBox(height: 8),
             Text(
-              years.length == 1 ? 'Mais 1 ano de histórico (${years.first})' : 'Mais ${years.length} anos de histórico (${years.join(', ')})',
+              years.length == 1
+                  ? context.tr('Mais 1 ano de histórico ({years})', {'years': years.first})
+                  : context.tr('Mais {count} anos de histórico ({years})', {
+                      'count': years.length,
+                      'years': years.join(', '),
+                    }),
               style: context.text.titleSmall?.copyWith(color: fg),
             ),
             const SizedBox(height: 4),
             Text(
-              'No plano Grátis vês o ano atual. Com o Birthdayly+ vês tudo o que já lhe escreveste e deste.',
+              context.tr(
+                'No plano Grátis vês o ano atual. Com o Birthdayly+ vês tudo o que já lhe escreveste e deste.',
+              ),
               style: context.text.bodySmall?.copyWith(color: fg.withValues(alpha: 0.85)),
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () => requirePlus(context, ref, feature: 'O histórico completo'),
-                child: const Text('Ver tudo'),
+                onPressed: () => requirePlus(context, ref, feature: context.tr('O histórico completo')),
+                child: Text(context.tr('Ver tudo')),
               ),
             ),
           ],

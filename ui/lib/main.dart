@@ -43,7 +43,7 @@ Future<void> main() async {
   // Carrega já a língua para o primeiro ecrã (a escolhida no perfil ou a do telemóvel).
   final saved = prefs.getString('velas.locale');
   await Translations.load(
-    saved != null ? Locale(saved) : Translations.resolve(WidgetsBinding.instance.platformDispatcher.locales),
+    (saved == null ? null : Translations.localeOf(saved)) ?? Translations.resolve(WidgetsBinding.instance.platformDispatcher.locales),
   );
 
   final api = Env.hasBackend ? ApiClient(Env.apiUrl) : null;

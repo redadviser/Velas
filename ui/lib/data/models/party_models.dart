@@ -1,14 +1,19 @@
+import '../../core/i18n/translations.dart';
 import 'package:flutter/foundation.dart';
 
 /// Resposta de um convidado.
 enum Rsvp {
-  pending('Por responder'),
-  yes('Vai'),
-  maybe('Talvez'),
-  no('Não vai');
+  pending,
+  yes,
+  maybe,
+  no;
 
-  const Rsvp(this.label);
-  final String label;
+  String get label => switch (this) {
+    pending => tr('Por responder'),
+    yes => tr('Vai'),
+    maybe => tr('Talvez'),
+    no => tr('Não vai'),
+  };
 
   static Rsvp parse(Object? v) => Rsvp.values.where((r) => r.name == v).firstOrNull ?? Rsvp.pending;
 }
@@ -25,7 +30,8 @@ class PartyGuest {
   final String? username;
   final Rsvp rsvp;
 
-  PartyGuest copyWith({Rsvp? rsvp}) => PartyGuest(id: id, userId: userId, name: name, username: username, rsvp: rsvp ?? this.rsvp);
+  PartyGuest copyWith({Rsvp? rsvp}) =>
+      PartyGuest(id: id, userId: userId, name: name, username: username, rsvp: rsvp ?? this.rsvp);
 
   Map<String, dynamic> toJson() => {
     'id': id,

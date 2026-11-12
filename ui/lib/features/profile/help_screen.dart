@@ -10,50 +10,65 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
 import 'legal.dart';
+import '../../core/i18n/translations.dart';
 
 /// Perguntas frequentes (pergunta, resposta).
-const helpFaq = [
+List<(String, String)> get helpFaq => [
   (
-    'Como adiciono aniversários?',
-    'No separador Pessoas, toca em + para adicionar à mão. Também podes importar dos contactos ou do calendário do '
-        'telemóvel (Google Calendar, Outlook), ou enviar um link para os teus amigos deixarem a data deles.',
+    tr('Como adiciono aniversários?'),
+    tr(
+      'No separador Pessoas, toca em + para adicionar à mão. Também podes importar dos contactos ou do calendário do '
+      'telemóvel (Google Calendar, Outlook), ou enviar um link para os teus amigos deixarem a data deles.',
+    ),
   ),
   (
-    'Não estou a receber os lembretes.',
-    'Confirma que as notificações estão ativas em Perfil → Notificações e nas definições do telemóvel. Em alguns '
-        'Android, a poupança de bateria trava as notificações: retira a Birthdayly da otimização de bateria. '
-        'A hora do aviso muda-se em Perfil → Hora do lembrete.',
+    tr('Não estou a receber os lembretes.'),
+    tr(
+      'Confirma que as notificações estão ativas em Perfil → Notificações e nas definições do telemóvel. Em alguns '
+      'Android, a poupança de bateria trava as notificações: retira a Birthdayly da otimização de bateria. '
+      'A hora do aviso muda-se em Perfil → Hora do lembrete.',
+    ),
   ),
   (
-    'Posso deixar a mensagem de parabéns agendada?',
-    'Sim. Escreve a mensagem na página da pessoa e toca em Agendar. Se for um amigo na Birthdayly, a mensagem vai '
-        'sozinha para o mural dele. Se não, à hora marcada avisamos-te com a mensagem pronta para enviares por '
-        'WhatsApp, SMS ou cartão.',
+    tr('Posso deixar a mensagem de parabéns agendada?'),
+    tr(
+      'Sim. Escreve a mensagem na página da pessoa e toca em Agendar. Se for um amigo na Birthdayly, a mensagem vai '
+      'sozinha para o mural dele. Se não, à hora marcada avisamos-te com a mensagem pronta para enviares por '
+      'WhatsApp, SMS ou cartão.',
+    ),
   ),
   (
-    'Como funcionam as prendas em grupo?',
-    'Quem cria o grupo define a prenda e o valor, e convida os outros. Cada pessoa paga a sua parte diretamente a '
-        'quem compra (MB WAY, Revolut, PayPal ou em mão) e marca que já pagou. A Birthdayly não recebe nem guarda '
-        'dinheiro.',
+    tr('Como funcionam as prendas em grupo?'),
+    tr(
+      'Quem cria o grupo define a prenda e o valor, e convida os outros. Cada pessoa paga a sua parte diretamente a '
+      'quem compra (MB WAY, Revolut, PayPal ou em mão) e marca que já pagou. A Birthdayly não recebe nem guarda '
+      'dinheiro.',
+    ),
   ),
   (
-    'Como cancelo o Birthdayly+?',
-    'A subscrição é gerida pela loja. No iPhone: Definições → o teu nome → Subscrições. No Android: Google Play → '
-        'Perfil → Pagamentos e subscrições → Subscrições. O plano mantém-se até ao fim do período já pago.',
+    tr('Como cancelo o Birthdayly+?'),
+    tr(
+      'A subscrição é gerida pela loja. No iPhone: Definições → o teu nome → Subscrições. No Android: Google Play → '
+      'Perfil → Pagamentos e subscrições → Subscrições. O plano mantém-se até ao fim do período já pago.',
+    ),
   ),
   (
-    'Mudei de telemóvel. Perco os meus dados?',
-    'Não. Entra com a mesma conta e está tudo lá. Se tinhas o Birthdayly+, toca em Restaurar compras em '
-        'Perfil → Plano.',
+    tr('Mudei de telemóvel. Perco os meus dados?'),
+    tr(
+      'Não. Entra com a mesma conta e está tudo lá. Se tinhas o Birthdayly+, toca em Restaurar compras em '
+      'Perfil → Plano.',
+    ),
   ),
   (
-    'Esqueci-me da palavra-passe.',
-    'No ecrã de entrada, toca em "Esqueceste-te da palavra-passe?" e enviamos-te um link para criares outra.',
+    tr('Esqueci-me da palavra-passe.'),
+    tr('No ecrã de entrada, toca em "Esqueceste-te da palavra-passe?" e enviamos-te um link para criares outra.'),
   ),
   (
-    'Como apago a minha conta?',
-    'Em Perfil → Eliminar conta. Enviamos-te um email com um link e a conta só é apagada quando confirmares. '
-        'Se tiveres o Birthdayly+, cancela também a subscrição na loja.',
+    tr('Como apago a minha conta?'),
+    tr(
+      'Em Perfil → Eliminar conta. Enviamos-te um email com um link e a conta só é apagada quando confirmares. '
+      'Se tiveres o Birthdayly+, cancela também a subscrição na loja.',
+    ),
   ),
 ];
 
@@ -79,7 +94,9 @@ class HelpScreen extends ConsumerWidget {
     final ok = await launchUrl(uri).catchError((_) => false);
     if (!ok && context.mounted) {
       await Clipboard.setData(ClipboardData(text: email));
-      if (context.mounted) showMessage(context, 'Não há app de email. Copiámos o endereço: $email');
+      if (context.mounted) {
+        showMessage(context, context.tr('Não há app de email. Copiámos o endereço: {email}', {'email': email}));
+      }
     }
   }
 
@@ -114,11 +131,11 @@ class HelpScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ajuda e contacto')),
+      appBar: AppBar(title: Text(context.tr('Ajuda e contacto'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
-          Text('Perguntas frequentes', style: context.text.titleMedium),
+          Text(context.tr('Perguntas frequentes'), style: context.text.titleMedium),
           const SizedBox(height: 8),
           AppCard(
             padding: EdgeInsets.zero,
@@ -141,12 +158,12 @@ class HelpScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Não encontraste resposta?', style: context.text.titleMedium),
+          Text(context.tr('Não encontraste resposta?'), style: context.text.titleMedium),
           const SizedBox(height: 8),
           action(
             LucideIcons.bug,
-            'Reportar um problema',
-            'Algo não funciona como devia. Conta-nos o que aconteceu.',
+            context.tr('Reportar um problema'),
+            context.tr('Algo não funciona como devia. Conta-nos o que aconteceu.'),
             () => _mail(
               context,
               email,
@@ -156,18 +173,18 @@ class HelpScreen extends ConsumerWidget {
           ),
           action(
             LucideIcons.messageCircleQuestion,
-            'Outra dúvida ou sugestão',
-            'Respondemos por email.',
+            context.tr('Outra dúvida ou sugestão'),
+            context.tr('Respondemos por email.'),
             () => _mail(context, email, 'Birthdayly: dúvida'),
           ),
           action(
             LucideIcons.messageSquareWarning,
-            'Fazer uma reclamação',
-            'Escreve-nos, ou usa o Livro de Reclamações Eletrónico.',
+            context.tr('Fazer uma reclamação'),
+            context.tr('Escreve-nos, ou usa o Livro de Reclamações Eletrónico.'),
             () => _complaint(context, email),
           ),
           const SizedBox(height: 16),
-          Text('Contacto', style: context.text.titleMedium),
+          Text(context.tr('Contacto'), style: context.text.titleMedium),
           const SizedBox(height: 8),
           AppCard(
             padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
@@ -177,11 +194,11 @@ class HelpScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(child: SelectableText(email, style: context.text.bodyLarge)),
                 IconButton(
-                  tooltip: 'Copiar',
+                  tooltip: context.tr('Copiar'),
                   icon: const Icon(LucideIcons.copy, size: 18),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: email));
-                    if (context.mounted) showMessage(context, 'Email copiado.');
+                    if (context.mounted) showMessage(context, context.tr('Email copiado.'));
                   },
                 ),
               ],
@@ -201,11 +218,13 @@ class HelpScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Fazer uma reclamação', style: ctx.text.titleLarge),
+            Text(ctx.tr('Fazer uma reclamação'), style: ctx.text.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Lamentamos que algo tenha corrido mal. Escreve-nos e respondemos o mais depressa possível. '
-              'Também podes registar a reclamação no Livro de Reclamações Eletrónico.',
+              ctx.tr(
+                'Lamentamos que algo tenha corrido mal. Escreve-nos e respondemos o mais depressa possível. '
+                'Também podes registar a reclamação no Livro de Reclamações Eletrónico.',
+              ),
               style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
             ),
             const SizedBox(height: 16),
@@ -215,7 +234,7 @@ class HelpScreen extends ConsumerWidget {
                 _mail(context, email, 'Birthdayly: reclamação');
               },
               icon: const Icon(LucideIcons.mail, size: 18),
-              label: const Text('Escrever-nos'),
+              label: Text(ctx.tr('Escrever-nos')),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
@@ -224,7 +243,7 @@ class HelpScreen extends ConsumerWidget {
                 openLegal(context, complaintsBookUrl);
               },
               icon: const Icon(LucideIcons.bookOpen, size: 18),
-              label: const Text('Livro de Reclamações'),
+              label: Text(ctx.tr('Livro de Reclamações')),
             ),
           ],
         ),

@@ -9,32 +9,35 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import 'chat_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 /// Motivos de denúncia (iguais aos do servidor, modules/safety).
-const reportReasons = [
-  ('spam', 'Spam ou publicidade'),
-  ('harassment', 'Assédio ou ameaças'),
-  ('inappropriate', 'Conteúdo impróprio'),
-  ('impersonation', 'Perfil falso ou a fazer-se passar por outra pessoa'),
-  ('underage', 'Parece ser menor de idade'),
-  ('other', 'Outro motivo'),
+List<(String, String)> get reportReasons => [
+  ('spam', tr('Spam ou publicidade')),
+  ('harassment', tr('Assédio ou ameaças')),
+  ('inappropriate', tr('Conteúdo impróprio')),
+  ('impersonation', tr('Perfil falso ou a fazer-se passar por outra pessoa')),
+  ('underage', tr('Parece ser menor de idade')),
+  ('other', tr('Outro motivo')),
 ];
 
 /// Bloquear, com a confirmação do que acontece. `true` se bloqueou.
 Future<bool> confirmBlock(BuildContext context, WidgetRef ref, ChatUser user) async {
   final ok = await confirmDialog(
     context,
-    title: 'Bloquear ${user.firstName}?',
-    message:
-        'Deixam de ser amigos, ${user.firstName} não te pode enviar mensagens nem pedidos de amizade, '
-        'e deixas de ver as mensagens desta pessoa nos grupos. Não recebe nenhum aviso.',
-    confirm: 'Bloquear',
+    title: context.tr('Bloquear {name}?', {'name': user.firstName}),
+    message: context.tr(
+      'Deixam de ser amigos, {name} não te pode enviar mensagens nem pedidos de amizade, '
+      'e deixas de ver as mensagens desta pessoa nos grupos. Não recebe nenhum aviso.',
+      {'name': user.firstName},
+    ),
+    confirm: context.tr('Bloquear'),
   );
   if (!ok || !context.mounted) return false;
   return runGuarded(
     context,
     () => ref.read(blockedUsersProvider.notifier).block(user),
-    success: 'Bloqueaste ${user.firstName}.',
+    success: context.tr('Bloqueaste {name}.', {'name': user.firstName}),
   );
 }
 
@@ -85,7 +88,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
         ref.invalidate(friendsProvider);
         ref.invalidate(conversationsProvider);
       }
-    }, success: 'Obrigado. A equipa da Birthdayly vai analisar a denúncia.');
+    }, success: context.tr('Obrigado. A equipa da Birthdayly vai analisar a denúncia.'));
     if (!mounted) return;
     setState(() => _sending = false);
     if (ok) Navigator.pop(context);
@@ -103,11 +106,16 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.messageId == null ? 'Denunciar ${widget.user.firstName}' : 'Denunciar mensagem',
+                widget.messageId == null
+                    ? context.tr('Denunciar {name}', {'name': widget.user.firstName})
+                    : context.tr('Denunciar mensagem'),
                 style: AppTheme.display(context, size: 22),
               ),
               const SizedBox(height: 4),
-              Text('A denúncia é anónima: ${widget.user.firstName} não fica a saber.', style: TextStyle(color: muted)),
+              Text(
+                context.tr('A denúncia é anónima: {name} não fica a saber.', {'name': widget.user.firstName}),
+                style: TextStyle(color: muted),
+              ),
               const SizedBox(height: 8),
               RadioGroup<String>(
                 groupValue: _reason,
@@ -115,7 +123,12 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                 child: Column(
                   children: [
                     for (final (value, label) in reportReasons)
-                      RadioListTile<String>(value: value, title: Text(label), contentPadding: EdgeInsets.zero, dense: true),
+                      RadioListTile<String>(
+                        value: value,
+                        title: Text(label),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
                   ],
                 ),
               ),
@@ -125,13 +138,13 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                 minLines: 2,
                 maxLines: 4,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(hintText: 'Queres explicar melhor? (opcional)'),
+                decoration: InputDecoration(hintText: context.tr('Queres explicar melhor? (opcional)')),
               ),
               CheckboxListTile(
                 value: _block,
                 onChanged: (v) => setState(() => _block = v ?? false),
                 contentPadding: EdgeInsets.zero,
-                title: Text('Bloquear ${widget.user.firstName} também'),
+                title: Text(context.tr('Bloquear {name} também', {'name': widget.user.firstName})),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 8),
@@ -140,7 +153,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
                 onPressed: _reason == null || _sending ? null : _send,
                 child: _sending
                     ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.2))
-                    : const Text('Enviar denúncia'),
+                    : Text(context.tr('Enviar denúncia')),
               ),
             ],
           ),
@@ -158,15 +171,17 @@ class BlockedUsersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final blocked = ref.watch(blockedUsersProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Bloqueados')),
+      appBar: AppBar(title: Text(context.tr('Bloqueados'))),
       body: blocked.when(
         loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(blockedUsersProvider)),
         data: (list) => list.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: LucideIcons.shieldCheck,
-                title: 'Ninguém bloqueado',
-                message: 'Quem bloqueares aparece aqui. Bloqueia a partir do perfil de alguém ou de uma mensagem.',
+                title: context.tr('Ninguém bloqueado'),
+                message: context.tr(
+                  'Quem bloqueares aparece aqui. Bloqueia a partir do perfil de alguém ou de uma mensagem.',
+                ),
               )
             : ListView(
                 children: [
@@ -179,9 +194,9 @@ class BlockedUsersScreen extends ConsumerWidget {
                         onPressed: () => runGuarded(
                           context,
                           () => ref.read(blockedUsersProvider.notifier).unblock(u.userId),
-                          success: 'Desbloqueaste ${u.firstName}.',
+                          success: context.tr('Desbloqueaste {name}.', {'name': u.firstName}),
                         ),
-                        child: const Text('Desbloquear'),
+                        child: Text(context.tr('Desbloquear')),
                       ),
                     ),
                 ],

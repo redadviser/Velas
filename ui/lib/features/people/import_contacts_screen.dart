@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -225,7 +226,9 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
     final ok = await runGuarded(
       context,
       () => repo.importPeople(people, photos: photos),
-      success: people.length == 1 ? '1 aniversário adicionado.' : '${people.length} aniversários adicionados.',
+      success: people.length == 1
+          ? context.tr('1 aniversário adicionado.')
+          : context.tr('{count} aniversários adicionados.', {'count': people.length}),
     );
     if (!mounted) return;
     setState(() => _importing = false);
@@ -239,9 +242,9 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
     final name = ref.watch(currentUserProvider)?.firstName ?? '';
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.fromCalendar ? 'Importar do calendário' : 'Adicionar dos contactos'),
+        title: Text(widget.fromCalendar ? context.tr('Importar do calendário') : context.tr('Adicionar dos contactos')),
         actions: [
-          if (widget.welcome) TextButton(onPressed: () => context.pop(), child: const Text('Depois')),
+          if (widget.welcome) TextButton(onPressed: () => context.pop(), child: Text(context.tr('Depois'))),
           const SizedBox(width: 8),
         ],
       ),
@@ -252,8 +255,14 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Text(
-                '${name.isEmpty ? 'Olá' : 'Olá, $name'}! Começa pelos aniversários de quem importa: '
-                'escolhe dos teus contactos ou pede a data por link. Nós lembramos-te a tempo.',
+                name.isEmpty
+                    ? context.tr(
+                        'Olá! Começa pelos aniversários de quem importa: escolhe dos teus contactos ou pede a data por link. Nós lembramos-te a tempo.',
+                      )
+                    : context.tr(
+                        'Olá, {name}! Começa pelos aniversários de quem importa: escolhe dos teus contactos ou pede a data por link. Nós lembramos-te a tempo.',
+                        {'name': name},
+                      ),
                 style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
               ),
             ),
@@ -274,32 +283,36 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
       _Stage.loading => const SizedBox.shrink(),
       _Stage.denied => EmptyState(
         icon: widget.fromCalendar ? LucideIcons.calendarDays : LucideIcons.contactRound,
-        title: widget.fromCalendar ? 'Sem acesso ao calendário' : 'Sem acesso aos contactos',
+        title: widget.fromCalendar ? context.tr('Sem acesso ao calendário') : context.tr('Sem acesso aos contactos'),
         message: widget.fromCalendar
-            ? 'Para importar os aniversários do calendário, permite o acesso nas definições do telemóvel.'
-            : 'Para adicionar a partir dos contactos, permite o acesso nas definições do telemóvel.',
+            ? context.tr('Para importar os aniversários do calendário, permite o acesso nas definições do telemóvel.')
+            : context.tr('Para adicionar a partir dos contactos, permite o acesso nas definições do telemóvel.'),
         action: FilledButton(
           onPressed: () async {
             await (widget.fromCalendar ? openCalendarSettings() : FlutterContacts.permissions.openSettings());
             if (mounted) _load();
           },
           style: FilledButton.styleFrom(minimumSize: const Size(220, 52)),
-          child: const Text('Abrir definições'),
+          child: Text(context.tr('Abrir definições')),
         ),
       ),
       _Stage.ready when _entries.isEmpty && widget.fromCalendar => EmptyState(
         icon: LucideIcons.calendarDays,
-        title: _contactsRead == 0 ? 'Sem aniversários no calendário' : 'Já tens todos',
+        title: _contactsRead == 0 ? context.tr('Sem aniversários no calendário') : context.tr('Já tens todos'),
         message: _contactsRead == 0
-            ? 'Não encontrámos aniversários no teu calendário, como "Aniversário da Ana" ou o calendário Aniversários do Google.'
-            : 'Todos os aniversários do teu calendário já estão na tua lista.',
+            ? context.tr(
+                'Não encontrámos aniversários no teu calendário, como "Aniversário da Ana" ou o calendário Aniversários do Google.',
+              )
+            : context.tr('Todos os aniversários do teu calendário já estão na tua lista.'),
       ),
       _Stage.ready when _entries.isEmpty => EmptyState(
         icon: LucideIcons.cake,
-        title: _contactsRead == 0 ? 'Sem contactos' : 'Já tens todos',
+        title: _contactsRead == 0 ? context.tr('Sem contactos') : context.tr('Já tens todos'),
         message: _contactsRead == 0
-            ? 'Não conseguimos ler nenhum contacto. Confirma nas definições que a Birthdayly tem acesso a todos.'
-            : 'Todos os teus contactos já estão na tua lista.',
+            ? context.tr(
+                'Não conseguimos ler nenhum contacto. Confirma nas definições que a Birthdayly tem acesso a todos.',
+              )
+            : context.tr('Todos os teus contactos já estão na tua lista.'),
       ),
       _Stage.ready => _list(context),
     };
@@ -313,9 +326,10 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
     final dated = shown.where((c) => c.date != null).toList();
     final undated = shown.where((c) => c.date == null).toList();
     final rows = <Object>[
-      if (dated.isNotEmpty) '${widget.fromCalendar ? 'Do calendário' : 'Com data no contacto'} · ${dated.length}',
+      if (dated.isNotEmpty)
+        '${widget.fromCalendar ? context.tr('Do calendário') : context.tr('Com data no contacto')} · ${dated.length}',
       ...dated,
-      if (undated.isNotEmpty) 'Sem data · toca para escolher',
+      if (undated.isNotEmpty) context.tr('Sem data · toca para escolher'),
       ...undated,
     ];
     final count = _selected.where((k) => _entries.any((c) => c.key == k && _dateOf(c) != null)).length;
@@ -328,7 +342,7 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
             controller: _search,
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
-              hintText: widget.fromCalendar ? 'Procurar' : 'Procurar contacto',
+              hintText: widget.fromCalendar ? context.tr('Procurar') : context.tr('Procurar contacto'),
               prefixIcon: Icon(LucideIcons.search, size: 18),
             ),
           ),
@@ -360,7 +374,7 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
                 ),
                 title: Text(c.name),
                 subtitle: d == null
-                    ? Text('Escolher data', style: TextStyle(color: context.colors.primary))
+                    ? Text(context.tr('Escolher data'), style: TextStyle(color: context.colors.primary))
                     : Text(Fmt.birthDate(d.day, d.month, d.year), style: TextStyle(color: muted)),
                 trailing: d == null
                     ? Icon(LucideIcons.calendarPlus, size: 20, color: muted)
@@ -377,7 +391,9 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
             child: LoadingButton(
-              label: count == 1 ? 'Adicionar 1 aniversário' : 'Adicionar $count aniversários',
+              label: count == 1
+                  ? context.tr('Adicionar 1 aniversário')
+                  : context.tr('Adicionar {count} aniversários', {'count': count}),
               loading: _importing,
               onPressed: count == 0 ? null : _import,
             ),

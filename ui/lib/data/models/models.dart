@@ -1,3 +1,4 @@
+import '../../core/i18n/translations.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/utils/birthday_utils.dart';
@@ -11,19 +12,19 @@ const kReminderOptions = <int>[0, 1, 3, 7, 14];
 const kDefaultReminderDays = <int>[0, 1];
 
 String reminderLabel(int days) => switch (days) {
-  0 => 'No próprio dia',
-  1 => '1 dia antes',
-  7 => '1 semana antes',
-  14 => '2 semanas antes',
-  _ => '$days dias antes',
+  0 => tr('No próprio dia'),
+  1 => tr('1 dia antes'),
+  7 => tr('1 semana antes'),
+  14 => tr('2 semanas antes'),
+  _ => tr('{count} dias antes', {'count': days}),
 };
 
 String reminderShortLabel(int days) => switch (days) {
-  0 => 'No dia',
-  1 => '1 dia',
-  7 => '1 semana',
-  14 => '2 semanas',
-  _ => '$days dias',
+  0 => tr('No dia'),
+  1 => tr('1 dia'),
+  7 => tr('1 semana'),
+  14 => tr('2 semanas'),
+  _ => tr('{count} dias', {'count': days}),
 };
 
 List<String> _stringList(dynamic v) => v == null ? const [] : (v as List).cast<String>().toList();
@@ -535,14 +536,19 @@ class BirthdayMessage {
 
 /// Tipo de data especial (define o ícone e a cor).
 enum SpecialDateKind {
-  couple('Namoro'),
-  wedding('Casamento'),
-  family('Família'),
-  memorial('Em memória'),
-  other('Outra');
+  couple,
+  wedding,
+  family,
+  memorial,
+  other;
 
-  const SpecialDateKind(this.label);
-  final String label;
+  String get label => switch (this) {
+    couple => tr('Namoro'),
+    wedding => tr('Casamento'),
+    family => tr('Família'),
+    memorial => tr('Em memória'),
+    other => tr('Outra'),
+  };
 }
 
 /// Data que se repete todos os anos e não é um aniversário de nascimento

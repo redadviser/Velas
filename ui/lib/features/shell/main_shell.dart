@@ -1,14 +1,15 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
+import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../chat/conversations_list.dart';
+import '../groups/group_widgets.dart';
 import '../people/birthday_request.dart';
 import '../special/special_dates_screen.dart';
 
@@ -29,42 +30,37 @@ class MainShell extends ConsumerWidget {
       bottomNavigationBar: Stack(
         clipBehavior: Clip.none,
         children: [
-          ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.palette.card.withValues(alpha: 0.94),
-                  border: Border(top: BorderSide(color: context.palette.border)),
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: SizedBox(
-                    height: 66,
-                    child: Row(
-                      children: [
-                        _Tab(icon: LucideIcons.house, label: 'Início', index: 0, shell: shell, onTap: go),
-                        _Tab(icon: LucideIcons.usersRound, label: 'Pessoas', index: 1, shell: shell, onTap: go),
-                        // A coluna toda abre o menu; o botão desenhado por cima sai da barra.
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            excludeFromSemantics: true,
-                            onTap: () => showAddSheet(context, ref),
-                          ),
-                        ),
-                        _Tab(
-                          icon: LucideIcons.gift,
-                          label: 'Prendas',
-                          index: 2,
-                          shell: shell,
-                          onTap: go,
-                          badge: pending,
-                        ),
-                        _Tab(icon: LucideIcons.circleUserRound, label: 'Perfil', index: 3, shell: shell, onTap: go),
-                      ],
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              border: Border(top: BorderSide(color: context.palette.border)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 66,
+                child: Row(
+                  children: [
+                    _Tab(icon: LucideIcons.house, label: context.tr('Início'), index: 0, shell: shell, onTap: go),
+                    _Tab(icon: LucideIcons.usersRound, label: context.tr('Pessoas'), index: 1, shell: shell, onTap: go),
+                    // A coluna toda abre o menu; o botão desenhado por cima sai da barra.
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        excludeFromSemantics: true,
+                        onTap: () => showAddSheet(context, ref),
+                      ),
                     ),
-                  ),
+                    _Tab(
+                      icon: LucideIcons.gift,
+                      label: context.tr('Prendas'),
+                      index: 2,
+                      shell: shell,
+                      onTap: go,
+                      badge: pending,
+                    ),
+                    _Tab(icon: LucideIcons.user, label: context.tr('Perfil'), index: 3, shell: shell, onTap: go),
+                  ],
                 ),
               ),
             ),
@@ -149,7 +145,7 @@ class _AddButton extends StatelessWidget {
     return Transform.rotate(
       angle: -0.05,
       child: Tooltip(
-        message: 'Adicionar',
+        message: context.tr('Adicionar'),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(19),
@@ -190,7 +186,10 @@ Future<void> showAddSheet(BuildContext context, WidgetRef ref) => showModalBotto
   builder: (_) => _AddSheet(host: context, ref: ref),
 );
 
-/// "O que queres adicionar?" e, para uma pessoa, o segundo passo "Quem queres guardar?".
+enum _Step { menu, person, gift }
+
+/// "O que queres adicionar?" e o segundo passo de uma pessoa ("Quem queres
+/// guardar?") ou de um grupo de prenda (criar ou entrar com código).
 class _AddSheet extends StatefulWidget {
   const _AddSheet({required this.host, required this.ref});
 
@@ -203,17 +202,24 @@ class _AddSheet extends StatefulWidget {
 }
 
 class _AddSheetState extends State<_AddSheet> {
-  bool _person = false;
+  var _step = _Step.menu;
 
   void _go(VoidCallback action) {
     Navigator.of(context).pop();
     action();
   }
 
-  Widget _option(IconData icon, String title, String subtitle, VoidCallback action, {bool last = false}) => Column(
+  Widget _option(IconData icon, String title, String subtitle, VoidCallback action, {bool last = false}) =>
+      _tile(icon, title, subtitle, () => _go(action), last: last);
+
+  /// Abre um segundo passo dentro da folha.
+  Widget _next(IconData icon, String title, String subtitle, _Step step) =>
+      _tile(icon, title, subtitle, () => setState(() => _step = step), last: true);
+
+  Widget _tile(IconData icon, String title, String subtitle, VoidCallback onTap, {bool last = false}) => Column(
     children: [
       InkWell(
-        onTap: () => _go(action),
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
@@ -243,6 +249,7 @@ class _AddSheetState extends State<_AddSheet> {
   Widget build(BuildContext context) {
     final host = widget.host;
     final ref = widget.ref;
+    final codes = ref.read(groupRepositoryProvider)?.supportsInvites ?? false;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -255,93 +262,91 @@ class _AddSheetState extends State<_AddSheet> {
             children: [
               Row(
                 children: [
-                  if (_person)
+                  if (_step != _Step.menu)
                     IconButton(
-                      tooltip: 'Voltar',
-                      onPressed: () => setState(() => _person = false),
+                      tooltip: context.tr('Voltar'),
+                      onPressed: () => setState(() => _step = _Step.menu),
                       icon: const Icon(LucideIcons.arrowLeft),
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
                     ),
                   Expanded(
-                    child: Text(
-                      _person ? 'Quem queres guardar?' : 'O que queres adicionar?',
-                      style: AppTheme.display(context, size: 21),
-                    ),
+                    child: Text(switch (_step) {
+                      _Step.menu => context.tr('O que queres adicionar?'),
+                      _Step.person => context.tr('Quem queres guardar?'),
+                      _Step.gift => context.tr('Grupo de prenda'),
+                    }, style: AppTheme.display(context, size: 21)),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
-              if (!_person) ...[
-                InkWell(
-                  onTap: () => setState(() => _person = true),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Row(
-                      children: [
-                        const IconBadge(icon: LucideIcons.user),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Uma pessoa', style: context.text.titleSmall),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Manual, contactos, calendário ou por link',
-                                style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(LucideIcons.chevronRight, size: 20, color: context.colors.onSurface),
-                      ],
-                    ),
-                  ),
+              if (_step == _Step.menu) ...[
+                _next(
+                  LucideIcons.user,
+                  context.tr('Uma pessoa'),
+                  context.tr('Manual, contactos, calendário ou por link'),
+                  _Step.person,
                 ),
                 const Divider(),
                 _option(
                   LucideIcons.heart,
-                  'Uma data especial',
-                  'Aniversários, Dia da Mãe ou à medida',
+                  context.tr('Uma data especial'),
+                  context.tr('Aniversários, Dia da Mãe ou à medida'),
                   () => showSpecialDateEditor(host, ref),
                 ),
-                _option(
+                _next(
                   LucideIcons.gift,
-                  'Um grupo de prenda',
-                  'Junta amigos e divide o valor',
-                  () => host.push('/groups/new'),
+                  context.tr('Um grupo de prenda'),
+                  context.tr('Junta amigos e divide o valor'),
+                  _Step.gift,
                 ),
+                const Divider(),
                 _option(
-                  LucideIcons.sparkles,
-                  'Uma festa surpresa',
-                  'Convida, distribui tarefas e celebra',
+                  LucideIcons.partyPopper,
+                  context.tr('Uma festa surpresa'),
+                  context.tr('Convida, distribui tarefas e celebra'),
                   () => host.push('/parties/new'),
                   last: true,
                 ),
+              ] else if (_step == _Step.gift) ...[
+                _option(
+                  LucideIcons.plus,
+                  context.tr('Nova prenda em grupo'),
+                  context.tr('Escolhe a prenda, o valor e quem entra'),
+                  () => host.push('/groups/new'),
+                  last: !codes,
+                ),
+                if (codes)
+                  _option(
+                    LucideIcons.ticket,
+                    context.tr('Tenho um código'),
+                    context.tr('De uma prenda em grupo ou de uma festa surpresa'),
+                    () => showJoinCodeSheet(host, ref),
+                    last: true,
+                  ),
               ] else ...[
                 _option(
                   LucideIcons.userPlus,
-                  'Adicionar manualmente',
-                  'Nome, data, ano opcional e categoria',
+                  context.tr('Adicionar manualmente'),
+                  context.tr('Nome, data, ano opcional e categoria'),
                   () => host.push('/person/new'),
                 ),
                 _option(
                   LucideIcons.contactRound,
-                  'Escolher dos contactos',
-                  'Encontra alguém na lista do telemóvel',
+                  context.tr('Escolher dos contactos'),
+                  context.tr('Encontra alguém na lista do telemóvel'),
                   () => host.push('/people/import'),
                 ),
                 _option(
                   LucideIcons.calendarDays,
-                  'Importar do calendário',
-                  'Escolhe entre as datas encontradas',
+                  context.tr('Importar do calendário'),
+                  context.tr('Escolhe entre as datas encontradas'),
                   () => host.push('/people/import?from=calendar'),
                 ),
                 _option(
                   LucideIcons.link,
-                  'Pedir por link',
-                  'Os amigos escrevem a data deles',
+                  context.tr('Pedir por link'),
+                  context.tr('Os amigos escrevem a data deles'),
                   () => shareBirthdayRequest(host, ref),
                   last: true,
                 ),

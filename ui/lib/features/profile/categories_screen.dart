@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
+import '../../core/i18n/translations.dart';
 
 /// Gerir categorias (Família, Amigos, Trabalho, …), RF11.
 class CategoriesScreen extends ConsumerWidget {
@@ -29,10 +30,10 @@ class CategoriesScreen extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, PersonCategory c, int count) async {
     final ok = await confirmDialog(
       context,
-      title: 'Eliminar "${c.name}"?',
+      title: context.tr('Eliminar "{name}"?', {'name': c.name}),
       message: count == 0
-          ? 'A categoria vai ser removida.'
-          : 'As $count pessoas desta categoria ficam sem categoria. Não são eliminadas.',
+          ? context.tr('A categoria vai ser removida.')
+          : context.tr('As {count} pessoas desta categoria ficam sem categoria. Não são eliminadas.', {'count': count}),
     );
     if (ok && context.mounted) {
       await runGuarded(context, () => ref.read(dataRepositoryProvider)!.deleteCategory(c.id));
@@ -43,18 +44,20 @@ class CategoriesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(dataProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Categorias')),
+      appBar: AppBar(title: Text(context.tr('Categorias'))),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _edit(context, ref),
         icon: const Icon(LucideIcons.plus, size: 20),
-        label: const Text('Nova categoria'),
+        label: Text(context.tr('Nova categoria')),
       ),
       body: data.categories.isEmpty
-          ? const Center(
+          ? Center(
               child: EmptyState(
                 icon: LucideIcons.tag,
-                title: 'Sem categorias',
-                message: 'Cria categorias para organizar as pessoas, por exemplo Família, Amigos ou Trabalho.',
+                title: context.tr('Sem categorias'),
+                message: context.tr(
+                  'Cria categorias para organizar as pessoas, por exemplo Família, Amigos ou Trabalho.',
+                ),
               ),
             )
           : ListView(
@@ -73,9 +76,11 @@ class CategoriesScreen extends ConsumerWidget {
                               onTap: () => _edit(context, ref, c),
                               leading: CircleAvatar(radius: 8, backgroundColor: swatch(c.color)),
                               title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                              subtitle: Text(count == 1 ? '1 pessoa' : '$count pessoas'),
+                              subtitle: Text(
+                                count == 1 ? context.tr('1 pessoa') : context.tr('{count} pessoas', {'count': count}),
+                              ),
                               trailing: IconButton(
-                                tooltip: 'Eliminar',
+                                tooltip: context.tr('Eliminar'),
                                 icon: Icon(LucideIcons.trash2, size: 18, color: context.palette.mutedForeground),
                                 onPressed: () => _delete(context, ref, c, count),
                               ),
@@ -131,7 +136,7 @@ class _CategoryEditorState extends State<_CategoryEditor> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              widget.category == null ? 'Nova categoria' : 'Editar categoria',
+              widget.category == null ? context.tr('Nova categoria') : context.tr('Editar categoria'),
               style: AppTheme.display(context, size: 22),
             ),
             const SizedBox(height: 16),
@@ -141,7 +146,7 @@ class _CategoryEditorState extends State<_CategoryEditor> {
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
               onSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(hintText: 'Ex.: Ginásio, Faculdade…'),
+              decoration: InputDecoration(hintText: context.tr('Ex.: Ginásio, Faculdade…')),
             ),
             const SizedBox(height: 16),
             Row(
@@ -168,7 +173,7 @@ class _CategoryEditorState extends State<_CategoryEditor> {
               ],
             ),
             const SizedBox(height: 20),
-            FilledButton(onPressed: _name.text.trim().isEmpty ? null : _submit, child: const Text('Guardar')),
+            FilledButton(onPressed: _name.text.trim().isEmpty ? null : _submit, child: Text(context.tr('Guardar'))),
           ],
         ),
       ),

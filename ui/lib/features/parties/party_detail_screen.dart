@@ -13,7 +13,9 @@ import '../../core/utils/text.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/confetti.dart';
 import '../../data/models/party_models.dart';
+import '../groups/invite_links.dart';
 import 'party_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 class PartyDetailScreen extends ConsumerWidget {
   const PartyDetailScreen({super.key, required this.partyId});
@@ -24,30 +26,34 @@ class PartyDetailScreen extends ConsumerWidget {
 
   Future<void> _share(Party p) => SharePlus.instance.share(
     ShareParams(
-      text:
-          'Estamos a preparar uma surpresa para ${p.celebrantName}! Entra na festa na Birthdayly com o código ${p.inviteCode}. Não digas nada!',
+      text: tr(
+        'Estamos a preparar uma surpresa para {name}. Não digas nada!\n'
+        'Entra na festa pela Birthdayly: {link}',
+        {'name': p.celebrantName, 'link': InviteLinks.partyShareLink(p.inviteCode)},
+      ),
+      subject: tr('Convite para {title}', {'title': p.title}),
     ),
   );
 
   Future<void> _addGuest(BuildContext context, WidgetRef ref, Party p) async {
     final name = await _askText(
       context,
-      title: 'Convidado sem conta',
-      hint: 'Nome (ex.: Tia Rosa)',
-      action: 'Acrescentar',
+      title: context.tr('Convidado sem conta'),
+      hint: context.tr('Nome (ex.: Tia Rosa)'),
+      action: context.tr('Acrescentar'),
     );
     if (name == null || !context.mounted) return;
     await runGuarded(context, () => _ctrl(ref).run((repo) => repo.addGuest(p.id, name)));
   }
 
   Future<void> _task(BuildContext context, WidgetRef ref, Party p, {PartyTask? task}) async {
-    final result = await showModalBottomSheet<PartyTask>(
+    final edited = await showModalBottomSheet<PartyTask>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _TaskSheet(party: p, task: task),
     );
-    if (result == null || !context.mounted) return;
-    await runGuarded(context, () => _ctrl(ref).run((repo) => repo.saveTask(p.id, result)));
+    if (edited == null || !context.mounted) return;
+    await runGuarded(context, () => _ctrl(ref).run((repo) => repo.saveTask(p.id, edited)));
   }
 
   Future<void> _menu(BuildContext context, WidgetRef ref, Party p, String action) async {
@@ -58,8 +64,8 @@ class PartyDetailScreen extends ConsumerWidget {
       case 'delete':
         final sure = await confirmDialog(
           context,
-          title: 'Apagar a festa?',
-          message: 'Os convidados deixam de a ver. Não dá para desfazer.',
+          title: context.tr('Apagar a festa?'),
+          message: context.tr('Os convidados deixam de a ver. Não dá para desfazer.'),
         );
         if (!sure) return;
         if (!context.mounted) return;
@@ -77,9 +83,9 @@ class PartyDetailScreen extends ConsumerWidget {
         if (me == null) return;
         if (!await confirmDialog(
           context,
-          title: 'Sair da festa?',
-          message: 'Deixas de a ver. Podes voltar com o código.',
-          confirm: 'Sair',
+          title: context.tr('Sair da festa?'),
+          message: context.tr('Deixas de a ver. Podes voltar com o código.'),
+          confirm: context.tr('Sair'),
         )) {
           return;
         }
@@ -106,10 +112,10 @@ class PartyDetailScreen extends ConsumerWidget {
         appBar: AppBar(),
         body: async.isLoading
             ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-            : const EmptyState(
+            : EmptyState(
                 icon: LucideIcons.partyPopper,
-                title: 'Festa não encontrada',
-                message: 'Pode ter sido apagada por quem a organiza.',
+                title: context.tr('Festa não encontrada'),
+                message: context.tr('Pode ter sido apagada por quem a organiza.'),
               ),
       );
     }
@@ -119,14 +125,18 @@ class PartyDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          IconButton(tooltip: 'Convidar', icon: const Icon(LucideIcons.share2, size: 20), onPressed: () => _share(p)),
+          IconButton(
+            tooltip: context.tr('Convidar'),
+            icon: const Icon(LucideIcons.share2, size: 20),
+            onPressed: () => _share(p),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(LucideIcons.ellipsisVertical, size: 20),
             onSelected: (v) => _menu(context, ref, p, v),
             itemBuilder: (_) => [
-              if (host) const PopupMenuItem(value: 'edit', child: Text('Editar')),
-              if (host) const PopupMenuItem(value: 'delete', child: Text('Apagar festa')),
-              if (!host) const PopupMenuItem(value: 'leave', child: Text('Sair da festa')),
+              if (host) PopupMenuItem(value: 'edit', child: Text(context.tr('Editar'))),
+              if (host) PopupMenuItem(value: 'delete', child: Text(context.tr('Apagar festa'))),
+              if (!host) PopupMenuItem(value: 'leave', child: Text(context.tr('Sair da festa'))),
             ],
           ),
         ],
@@ -143,11 +153,11 @@ class PartyDetailScreen extends ConsumerWidget {
               decoration: BoxDecoration(color: context.palette.violetSoft, borderRadius: BorderRadius.circular(14)),
               child: Row(
                 children: [
-                  Icon(LucideIcons.lock, size: 16, color: context.colors.secondary),
+                  Icon(LucideIcons.eyeOff, size: 16, color: context.colors.secondary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Secreto: só quem foi convidado vê esta festa.',
+                      context.tr('Secreto: só quem foi convidado vê esta festa.'),
                       style: context.text.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -155,7 +165,7 @@ class PartyDetailScreen extends ConsumerWidget {
               ),
             ),
             if (me != null) ...[
-              SectionTitle('Vais?', padding: const EdgeInsets.fromLTRB(4, 24, 0, 10)),
+              SectionTitle(context.tr('Vais?'), padding: const EdgeInsets.fromLTRB(4, 24, 0, 10)),
               Row(
                 children: [
                   for (final r in [Rsvp.yes, Rsvp.maybe, Rsvp.no]) ...[
@@ -175,8 +185,8 @@ class PartyDetailScreen extends ConsumerWidget {
               ),
             ],
             SectionTitle(
-              'Convidados · ${p.guests.length}',
-              action: host ? 'Acrescentar' : null,
+              context.tr('Convidados · {count}', {'count': p.guests.length}),
+              action: host ? context.tr('Acrescentar') : null,
               onAction: () => _addGuest(context, ref, p),
               padding: const EdgeInsets.fromLTRB(4, 24, 0, 6),
             ),
@@ -203,15 +213,17 @@ class PartyDetailScreen extends ConsumerWidget {
                   const Divider(),
                   ListTile(
                     onTap: () => _share(p),
-                    leading: const IconBadge(icon: LucideIcons.ticket, size: 38),
-                    title: const Text('Convidar com o código'),
-                    subtitle: Text(p.inviteCode, style: const TextStyle(letterSpacing: 2, fontWeight: FontWeight.w700)),
+                    leading: const IconBadge(icon: LucideIcons.link, size: 38),
+                    title: Text(context.tr('Enviar link de convite')),
+                    subtitle: Text(
+                      context.tr('Quem não tem a app vai para a loja. Código {code}', {'code': p.inviteCode}),
+                    ),
                     trailing: IconButton(
-                      tooltip: 'Copiar código',
+                      tooltip: context.tr('Copiar link'),
                       icon: const Icon(LucideIcons.copy, size: 18),
                       onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: p.inviteCode));
-                        if (context.mounted) showMessage(context, 'Código copiado.');
+                        await Clipboard.setData(ClipboardData(text: InviteLinks.partyShareLink(p.inviteCode)));
+                        if (context.mounted) showMessage(context, context.tr('Link copiado.'));
                       },
                     ),
                   ),
@@ -219,13 +231,15 @@ class PartyDetailScreen extends ConsumerWidget {
               ),
             ),
             SectionTitle(
-              p.tasks.isEmpty ? 'Tarefas' : 'Tarefas · ${p.doneTasks} de ${p.tasks.length}',
-              action: 'Nova',
+              p.tasks.isEmpty
+                  ? context.tr('Tarefas')
+                  : context.tr('Tarefas · {done} de {total}', {'done': p.doneTasks, 'total': p.tasks.length}),
+              action: context.tr('Nova'),
               onAction: () => _task(context, ref, p),
               padding: const EdgeInsets.fromLTRB(4, 24, 0, 6),
             ),
             if (p.tasks.isNotEmpty) ...[
-              SoftProgress(value: p.doneTasks / p.tasks.length, semanticsLabel: 'Tarefas feitas'),
+              SoftProgress(value: p.doneTasks / p.tasks.length, semanticsLabel: context.tr('Tarefas feitas')),
               const SizedBox(height: 10),
               AppCard(
                 padding: EdgeInsets.zero,
@@ -249,11 +263,11 @@ class PartyDetailScreen extends ConsumerWidget {
             ] else
               DashedButton(
                 icon: LucideIcons.listTodo,
-                label: 'Bolo, balões, quem leva o aniversariante…',
+                label: context.tr('Bolo, balões, quem leva o aniversariante…'),
                 onTap: () => _task(context, ref, p),
               ),
             if (p.notes.isNotEmpty) ...[
-              SectionTitle('Notas', padding: const EdgeInsets.fromLTRB(4, 24, 0, 10)),
+              SectionTitle(context.tr('Notas'), padding: const EdgeInsets.fromLTRB(4, 24, 0, 10)),
               AppCard(child: Text(p.notes, style: context.text.bodyMedium)),
             ],
           ],
@@ -263,7 +277,7 @@ class PartyDetailScreen extends ConsumerWidget {
   }
 }
 
-/// Capa violeta com o título, a data e a contagem de respostas.
+/// Capa lilás com o título, a data e a contagem de respostas.
 class _Cover extends StatelessWidget {
   const _Cover({required this.party});
 
@@ -272,56 +286,53 @@ class _Cover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = party;
-    const white = Colors.white;
+    final ink = context.colors.onSurface;
+    final accent = context.colors.secondary;
     final days = p.startsAt == null
         ? null
         : DateUtils.dateOnly(p.startsAt!).difference(DateUtils.dateOnly(DateTime.now())).inDays;
     Widget stat(String value, String label) => Expanded(
       child: Column(
         children: [
-          Text(value, style: AppTheme.display(context, size: 20, color: white)),
-          Text(label, style: context.text.labelSmall?.copyWith(color: white)),
+          Text(value, style: AppTheme.display(context, size: 20, color: accent)),
+          Text(label, style: context.text.labelSmall?.copyWith(color: ink)),
         ],
       ),
     );
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF6650CC), Color(0xFF8B4FC4)],
-        ),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), color: context.palette.violetSoft),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: accent.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
             child: Text(
               days == null || days < 0
-                  ? 'FESTA SURPRESA'
+                  ? context.tr('Festa surpresa')
                   : days == 0
-                  ? 'É HOJE'
+                  ? context.tr('É hoje')
                   : days == 1
-                  ? 'É AMANHÃ'
-                  : 'FALTAM $days DIAS',
-              style: AppTheme.eyebrow(context, color: white).copyWith(fontSize: 10),
+                  ? context.tr('É amanhã')
+                  : context.tr('Faltam {days} dias', {'days': days}),
+              style: context.text.labelMedium?.copyWith(color: accent, fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 14),
-          Text(p.title, style: AppTheme.display(context, size: 25, color: white)),
+          Text(p.title, style: AppTheme.display(context, size: 25, color: ink)),
           const SizedBox(height: 4),
-          Text('Para ${p.celebrantName}', style: context.text.bodyMedium?.copyWith(color: white)),
+          Text(
+            context.tr('Para {name}', {'name': p.celebrantName}),
+            style: context.text.bodyMedium?.copyWith(color: ink),
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
-              const Icon(LucideIcons.calendarClock, size: 16, color: white),
+              Icon(LucideIcons.calendarClock, size: 16, color: accent),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(partyWhen(p), style: context.text.bodySmall?.copyWith(color: white)),
+                child: Text(partyWhen(p), style: context.text.bodySmall?.copyWith(color: ink)),
               ),
             ],
           ),
@@ -329,10 +340,10 @@ class _Cover extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(LucideIcons.mapPin, size: 16, color: white),
+                Icon(LucideIcons.mapPin, size: 16, color: accent),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(p.place, style: context.text.bodySmall?.copyWith(color: white)),
+                  child: Text(p.place, style: context.text.bodySmall?.copyWith(color: ink)),
                 ),
               ],
             ),
@@ -340,15 +351,12 @@ class _Cover extends StatelessWidget {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(16),
-            ),
+            decoration: BoxDecoration(color: context.palette.card, borderRadius: BorderRadius.circular(16)),
             child: Row(
               children: [
-                stat('${p.count(Rsvp.yes)}', 'vão'),
-                stat('${p.count(Rsvp.maybe)}', 'talvez'),
-                stat('${p.count(Rsvp.pending)}', 'por responder'),
+                stat('${p.count(Rsvp.yes)}', context.tr('vão')),
+                stat('${p.count(Rsvp.maybe)}', context.tr('talvez')),
+                stat('${p.count(Rsvp.pending)}', context.tr('por responder')),
               ],
             ),
           ),
@@ -369,9 +377,9 @@ class _RsvpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = rsvpColors(context, rsvp);
     final label = switch (rsvp) {
-      Rsvp.yes => 'Vou',
-      Rsvp.maybe => 'Talvez',
-      Rsvp.no => 'Não vou',
+      Rsvp.yes => context.tr('Vou'),
+      Rsvp.maybe => context.tr('Talvez'),
+      Rsvp.no => context.tr('Não vou'),
       Rsvp.pending => '',
     };
     return Semantics(
@@ -426,8 +434,8 @@ class _GuestRow extends StatelessWidget {
       title: Text(guest.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         [
-          if (isHost) 'Organiza',
-          if (guest.userId == null) 'Sem conta' else if (guest.username != null) '@${guest.username}',
+          if (isHost) context.tr('Organiza'),
+          if (guest.userId == null) context.tr('Sem conta') else if (guest.username != null) '@${guest.username}',
         ].join(' · '),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -438,7 +446,7 @@ class _GuestRow extends StatelessWidget {
           Pill(label: guest.rsvp.label, background: bg, foreground: fg, dense: true),
           if (onRemove != null)
             IconButton(
-              tooltip: 'Tirar da festa',
+              tooltip: context.tr('Tirar da festa'),
               icon: Icon(LucideIcons.x, size: 18, color: context.palette.mutedForeground),
               onPressed: onRemove,
             ),
@@ -470,7 +478,7 @@ class _TaskRow extends StatelessWidget {
             : null,
       ),
       subtitle: Text(
-        assignee == null ? 'Sem responsável' : assignee!.name,
+        assignee == null ? context.tr('Sem responsável') : assignee!.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -516,24 +524,27 @@ class _TaskSheetState extends State<_TaskSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.task == null ? 'Nova tarefa' : 'Editar tarefa', style: AppTheme.display(context, size: 22)),
+              Text(
+                widget.task == null ? context.tr('Nova tarefa') : context.tr('Editar tarefa'),
+                style: AppTheme.display(context, size: 22),
+              ),
               const SizedBox(height: 14),
               TextField(
                 controller: _title,
                 autofocus: widget.task == null,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(hintText: 'Ex.: Encomendar o bolo'),
+                decoration: InputDecoration(hintText: context.tr('Ex.: Encomendar o bolo')),
                 onSubmitted: (_) => _save(),
               ),
               const SizedBox(height: 14),
-              Text('Quem trata?', style: context.text.titleSmall),
+              Text(context.tr('Quem trata?'), style: context.text.titleSmall),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   ChoiceChip(
-                    label: const Text('Ninguém ainda'),
+                    label: Text(context.tr('Ninguém ainda')),
                     selected: _assignee == null,
                     onSelected: (_) => setState(() => _assignee = null),
                   ),
@@ -546,7 +557,7 @@ class _TaskSheetState extends State<_TaskSheet> {
                 ],
               ),
               const SizedBox(height: 20),
-              FilledButton(onPressed: _save, child: const Text('Guardar')),
+              FilledButton(onPressed: _save, child: Text(context.tr('Guardar'))),
             ],
           ),
         ),
@@ -570,7 +581,7 @@ Future<String?> _askText(BuildContext context, {required String title, required 
             onSubmitted: (v) => Navigator.pop(ctx, v.trim().isEmpty ? null : v.trim()),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Cancelar'))),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, c.text.trim().isEmpty ? null : c.text.trim()),
               style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),

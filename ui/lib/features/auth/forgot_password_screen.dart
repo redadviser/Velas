@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
 import 'auth_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -42,10 +43,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     if (_sent) {
       return AuthScaffold(
-        title: 'Verifica o teu email',
-        subtitle:
-            'Se existir uma conta associada a ${_email.text.trim()}, vais receber um link para '
-            'definir uma nova palavra-passe. Abre-o neste telemóvel.',
+        title: context.tr('Verifica o teu email'),
+        subtitle: context.tr(
+          'Se existir uma conta associada a {email}, vais receber um link para '
+          'definir uma nova palavra-passe. Abre-o neste telemóvel.',
+          {'email': _email.text.trim()},
+        ),
         children: [
           AppCard(
             color: context.palette.accent,
@@ -55,7 +58,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Não encontras o email? Vê a pasta de spam ou tenta novamente dentro de alguns minutos.',
+                    context.tr(
+                      'Não encontras o email? Vê a pasta de spam ou tenta novamente dentro de alguns minutos.',
+                    ),
                     style: TextStyle(color: context.palette.accentForeground),
                   ),
                 ),
@@ -63,21 +68,21 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          OutlinedButton(onPressed: () => context.pop(), child: const Text('Voltar ao início de sessão')),
+          OutlinedButton(onPressed: () => context.pop(), child: Text(context.tr('Voltar ao início de sessão'))),
         ],
       );
     }
 
     return AuthScaffold(
-      title: 'Recuperar palavra-passe',
-      subtitle: 'Indica o email da tua conta e enviamos-te um link para criares uma nova.',
+      title: context.tr('Recuperar palavra-passe'),
+      subtitle: context.tr('Indica o email da tua conta e enviamos-te um link para criares uma nova.'),
       children: [
         Form(
           key: _form,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const FieldLabel('Email'),
+              FieldLabel(context.tr('Email')),
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
@@ -90,7 +95,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              LoadingButton(label: 'Enviar link', loading: _loading, onPressed: _submit, icon: LucideIcons.send),
+              LoadingButton(
+                label: context.tr('Enviar link'),
+                loading: _loading,
+                onPressed: _submit,
+                icon: LucideIcons.send,
+              ),
             ],
           ),
         ),

@@ -13,6 +13,7 @@ import '../../data/models/group_models.dart';
 import '../../data/models/party_models.dart';
 import '../../services/reminder_copy.dart';
 import '../people/birthday_request.dart';
+import '../../core/i18n/translations.dart';
 
 /// Uma coisa por tratar: o texto e para onde leva.
 typedef _Action = ({IconData icon, int tone, String title, String subtitle, String route});
@@ -26,8 +27,8 @@ List<_Action> _actions(WidgetRef ref) {
     out.add((
       icon: LucideIcons.cake,
       tone: 0,
-      title: 'Hoje é o aniversário de ${p.firstName}',
-      subtitle: data.messageFor(p.id) == null ? 'Escreve-lhe os parabéns' : 'A tua mensagem está pronta',
+      title: tr('Hoje é o aniversário de {name}', {'name': p.firstName}),
+      subtitle: data.messageFor(p.id) == null ? tr('Escreve-lhe os parabéns') : tr('A tua mensagem está pronta'),
       route: '/person/${p.id}/message',
     ));
   }
@@ -35,8 +36,8 @@ List<_Action> _actions(WidgetRef ref) {
     out.add((
       icon: LucideIcons.heart,
       tone: 1,
-      title: 'Hoje: ${d.title}',
-      subtitle: 'Um dia para assinalar',
+      title: tr('Hoje: {title}', {'title': d.title}),
+      subtitle: tr('Um dia para assinalar'),
       route: '/special',
     ));
   }
@@ -48,7 +49,7 @@ List<_Action> _actions(WidgetRef ref) {
       out.add((
         icon: LucideIcons.badgeCheck,
         tone: 2,
-        title: n == 1 ? '1 pagamento para confirmares' : '$n pagamentos para confirmares',
+        title: n == 1 ? tr('1 pagamento para confirmares') : tr('{count} pagamentos para confirmares', {'count': n}),
         subtitle: g.title,
         route: '/groups/${g.id}',
       ));
@@ -56,7 +57,7 @@ List<_Action> _actions(WidgetRef ref) {
       out.add((
         icon: LucideIcons.wallet,
         tone: 3,
-        title: 'Falta pagares ${Fmt.money(g.shareOf(m))}',
+        title: tr('Falta pagares {amount}', {'amount': Fmt.money(g.shareOf(m))}),
         subtitle: g.title,
         route: '/groups/${g.id}',
       ));
@@ -66,14 +67,20 @@ List<_Action> _actions(WidgetRef ref) {
     out.add((
       icon: LucideIcons.mailOpen,
       tone: 1,
-      title: '${i.inviterName} convidou-te',
+      title: tr('{name} convidou-te', {'name': i.inviterName}),
       subtitle: i.title,
       route: '/gifts?tab=chats',
     ));
   }
   for (final p in ref.watch(partiesProvider).value ?? const <Party>[]) {
     if (!p.isPast && !p.isHost(me) && p.guestFor(me)?.rsvp == Rsvp.pending) {
-      out.add((icon: LucideIcons.partyPopper, tone: 1, title: 'Vais à festa de ${p.celebrantName}?', subtitle: p.title, route: '/parties/${p.id}'));
+      out.add((
+        icon: LucideIcons.partyPopper,
+        tone: 1,
+        title: tr('Vais à festa de {name}?', {'name': p.celebrantName}),
+        subtitle: p.title,
+        route: '/parties/${p.id}',
+      ));
     }
   }
   final requests = ref.watch(incomingFriendRequestsProvider);
@@ -81,8 +88,8 @@ List<_Action> _actions(WidgetRef ref) {
     out.add((
       icon: LucideIcons.userPlus,
       tone: 4,
-      title: requests == 1 ? '1 pedido de amizade' : '$requests pedidos de amizade',
-      subtitle: 'Aceita para trocarem mensagens e prendas',
+      title: requests == 1 ? tr('1 pedido de amizade') : tr('{count} pedidos de amizade', {'count': requests}),
+      subtitle: tr('Aceita para trocarem mensagens e prendas'),
       route: '/friends',
     ));
   }
@@ -91,8 +98,10 @@ List<_Action> _actions(WidgetRef ref) {
     out.add((
       icon: LucideIcons.inbox,
       tone: 2,
-      title: answers == 1 ? '1 data recebida pelo link' : '$answers datas recebidas pelo link',
-      subtitle: 'Confirma antes de as juntar',
+      title: answers == 1
+          ? tr('1 data recebida pelo link')
+          : tr('{count} datas recebidas pelo link', {'count': answers}),
+      subtitle: tr('Confirma antes de as juntar'),
       route: '/people/requests',
     ));
   }
@@ -116,11 +125,11 @@ class NotificationsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notificações')),
+      appBar: AppBar(title: Text(context.tr('Notificações'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
-          Text('PARA TRATAR', style: AppTheme.eyebrow(context)),
+          Text(context.tr('PARA TRATAR'), style: AppTheme.eyebrow(context)),
           const SizedBox(height: 10),
           if (actions.isEmpty)
             AppCard(
@@ -135,7 +144,7 @@ class NotificationsScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Está tudo em dia. Avisamos-te quando houver novidades.',
+                      context.tr('Está tudo em dia. Avisamos-te quando houver novidades.'),
                       style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
                     ),
                   ),
@@ -170,19 +179,19 @@ class NotificationsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: Text('PRÓXIMOS AVISOS', style: AppTheme.eyebrow(context))),
-              TextButton(onPressed: () => context.go('/profile'), child: const Text('Quando avisar')),
+              Expanded(child: Text(context.tr('PRÓXIMOS AVISOS'), style: AppTheme.eyebrow(context))),
+              TextButton(onPressed: () => context.go('/profile'), child: Text(context.tr('Quando avisar'))),
             ],
           ),
           const SizedBox(height: 4),
           if (user != null && !user.notificationsEnabled)
             Text(
-              'Tens as notificações desligadas. Liga-as no perfil para não falhares nenhum dia.',
+              context.tr('Tens as notificações desligadas. Liga-as no perfil para não falhares nenhum dia.'),
               style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
             )
           else if (planned.isEmpty)
             Text(
-              'Ainda não há avisos marcados. Adiciona aniversários ou datas especiais.',
+              context.tr('Ainda não há avisos marcados. Adiciona aniversários ou datas especiais.'),
               style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
             )
           else
@@ -209,9 +218,9 @@ class _Preview extends StatelessWidget {
     final days = BirthdayUtils.daysUntil(w.day, w.month);
     final time = '${w.hour.toString().padLeft(2, '0')}:${w.minute.toString().padLeft(2, '0')}';
     final when = switch (days) {
-      0 => 'hoje às $time',
-      1 => 'amanhã às $time',
-      _ => '${Fmt.dayMonth(w)} às $time',
+      0 => context.tr('hoje às {time}', {'time': time}),
+      1 => context.tr('amanhã às {time}', {'time': time}),
+      _ => context.tr('{date} às {time}', {'date': Fmt.dayMonth(w), 'time': time}),
     };
     return AppCard(
       raised: false,

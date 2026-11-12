@@ -13,6 +13,7 @@ import '../../core/utils/identity.dart';
 import '../profile/legal.dart';
 import 'auth_widgets.dart';
 import 'identity_fields.dart';
+import '../../core/i18n/translations.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -81,12 +82,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           icon: Icon(LucideIcons.mailCheck, color: ctx.colors.primary, size: 32),
-          title: Text('Confirma o teu email', style: AppTheme.display(ctx, size: 22)),
+          title: Text(ctx.tr('Confirma o teu email'), style: AppTheme.display(ctx, size: 22)),
           content: Text(
-            'Enviámos um link para ${_email.text.trim()}. Abre-o para ativar a conta e depois inicia sessão.',
+            ctx.tr('Enviámos um link para {email}. Abre-o para ativar a conta e depois inicia sessão.', {
+              'email': _email.text.trim(),
+            }),
             textAlign: TextAlign.center,
           ),
-          actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Entendido'))],
+          actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('Entendido')))],
         ),
       );
       if (mounted) context.pushReplacement('/login');
@@ -97,15 +100,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final muted = context.palette.mutedForeground;
     return AuthScaffold(
-      title: 'Cria a tua conta',
-      subtitle: 'Leva menos de um minuto. Depois é só adicionar as pessoas de quem gostas.',
+      title: context.tr('Cria a tua conta'),
+      subtitle: context.tr('Leva menos de um minuto. Depois é só adicionar as pessoas de quem gostas.'),
       // Wrap: com letra grande o botão passa para a linha de baixo.
       footer: Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('Já tens conta?', style: TextStyle(color: muted)),
-          TextButton(onPressed: () => context.pushReplacement('/login'), child: const Text('Iniciar sessão')),
+          Text(context.tr('Já tens conta?'), style: TextStyle(color: muted)),
+          TextButton(onPressed: () => context.pushReplacement('/login'), child: Text(context.tr('Iniciar sessão'))),
         ],
       ),
       children: [
@@ -115,23 +118,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const FieldLabel('Como te chamas?'),
+                FieldLabel(context.tr('Como te chamas?')),
                 TextFormField(
                   controller: _name,
                   textCapitalization: TextCapitalization.words,
                   autofillHints: const [AutofillHints.name],
                   textInputAction: TextInputAction.next,
-                  validator: (v) => Validators.required(v, 'Indica o teu nome.'),
-                  decoration: const InputDecoration(
-                    hintText: 'O teu nome',
-                    prefixIcon: Icon(LucideIcons.user, size: 18),
+                  validator: (v) => Validators.required(v, context.tr('Indica o teu nome.')),
+                  decoration: InputDecoration(
+                    hintText: context.tr('O teu nome'),
+                    prefixIcon: const Icon(LucideIcons.user, size: 18),
                   ),
                 ),
                 const SizedBox(height: 18),
-                const FieldLabel('Username'),
+                FieldLabel(context.tr('Username')),
                 UsernameField(key: _usernameKey, controller: _username, textInputAction: TextInputAction.next),
                 const SizedBox(height: 18),
-                const FieldLabel('Email'),
+                FieldLabel(context.tr('Email')),
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
@@ -145,22 +148,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 18),
                 FieldLabel(
-                  'Telemóvel',
-                  trailing: Text('Opcional', style: context.text.labelSmall?.copyWith(color: muted)),
+                  context.tr('Telemóvel'),
+                  trailing: Text(context.tr('Opcional'), style: context.text.labelSmall?.copyWith(color: muted)),
                 ),
                 PhoneField(controller: _phone, taken: _phoneTaken, textInputAction: TextInputAction.next),
                 Padding(
                   padding: const EdgeInsets.only(top: 6, left: 4),
                   child: Text(
-                    'Permite que os teus amigos te encontrem e convidem pelo número.',
+                    context.tr('Permite que os teus amigos te encontrem e convidem pelo número.'),
                     style: context.text.bodySmall?.copyWith(color: muted),
                   ),
                 ),
                 const SizedBox(height: 18),
-                const FieldLabel('Palavra-passe'),
+                FieldLabel(context.tr('Palavra-passe')),
                 PasswordField(
                   controller: _password,
-                  hint: 'Mínimo 8 caracteres',
+                  hint: context.tr('Mínimo 8 caracteres'),
                   autofillHints: const [AutofillHints.newPassword],
                   validator: Validators.password,
                 ),
@@ -189,15 +192,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             TextSpan(
                               style: context.text.bodySmall?.copyWith(color: muted, fontSize: 13),
                               children: [
-                                const TextSpan(text: 'Tenho $kMinimumAge anos ou mais e aceito os '),
                                 TextSpan(
-                                  text: 'Termos de Utilização',
+                                  text: context.tr('Tenho {age} anos ou mais e aceito os ', {'age': kMinimumAge}),
+                                ),
+                                TextSpan(
+                                  text: context.tr('Termos de Utilização'),
                                   style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.w600),
                                   recognizer: _termsTap,
                                 ),
-                                const TextSpan(text: ' e a '),
+                                TextSpan(text: context.tr(' e a ')),
                                 TextSpan(
-                                  text: 'Política de Privacidade',
+                                  text: context.tr('Política de Privacidade'),
                                   style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.w600),
                                   recognizer: _privacyTap,
                                 ),
@@ -214,12 +219,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   Padding(
                     padding: const EdgeInsets.only(left: 12, top: 2),
                     child: Text(
-                      'Precisas de aceitar para continuar.',
+                      context.tr('Precisas de aceitar para continuar.'),
                       style: context.text.bodySmall?.copyWith(color: context.colors.error),
                     ),
                   ),
                 const SizedBox(height: 24),
-                LoadingButton(label: 'Criar conta', loading: _loading, onPressed: _submit),
+                LoadingButton(label: context.tr('Criar conta'), loading: _loading, onPressed: _submit),
                 const GoogleAuthButton(),
               ],
             ),

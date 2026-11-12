@@ -8,19 +8,29 @@ typedef CalendarItem = ({String id, String title, DateTime start, String calenda
 /// Calendários que só têm aniversários: o "Aniversários" do Google e do iPhone
 /// (gerado a partir dos contactos), noutras línguas também.
 final _birthdayCalendar = RegExp(
-  r'^(birthdays?|anivers[aá]rios?|cumplea[nñ]os|anniversaires?|geburtstage?|contact birthdays.*|contacts?|contactos)$',
+  r'^(birthdays?|anivers[aá]rios?|cumplea[nñ]os|anniversaires?|geburtstage?|compleanni|verjaardagen|urodziny'
+  r'|zile de na[șş]tere|дні народження|дни рождения|doğum günleri|أعياد الميلاد|生日|誕生日'
+  r'|contact birthdays.*|contacts?|contactos)$',
   caseSensitive: false,
 );
 
 bool isBirthdayCalendar(String name) => _birthdayCalendar.hasMatch(name.trim());
 
 /// Palavras de "aniversário" no início ou no fim do título.
-const _word = r'(?:anivers[aá]rio|aniv\.|parab[eé]ns|cumplea[nñ]os|anniversaire|birthday|bday|b-day|geburtstag)';
+const _word =
+    r'(?:anivers[aá]rio|aniv\.|parab[eé]ns|cumplea[nñ]os|anniversaire|birthday|bday|b-day|geburtstag|compleanno'
+    r'|verjaardag|urodziny|ziua|zi de na[șş]tere|день народження|день рождения|doğum günü|عيد ميلاد)';
 
 /// Entre a palavra e o nome: espaço, dois pontos ou travessão.
 const _sep = r'(?:\s*[:\-–]\s*|\s+)';
 
-final _prefix = RegExp('^$_word$_sep(?:d[aoe]s?\\s+|de la\\s+|del\\s+|von\\s+)?(.+)\$', caseSensitive: false);
+final _prefix = RegExp(
+  '^$_word$_sep(?:d[aoe]s?\\s+|de la\\s+|del\\s+|von\\s+|van\\s+|di\\s+|lui\\s+)?(.+)\$',
+  caseSensitive: false,
+);
+
+/// Chinês e japonês: "安娜的生日", "花子の誕生日", "安娜生日".
+final _cjk = RegExp(r'^(.+?)\s*[的の]?\s*(?:生日|誕生日)$');
 final _possessive = RegExp(r"^(.+?)(?:'s|’s|s'|’)\s+birthday$", caseSensitive: false);
 final _suffix = RegExp('^(.+?)$_sep(?:$_word|faz anos)\$', caseSensitive: false);
 
@@ -31,8 +41,9 @@ final _decorations = RegExp(r'[🎂🎉🎈🥳🎁🍰]|\(\d{1,3}\)|\s[-–]\s*
 /// "🎂 Ana - aniversário"), ou `null` se o título não for de um aniversário.
 String? birthdayNameFromTitle(String title) {
   final t = title.replaceAll(_decorations, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
-  for (final re in [_possessive, _prefix, _suffix]) {
-    final name = re.firstMatch(t)?.group(1)?.trim();
+  for (final re in [_possessive, _prefix, _suffix, _cjk]) {
+    // Sem o genitivo turco: "Ayşe'nin doğum günü" → "Ayşe".
+    final name = re.firstMatch(t)?.group(1)?.trim().replaceFirst(RegExp(r"['’]n?[ıiuü]n$"), '');
     if (name != null && name.isNotEmpty && !RegExp('^$_word\$', caseSensitive: false).hasMatch(name)) {
       return name;
     }

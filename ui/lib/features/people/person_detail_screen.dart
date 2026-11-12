@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -29,16 +30,17 @@ class PersonDetailScreen extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, Person p) async {
     final ok = await confirmDialog(
       context,
-      title: 'Eliminar ${p.firstName}?',
-      message:
-          'Vais perder o aniversário, as ideias de presente e as mensagens guardadas. Esta ação não pode ser desfeita.',
+      title: context.tr('Eliminar {name}?', {'name': p.firstName}),
+      message: context.tr(
+        'Vais perder o aniversário, as ideias de presente e as mensagens guardadas. Esta ação não pode ser desfeita.',
+      ),
     );
     if (!ok || !context.mounted) return;
     final router = GoRouter.of(context);
     final done = await runGuarded(
       context,
       () => ref.read(dataRepositoryProvider)!.deletePerson(p.id),
-      success: '${p.firstName} foi eliminado(a).',
+      success: context.tr('{name} foi eliminado(a).', {'name': p.firstName}),
     );
     if (done) router.pop();
   }
@@ -52,10 +54,10 @@ class PersonDetailScreen extends ConsumerWidget {
     if (person == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(
+        body: EmptyState(
           icon: LucideIcons.userX,
-          title: 'Pessoa não encontrada',
-          message: 'Pode ter sido eliminada noutro dispositivo.',
+          title: context.tr('Pessoa não encontrada'),
+          message: context.tr('Pode ter sido eliminada noutro dispositivo.'),
         ),
       );
     }
@@ -76,7 +78,7 @@ class PersonDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         actions: [
           IconButton(
-            tooltip: 'Editar',
+            tooltip: context.tr('Editar'),
             icon: const Icon(LucideIcons.pencil, size: 20),
             onPressed: () => context.push('/person/${person.id}/edit'),
           ),
@@ -92,7 +94,7 @@ class PersonDetailScreen extends ConsumerWidget {
                   children: [
                     Icon(LucideIcons.trash2, size: 18, color: ctx.colors.error),
                     const SizedBox(width: 12),
-                    Text('Eliminar', style: TextStyle(color: ctx.colors.error)),
+                    Text(ctx.tr('Eliminar'), style: TextStyle(color: ctx.colors.error)),
                   ],
                 ),
               ),
@@ -117,7 +119,10 @@ class PersonDetailScreen extends ConsumerWidget {
           Text(person.name, textAlign: TextAlign.center, style: AppTheme.display(context, size: 26)),
           const SizedBox(height: 2),
           Text(
-            [Fmt.dayMonth(next), if (person.turningAge != null) 'faz ${person.turningAge} anos'].join(' · '),
+            [
+              Fmt.dayMonth(next),
+              if (person.turningAge != null) context.tr('faz {age} anos', {'age': person.turningAge}),
+            ].join(' · '),
             textAlign: TextAlign.center,
             style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
           ),
@@ -148,7 +153,7 @@ class PersonDetailScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Na Birthdayly',
+                          context.tr('Na Birthdayly'),
                           style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                         ),
                         Text(
@@ -169,25 +174,25 @@ class PersonDetailScreen extends ConsumerWidget {
               children: [
                 _Action(
                   icon: LucideIcons.messageSquareHeart,
-                  label: message == null ? 'Enviar parabéns' : 'Ver mensagem',
+                  label: message == null ? context.tr('Enviar parabéns') : context.tr('Ver mensagem'),
                   onTap: () => context.push('/person/${person.id}/message'),
                 ),
                 const SizedBox(width: 9),
                 _Action(
                   icon: LucideIcons.lightbulb,
-                  label: 'Ideia de prenda',
+                  label: context.tr('Ideia de prenda'),
                   onTap: () => showGiftEditor(context, ref, personId: person.id),
                 ),
                 const SizedBox(width: 9),
                 _Action(
                   icon: LucideIcons.usersRound,
-                  label: 'Prenda em grupo',
+                  label: context.tr('Prenda em grupo'),
                   onTap: () => context.push('/groups/new?personId=${person.id}'),
                 ),
                 const SizedBox(width: 9),
                 _Action(
                   icon: LucideIcons.partyPopper,
-                  label: 'Festa surpresa',
+                  label: context.tr('Festa surpresa'),
                   onTap: () => context.push('/parties/new?personId=${person.id}'),
                 ),
               ],
@@ -199,7 +204,10 @@ class PersonDetailScreen extends ConsumerWidget {
             child: IntrinsicHeight(
               child: Row(
                 children: [
-                  _Stat(value: person.turningAge?.toString() ?? '—', label: days == 0 ? 'anos hoje' : 'vai fazer'),
+                  _Stat(
+                    value: person.turningAge?.toString() ?? '—',
+                    label: days == 0 ? context.tr('anos hoje') : context.tr('vai fazer'),
+                  ),
                   const VerticalDivider(),
                   _Stat(
                     value: '${next.day} ${Fmt.monthShort(next.month).toLowerCase()}',
@@ -208,7 +216,7 @@ class PersonDetailScreen extends ConsumerWidget {
                   const VerticalDivider(),
                   _Stat(
                     value: days == 0 ? '🎉' : '$days',
-                    label: days == 0 ? 'é hoje!' : (days == 1 ? 'dia' : 'dias'),
+                    label: days == 0 ? context.tr('é hoje!') : (days == 1 ? context.tr('dia') : context.tr('dias')),
                     highlight: days <= 7,
                   ),
                 ],
@@ -219,7 +227,7 @@ class PersonDetailScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Text(
-                'Nasceu a ${Fmt.birthDate(person.day, person.month, person.year)}',
+                context.tr('Nasceu a {date}', {'date': Fmt.birthDate(person.day, person.month, person.year)}),
                 textAlign: TextAlign.center,
                 style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
               ),
@@ -236,9 +244,13 @@ class PersonDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Lembretes', style: context.text.titleSmall),
+                      Text(context.tr('Lembretes'), style: context.text.titleSmall),
                       Text(
-                        '${reminders.map(reminderLabel).join(', ')}${person.reminderDays == null ? ' · predefinição' : ''}',
+                        person.reminderDays == null
+                            ? context.tr('{reminders} · predefinição', {
+                                'reminders': reminders.map(reminderLabel).join(', '),
+                              })
+                            : reminders.map(reminderLabel).join(', '),
                         style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                       ),
                     ],
@@ -261,9 +273,9 @@ class PersonDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Histórico', style: context.text.titleSmall),
+                        Text(context.tr('Histórico'), style: context.text.titleSmall),
                         Text(
-                          'O que lhe escreveste e deste, ano a ano',
+                          context.tr('O que lhe escreveste e deste, ano a ano'),
                           style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                         ),
                       ],
@@ -274,7 +286,7 @@ class PersonDetailScreen extends ConsumerWidget {
               ),
             ),
           ],
-          SectionTitle('Mensagem', padding: const EdgeInsets.fromLTRB(4, 28, 0, 10)),
+          SectionTitle(context.tr('Mensagem'), padding: const EdgeInsets.fromLTRB(4, 28, 0, 10)),
           if (message == null)
             AppCard(
               onTap: () => context.push('/person/${person.id}/message'),
@@ -288,11 +300,11 @@ class PersonDetailScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Prepara já os parabéns',
+                          context.tr('Prepara já os parabéns'),
                           style: context.text.titleSmall?.copyWith(color: context.palette.accentForeground),
                         ),
                         Text(
-                          'Escreve a tua ou parte de uma sugestão.',
+                          context.tr('Escreve a tua ou parte de uma sugestão.'),
                           style: context.text.bodySmall?.copyWith(
                             color: context.palette.accentForeground.withValues(alpha: 0.8),
                           ),
@@ -308,8 +320,8 @@ class PersonDetailScreen extends ConsumerWidget {
             _MessageCard(message: message, personId: person.id),
           _TastesAndWishes(person: person, friendId: friend?.userId),
           SectionTitle(
-            'Prendas',
-            action: 'Ver ideias',
+            context.tr('Prendas'),
+            action: context.tr('Ver ideias'),
             onAction: () => context.push('/person/${person.id}/ideas'),
             padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
           ),
@@ -327,7 +339,7 @@ class PersonDetailScreen extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Sem ideias ainda. Guarda aqui o que te vier à cabeça ao longo do ano.',
+                      context.tr('Sem ideias ainda. Guarda aqui o que te vier à cabeça ao longo do ano.'),
                       style: TextStyle(color: context.palette.mutedForeground),
                     ),
                   )
@@ -342,7 +354,7 @@ class PersonDetailScreen extends ConsumerWidget {
                       child: TextButton.icon(
                         onPressed: () => showGiftEditor(context, ref, personId: person.id),
                         icon: const Icon(LucideIcons.plus, size: 18),
-                        label: const Text('Nova ideia'),
+                        label: Text(context.tr('Nova ideia')),
                         style: TextButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                       ),
                     ),
@@ -351,7 +363,7 @@ class PersonDetailScreen extends ConsumerWidget {
                       child: TextButton.icon(
                         onPressed: () => context.push('/groups/new?personId=${person.id}'),
                         icon: const Icon(LucideIcons.usersRound, size: 18),
-                        label: const Text('Em grupo'),
+                        label: Text(context.tr('Em grupo')),
                         style: TextButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                       ),
                     ),
@@ -362,8 +374,8 @@ class PersonDetailScreen extends ConsumerWidget {
           ),
           for (final g in groups) ...[const SizedBox(height: 12), GroupCard(group: g, userId: user?.id)],
           SectionTitle(
-            'Datas especiais',
-            action: 'Adicionar',
+            context.tr('Datas especiais'),
+            action: context.tr('Adicionar'),
             onAction: () => showSpecialDateEditor(context, ref, personId: person.id),
             padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
           ),
@@ -378,11 +390,11 @@ class PersonDetailScreen extends ConsumerWidget {
           if (!data.specialDates.any((d) => d.personId == person.id))
             DashedButton(
               icon: LucideIcons.heart,
-              label: 'Casamento, namoro ou outra data de ${person.firstName}',
+              label: context.tr('Casamento, namoro ou outra data de {name}', {'name': person.firstName}),
               onTap: () => showSpecialDateEditor(context, ref, personId: person.id),
             ),
           if (person.notes.isNotEmpty) ...[
-            SectionTitle('Notas', padding: const EdgeInsets.fromLTRB(4, 28, 0, 10)),
+            SectionTitle(context.tr('Notas'), padding: const EdgeInsets.fromLTRB(4, 28, 0, 10)),
             AppCard(child: Text(person.notes, style: context.text.bodyMedium)),
           ],
         ],
@@ -482,24 +494,24 @@ class _MessageCard extends StatelessWidget {
                 child: TextButton.icon(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: message.body));
-                    if (context.mounted) showMessage(context, 'Mensagem copiada.');
+                    if (context.mounted) showMessage(context, context.tr('Mensagem copiada.'));
                   },
                   icon: const Icon(LucideIcons.copy, size: 16),
-                  label: const Text('Copiar'),
+                  label: Text(context.tr('Copiar')),
                 ),
               ),
               Expanded(
                 child: TextButton.icon(
                   onPressed: () => SharePlus.instance.share(ShareParams(text: message.body)),
                   icon: const Icon(LucideIcons.send, size: 16),
-                  label: const Text('Enviar'),
+                  label: Text(context.tr('Enviar')),
                 ),
               ),
               Expanded(
                 child: TextButton.icon(
                   onPressed: () => context.push('/person/$personId/message'),
                   icon: const Icon(LucideIcons.pencil, size: 16),
-                  label: const Text('Editar'),
+                  label: Text(context.tr('Editar')),
                 ),
               ),
             ],
@@ -528,17 +540,23 @@ class _TastesAndWishes extends ConsumerWidget {
       children: [
         if (interests.isNotEmpty) ...[
           SectionTitle(
-            'Gostos e hobbies',
-            action: 'Editar',
+            context.tr('Gostos e hobbies'),
+            action: context.tr('Editar'),
             onAction: () => context.push('/person/${person.id}/edit'),
             padding: const EdgeInsets.fromLTRB(4, 28, 0, 8),
           ),
           InterestChips(keys: interests),
         ],
         if (theirs != null) ...[
-          SectionTitle('Lista de desejos de ${person.firstName}', padding: const EdgeInsets.fromLTRB(4, 28, 0, 6)),
+          SectionTitle(
+            context.tr('Lista de desejos de {name}', {'name': person.firstName}),
+            padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
+          ),
           if (theirs.items.isEmpty)
-            Text('${person.firstName} ainda não pôs nada na lista.', style: TextStyle(color: muted))
+            Text(
+              context.tr('{name} ainda não pôs nada na lista.', {'name': person.firstName}),
+              style: TextStyle(color: muted),
+            )
           else
             AppCard(
               padding: EdgeInsets.zero,

@@ -1,4 +1,5 @@
 import '../../core/config/env.dart';
+import '../../core/i18n/translations.dart';
 
 /// Links dos cartões de parabéns.
 ///
@@ -17,8 +18,10 @@ class CardLinks {
   }
 
   /// Texto para o WhatsApp: não revela a mensagem, para a pessoa abrir o cartão.
-  static String shareMessage(String recipientName, String token) =>
-      'Parabéns, $recipientName! 🎂 Deixei-te uma mensagem especial: ${shareLink(token)}';
+  static String shareMessage(String recipientName, String token) => tr(
+    'Parabéns, {name}! 🎂 Deixei-te uma mensagem especial: {link}',
+    {'name': recipientName, 'link': shareLink(token)},
+  );
 
   /// Token de um link de cartão (da app ou da página), se for um.
   static String? tokenFrom(Uri uri) {

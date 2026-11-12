@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -27,7 +28,12 @@ Future<PickedCardMedia?> pickCardMedia(BuildContext context, CardMediaKind kind)
   try {
     switch (kind) {
       case CardMediaKind.image:
-        final f = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
+        final f = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          imageQuality: 85,
+        );
         return f == null ? null : (kind: kind, bytes: await f.readAsBytes(), path: f.path);
       case CardMediaKind.video:
         final source = await _videoSource(context);
@@ -36,7 +42,7 @@ Future<PickedCardMedia?> pickCardMedia(BuildContext context, CardMediaKind kind)
         if (f == null) return null;
         final bytes = await f.readAsBytes();
         if (bytes.length > _maxBytes) {
-          if (context.mounted) showMessage(context, 'O vídeo é grande demais. Escolhe um até 30 segundos.');
+          if (context.mounted) showMessage(context, context.tr('O vídeo é grande demais. Escolhe um até 30 segundos.'));
           return null;
         }
         return (kind: kind, bytes: bytes, path: f.path);
@@ -50,7 +56,12 @@ Future<PickedCardMedia?> pickCardMedia(BuildContext context, CardMediaKind kind)
         );
     }
   } catch (_) {
-    if (context.mounted) showMessage(context, 'Não foi possível aceder à câmara, à galeria ou ao microfone. Verifica as permissões.');
+    if (context.mounted) {
+      showMessage(
+        context,
+        context.tr('Não foi possível aceder à câmara, à galeria ou ao microfone. Verifica as permissões.'),
+      );
+    }
     return null;
   }
 }
@@ -65,13 +76,13 @@ Future<ImageSource?> _videoSource(BuildContext context) => showModalBottomSheet<
         children: [
           ListTile(
             leading: const Icon(LucideIcons.video),
-            title: const Text('Gravar um vídeo'),
-            subtitle: const Text('Até 30 segundos'),
+            title: Text(context.tr('Gravar um vídeo')),
+            subtitle: Text(context.tr('Até 30 segundos')),
             onTap: () => Navigator.pop(ctx, ImageSource.camera),
           ),
           ListTile(
             leading: const Icon(LucideIcons.film),
-            title: const Text('Escolher da galeria'),
+            title: Text(context.tr('Escolher da galeria')),
             onTap: () => Navigator.pop(ctx, ImageSource.gallery),
           ),
           const SizedBox(height: 8),
@@ -107,7 +118,7 @@ class _AudioRecorderSheetState extends State<_AudioRecorderSheet> {
 
   Future<void> _start() async {
     if (!await _recorder.hasPermission()) {
-      if (mounted) showMessage(context, 'Permite o acesso ao microfone para gravar.');
+      if (mounted) showMessage(context, context.tr('Permite o acesso ao microfone para gravar.'));
       return;
     }
     final dir = await getTemporaryDirectory();
@@ -154,10 +165,16 @@ class _AudioRecorderSheetState extends State<_AudioRecorderSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Mensagem de voz', textAlign: TextAlign.center, style: AppTheme.display(context, size: 22)),
+            Text(
+              context.tr('Mensagem de voz'),
+              textAlign: TextAlign.center,
+              style: AppTheme.display(context, size: 22),
+            ),
             const SizedBox(height: 6),
             Text(
-              _recording ? 'A gravar… ${_fmt(_elapsed)} de ${_fmt(_limit)}' : 'Até ${_limit.inSeconds} segundos.',
+              _recording
+                  ? context.tr('A gravar… {elapsed} de {limit}', {'elapsed': _fmt(_elapsed), 'limit': _fmt(_limit)})
+                  : context.tr('Até {seconds} segundos.', {'seconds': _limit.inSeconds}),
               textAlign: TextAlign.center,
               style: TextStyle(color: muted),
             ),
@@ -177,7 +194,7 @@ class _AudioRecorderSheetState extends State<_AudioRecorderSheet> {
               const SizedBox(height: 16),
               CardMediaView(media: (kind: CardMediaKind.audio, url: _path!)),
               const SizedBox(height: 12),
-              FilledButton(onPressed: _use, child: const Text('Usar esta gravação')),
+              FilledButton(onPressed: _use, child: Text(context.tr('Usar esta gravação'))),
             ],
             const SizedBox(height: 4),
             TextButton(
@@ -185,7 +202,7 @@ class _AudioRecorderSheetState extends State<_AudioRecorderSheet> {
                 if (_recording) await _recorder.stop();
                 if (context.mounted) Navigator.pop(context);
               },
-              child: const Text('Cancelar'),
+              child: Text(context.tr('Cancelar')),
             ),
           ],
         ),
@@ -232,11 +249,14 @@ class _VideoViewState extends State<_VideoView> {
   @override
   void initState() {
     super.initState();
-    _c.initialize().then((_) {
-      if (mounted) setState(() {});
-    }, onError: (_) {
-      if (mounted) setState(() => _failed = true);
-    });
+    _c.initialize().then(
+      (_) {
+        if (mounted) setState(() {});
+      },
+      onError: (_) {
+        if (mounted) setState(() => _failed = true);
+      },
+    );
     _c.addListener(_onTick);
   }
 
@@ -312,15 +332,21 @@ class _AudioViewState extends State<_AudioView> {
   void initState() {
     super.initState();
     _subs
-      ..add(_player.onPlayerStateChanged.listen((s) {
-        if (mounted) setState(() => _playing = s == PlayerState.playing);
-      }))
-      ..add(_player.onPositionChanged.listen((p) {
-        if (mounted) setState(() => _position = p);
-      }))
-      ..add(_player.onDurationChanged.listen((d) {
-        if (mounted) setState(() => _duration = d);
-      }));
+      ..add(
+        _player.onPlayerStateChanged.listen((s) {
+          if (mounted) setState(() => _playing = s == PlayerState.playing);
+        }),
+      )
+      ..add(
+        _player.onPositionChanged.listen((p) {
+          if (mounted) setState(() => _position = p);
+        }),
+      )
+      ..add(
+        _player.onDurationChanged.listen((d) {
+          if (mounted) setState(() => _duration = d);
+        }),
+      );
   }
 
   @override

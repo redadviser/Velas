@@ -114,7 +114,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
           onChanged: (_) => _emit(),
           validator: (v) => (v == null || v.trim().isEmpty || PaymentFormat.normalizePhone(v) != null)
               ? null
-              : 'Número de telemóvel inválido.',
+              : context.tr('Número de telemóvel inválido.'),
           decoration: InputDecoration(hintText: '912 345 678', prefixIcon: _fieldLogo(PaymentMethod.mbway)),
         ),
         const SizedBox(height: 18),
@@ -177,7 +177,7 @@ class _PaymentDetailsFieldsState extends State<PaymentDetailsFields> {
         const SizedBox(height: 8),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Aceito dinheiro em mão'),
+          title: Text(context.tr('Aceito dinheiro em mão')),
           value: _cash,
           onChanged: (v) {
             setState(() => _cash = v);
@@ -443,20 +443,20 @@ class _PaySheetState extends State<_PaySheet> {
             ),
           ),
           SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: FilledButton.icon(
-                  onPressed: selected == null ? null : () => Navigator.pop(context, PayResult(selected)),
-                  icon: const Icon(LucideIcons.check, size: 18),
-                  label: Text(
-                    selected == null
-                        ? context.tr(Keys.payConfirmChoose)
-                        : context.tr(Keys.payConfirm, {'method': selected.label}),
-                  ),
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: FilledButton.icon(
+                onPressed: selected == null ? null : () => Navigator.pop(context, PayResult(selected)),
+                icon: const Icon(LucideIcons.check, size: 18),
+                label: Text(
+                  selected == null
+                      ? context.tr(Keys.payConfirmChoose)
+                      : context.tr(Keys.payConfirm, {'method': selected.label}),
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -465,12 +465,7 @@ class _PaySheetState extends State<_PaySheet> {
 
 /// Um método na grelha: logótipo e nome (indisponível se quem recebe não o indicou).
 class _MethodChoice extends StatelessWidget {
-  const _MethodChoice({
-    required this.method,
-    required this.available,
-    required this.selected,
-    required this.onTap,
-  });
+  const _MethodChoice({required this.method, required this.available, required this.selected, required this.onTap});
 
   final PaymentMethod method;
   final bool available;

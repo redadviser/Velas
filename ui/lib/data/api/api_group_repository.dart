@@ -70,7 +70,7 @@ class ApiGroupRepository implements GroupRepository {
       final res = await _api.post('/invite-codes/${_code(code)}/join', {'display_name': displayName});
       return (res as Map)['group_id'] as String;
     } on ApiException catch (e) {
-      if (e.code == 'invalid_code') throw const AppException('Código inválido. Confirma com quem te convidou.');
+      if (e.code == 'invalid_code') throw invalidInviteCode;
       if (e.code == 'group_closed') throw const AppException('Este grupo já fechou: a prenda foi comprada.');
       rethrow;
     }

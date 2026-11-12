@@ -45,6 +45,13 @@ void main() {
     expect(InviteLinks.codeFrom(Uri.parse('com.eupasoft.velas://auth-callback?code=x')), isNull);
     // Com servidor, o link partilhado é a página de convite da API.
     expect(InviteLinks.shareLink('ABC'), '${Env.apiUrl}/g/ABC');
+
+    // Festas: /f/ e app/party, sem confundir com os grupos.
+    expect(InviteLinks.partyCodeFrom(Uri.parse('https://convite.velas.pt/f/A1B2C3D4E5')), 'A1B2C3D4E5');
+    expect(InviteLinks.partyCodeFrom(Uri.parse('com.eupasoft.velas://app/party/A1B2C3D4E5')), 'A1B2C3D4E5');
+    expect(InviteLinks.partyCodeFrom(Uri.parse('https://convite.velas.pt/g/ABCDE12345')), isNull);
+    expect(InviteLinks.codeFrom(Uri.parse('https://convite.velas.pt/f/A1B2C3D4E5')), isNull);
+    expect(InviteLinks.partyShareLink('A1B2'), '${Env.apiUrl}/f/A1B2');
   });
 
   test('códigos de convite: formato, o que a pessoa escreve e mensagens', () {

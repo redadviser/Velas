@@ -41,8 +41,7 @@ class WallController extends AsyncNotifier<List<ReceivedCard>> {
     final cards = state.value ?? const [];
     if (cards.every((c) => c.seen)) return;
     state = AsyncData([
-      for (final c in cards)
-        ReceivedCard(id: c.id, sender: c.sender, body: c.body, receivedAt: c.receivedAt),
+      for (final c in cards) ReceivedCard(id: c.id, sender: c.sender, body: c.body, receivedAt: c.receivedAt),
     ]);
     await ref.read(cardsRepositoryProvider)?.markWallSeen();
   }

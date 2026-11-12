@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
+import '../../core/i18n/translations.dart';
 
 /// Estrutura comum aos ecrãs de autenticação.
 class AuthScaffold extends StatelessWidget {
@@ -113,7 +114,7 @@ class _PasswordFieldState extends State<PasswordField> {
       hintText: widget.hint,
       prefixIcon: const Icon(LucideIcons.lock, size: 18),
       suffixIcon: IconButton(
-        tooltip: _obscure ? 'Mostrar' : 'Ocultar',
+        tooltip: _obscure ? context.tr('Mostrar') : context.tr('Ocultar'),
         icon: Icon(_obscure ? LucideIcons.eye : LucideIcons.eyeOff, size: 18),
         onPressed: () => setState(() => _obscure = !_obscure),
       ),
@@ -154,14 +155,14 @@ class Validators {
   static final _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   static String? email(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Indica o teu email.';
-    if (!_email.hasMatch(v.trim())) return 'Este email não parece válido.';
+    if (v == null || v.trim().isEmpty) return tr('Indica o teu email.');
+    if (!_email.hasMatch(v.trim())) return tr('Este email não parece válido.');
     return null;
   }
 
   static String? password(String? v) {
-    if (v == null || v.isEmpty) return 'Indica a palavra-passe.';
-    if (v.length < 8) return 'Usa pelo menos 8 caracteres.';
+    if (v == null || v.isEmpty) return tr('Indica a palavra-passe.');
+    if (v.length < 8) return tr('Usa pelo menos 8 caracteres.');
     return null;
   }
 
@@ -203,7 +204,7 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
                 Expanded(child: Divider(color: context.palette.border)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('ou', style: TextStyle(color: muted)),
+                  child: Text(context.tr('ou'), style: TextStyle(color: muted)),
                 ),
                 Expanded(child: Divider(color: context.palette.border)),
               ],
@@ -213,9 +214,9 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
           onPressed: _loading ? null : _signIn,
           child: _loading
               ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.2))
-              : const Row(
+              : Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [GoogleLogo(), SizedBox(width: 10), Text('Continuar com Google')],
+                  children: [const GoogleLogo(), const SizedBox(width: 10), Text(context.tr('Continuar com Google'))],
                 ),
         ),
       ],

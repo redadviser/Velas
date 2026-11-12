@@ -22,17 +22,23 @@ class ApiPartyRepository implements PartyRepository {
   Future<Party> join(String code) async => _party(await _api.post('/parties/join', {'code': code}));
 
   @override
-  Future<Party> rsvp(String partyId, Rsvp rsvp) async => _party(await _api.put('/parties/$partyId/rsvp', {'rsvp': rsvp.name}));
+  Future<Party> rsvp(String partyId, Rsvp rsvp) async =>
+      _party(await _api.put('/parties/$partyId/rsvp', {'rsvp': rsvp.name}));
 
   @override
-  Future<Party> addGuest(String partyId, String name) async => _party(await _api.post('/parties/$partyId/guests', {'name': name}));
+  Future<Party> addGuest(String partyId, String name) async =>
+      _party(await _api.post('/parties/$partyId/guests', {'name': name}));
 
   @override
   Future<void> removeGuest(String guestId) => _api.delete('/party-guests/$guestId');
 
   @override
   Future<Party> saveTask(String partyId, PartyTask task) async => _party(
-    await _api.put('/parties/$partyId/tasks/${task.id}', {'title': task.title, 'assignee_id': task.assigneeId, 'done': task.done}),
+    await _api.put('/parties/$partyId/tasks/${task.id}', {
+      'title': task.title,
+      'assignee_id': task.assigneeId,
+      'done': task.done,
+    }),
   );
 
   @override

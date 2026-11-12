@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
 import '../../core/wishlist_providers.dart';
 import '../gifts/wishlist_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 /// Os meus gostos e a minha lista de desejos (o que os amigos veem).
 class MyWishlistScreen extends ConsumerWidget {
@@ -19,17 +20,17 @@ class MyWishlistScreen extends ConsumerWidget {
     final wishes = ref.watch(myWishlistProvider);
     final muted = context.palette.mutedForeground;
     return Scaffold(
-      appBar: AppBar(title: const Text('Gostos e desejos')),
+      appBar: AppBar(title: Text(context.tr('Gostos e desejos'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
           Text(
             online
-                ? 'Os teus amigos veem isto no teu perfil, para acertarem na prenda. Mais ninguém vê.'
-                : 'Ajuda-te a ti e, com conta, aos teus amigos a acertar na prenda.',
+                ? context.tr('Os teus amigos veem isto no teu perfil, para acertarem na prenda. Mais ninguém vê.')
+                : context.tr('Ajuda-te a ti e, com conta, aos teus amigos a acertar na prenda.'),
             style: context.text.bodyMedium?.copyWith(color: muted),
           ),
-          const SectionTitle('Gostos e hobbies', padding: EdgeInsets.fromLTRB(4, 20, 0, 10)),
+          SectionTitle(context.tr('Gostos e hobbies'), padding: const EdgeInsets.fromLTRB(4, 20, 0, 10)),
           InterestPicker(
             selected: user.interests,
             onChanged: (keys) => runGuarded(
@@ -39,15 +40,15 @@ class MyWishlistScreen extends ConsumerWidget {
           ),
           if (online) ...[
             SectionTitle(
-              'A minha lista de desejos',
-              action: 'Adicionar',
+              context.tr('A minha lista de desejos'),
+              action: context.tr('Adicionar'),
               onAction: () => showWishEditor(context),
               padding: const EdgeInsets.fromLTRB(4, 28, 0, 6),
             ),
             switch (wishes) {
               AsyncData(:final value) when value.isEmpty => DashedButton(
                 icon: LucideIcons.plus,
-                label: 'Junta o primeiro desejo',
+                label: context.tr('Junta o primeiro desejo'),
                 onTap: () => showWishEditor(context),
               ),
               AsyncData(:final value) => AppCard(

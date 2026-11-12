@@ -44,7 +44,7 @@ class GroupDetailScreen extends ConsumerWidget {
     if (!context.mounted) return;
     final paid = await showPaySheet(
       context,
-      payeeName: g.buyer?.name ?? 'quem compra',
+      payeeName: g.buyer?.name ?? context.tr('quem compra'),
       amount: g.shareOf(me),
       payee: payee,
       reference: '${g.title}: ${me.name}',
@@ -57,7 +57,9 @@ class GroupDetailScreen extends ConsumerWidget {
         (repo) => repo.setPaid(me, method),
         optimistic: _replace(g, me.copyWith(paidAt: () => DateTime.now(), paidMethod: () => method)),
       ),
-      success: 'Registado. ${g.buyer?.name ?? 'Quem compra'} vai confirmar que recebeu.',
+      success: g.buyer == null
+          ? context.tr('Registado. Quem compra vai confirmar que recebeu.')
+          : context.tr('Registado. {name} vai confirmar que recebeu.', {'name': g.buyer!.name}),
     );
     if (ok && context.mounted) showConfetti(context);
   }
@@ -91,28 +93,30 @@ class GroupDetailScreen extends ConsumerWidget {
               if (status != ContributionStatus.confirmed)
                 ListTile(
                   leading: const Icon(LucideIcons.circleCheck),
-                  title: const Text('Confirmar que recebi'),
+                  title: Text(ctx.tr('Confirmar que recebi')),
                   subtitle: Text(
-                    m.paidMethod == null ? 'Por exemplo, se pagou em mão' : 'Pagou por ${m.paidMethod!.label}',
+                    m.paidMethod == null
+                        ? ctx.tr('Por exemplo, se pagou em mão')
+                        : ctx.tr('Pagou por {method}', {'method': m.paidMethod!.label}),
                   ),
                   onTap: () => Navigator.pop(ctx, 'confirm'),
                 ),
               if (status == ContributionStatus.confirmed)
                 ListTile(
                   leading: const Icon(LucideIcons.undo2),
-                  title: const Text('Anular confirmação'),
+                  title: Text(ctx.tr('Anular confirmação')),
                   onTap: () => Navigator.pop(ctx, 'unconfirm'),
                 ),
               if (status == ContributionStatus.paid)
                 ListTile(
                   leading: const Icon(LucideIcons.circleX),
-                  title: const Text('Não recebi: voltar a "por pagar"'),
+                  title: Text(ctx.tr('Não recebi: voltar a "por pagar"')),
                   onTap: () => Navigator.pop(ctx, 'reset'),
                 ),
               if (status == ContributionStatus.pending)
                 ListTile(
                   leading: const Icon(LucideIcons.send),
-                  title: Text('Lembrar ${m.name}'),
+                  title: Text(ctx.tr('Lembrar {name}', {'name': m.name})),
                   onTap: () => Navigator.pop(ctx, 'remind'),
                 ),
               const SizedBox(height: 8),
@@ -164,10 +168,11 @@ class GroupDetailScreen extends ConsumerWidget {
     if (purchased && !g.fullyCollected) {
       final ok = await confirmDialog(
         context,
-        title: 'Ainda faltam pagamentos',
-        message:
-            'Há ${g.pendingCount + g.awaitingConfirmationCount} participantes sem pagamento confirmado. Marcar mesmo assim como comprada?',
-        confirm: 'Marcar comprada',
+        title: context.tr('Ainda faltam pagamentos'),
+        message: context.tr('Há {count} participantes sem pagamento confirmado. Marcar mesmo assim como comprada?', {
+          'count': g.pendingCount + g.awaitingConfirmationCount,
+        }),
+        confirm: context.tr('Marcar comprada'),
         destructive: false,
       );
       if (!ok || !context.mounted) return;
@@ -178,7 +183,7 @@ class GroupDetailScreen extends ConsumerWidget {
         (repo) => repo.setPurchased(g.id, purchased),
         optimistic: g.copyWith(purchasedAt: () => purchased ? DateTime.now() : null),
       ),
-      success: purchased ? 'Prenda comprada. Bom trabalho! 🎁' : null,
+      success: purchased ? context.tr('Prenda comprada. Bom trabalho! 🎁') : null,
     );
   }
 
@@ -191,11 +196,11 @@ class GroupDetailScreen extends ConsumerWidget {
   }) async {
     final ok = await confirmDialog(
       context,
-      title: asAdmin ? 'Eliminar grupo?' : 'Sair do grupo?',
+      title: asAdmin ? context.tr('Eliminar grupo?') : context.tr('Sair do grupo?'),
       message: asAdmin
-          ? 'O grupo e os registos de pagamento são apagados para todos os participantes.'
-          : 'Deixas de ver este grupo. Se já pagaste, combina primeiro com quem compra.',
-      confirm: asAdmin ? 'Eliminar' : 'Sair',
+          ? context.tr('O grupo e os registos de pagamento são apagados para todos os participantes.')
+          : context.tr('Deixas de ver este grupo. Se já pagaste, combina primeiro com quem compra.'),
+      confirm: asAdmin ? context.tr('Eliminar') : context.tr('Sair'),
     );
     if (!ok || !context.mounted) return;
     final router = GoRouter.of(context);
@@ -218,10 +223,10 @@ class GroupDetailScreen extends ConsumerWidget {
         appBar: AppBar(),
         body: groupsAsync.isLoading
             ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-            : const EmptyState(
+            : EmptyState(
                 icon: LucideIcons.usersRound,
-                title: 'Grupo não encontrado',
-                message: 'Pode ter sido eliminado pelo administrador.',
+                title: context.tr('Grupo não encontrado'),
+                message: context.tr('Pode ter sido eliminado pelo administrador.'),
               ),
       );
     }
@@ -249,7 +254,7 @@ class GroupDetailScreen extends ConsumerWidget {
             ),
           if (isAdmin)
             IconButton(
-              tooltip: 'Editar',
+              tooltip: context.tr('Editar'),
               icon: const Icon(LucideIcons.pencil, size: 20),
               onPressed: () => context.push('/groups/${g.id}/edit'),
             ),
@@ -267,7 +272,10 @@ class GroupDetailScreen extends ConsumerWidget {
                   children: [
                     Icon(isAdmin ? LucideIcons.trash2 : LucideIcons.logOut, size: 18, color: ctx.colors.error),
                     const SizedBox(width: 12),
-                    Text(isAdmin ? 'Eliminar grupo' : 'Sair do grupo', style: TextStyle(color: ctx.colors.error)),
+                    Text(
+                      isAdmin ? ctx.tr('Eliminar grupo') : ctx.tr('Sair do grupo'),
+                      style: TextStyle(color: ctx.colors.error),
+                    ),
                   ],
                 ),
               ),
@@ -325,8 +333,8 @@ class GroupDetailScreen extends ConsumerWidget {
               InviteCodeCard(group: g, onInviteContact: isAdmin ? () => showInviteSheet(context, g) : null),
             ],
             SectionTitle(
-              'Participantes · ${g.members.length}',
-              action: canManage && pending.isNotEmpty ? 'Lembrar quem falta' : null,
+              context.tr('Participantes · {count}', {'count': g.members.length}),
+              action: canManage && pending.isNotEmpty ? context.tr('Lembrar quem falta') : null,
               onAction: () => SharePlus.instance.share(ShareParams(text: reminderText(g, pending))),
               padding: const EdgeInsets.fromLTRB(4, 24, 0, 8),
             ),
@@ -359,7 +367,7 @@ class GroupDetailScreen extends ConsumerWidget {
                                   invitations: g.invitations.where((i) => i.id != inv.id).toList(),
                                 ),
                               ),
-                              success: 'Convite cancelado.',
+                              success: context.tr('Convite cancelado.'),
                             )
                           : null,
                     ),
@@ -371,7 +379,7 @@ class GroupDetailScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8, left: 4),
                 child: Text(
-                  'Toca num participante para confirmar que recebeste.',
+                  context.tr('Toca num participante para confirmar que recebeste.'),
                   style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                 ),
               ),
@@ -381,12 +389,12 @@ class GroupDetailScreen extends ConsumerWidget {
                   ? FilledButton.icon(
                       onPressed: () => _togglePurchased(context, ref, g),
                       icon: const Icon(LucideIcons.shoppingBag, size: 18),
-                      label: const Text('Marcar prenda como comprada'),
+                      label: Text(context.tr('Marcar prenda como comprada')),
                     )
                   : OutlinedButton.icon(
                       onPressed: () => _togglePurchased(context, ref, g),
                       icon: const Icon(LucideIcons.undo2, size: 18),
-                      label: const Text('Ainda não foi comprada'),
+                      label: Text(context.tr('Ainda não foi comprada')),
                     ),
             ],
           ],
@@ -485,14 +493,14 @@ class _Header extends StatelessWidget {
               if (g.purchasedAt != null)
                 Pill(
                   icon: LucideIcons.circleCheck,
-                  label: 'Comprada',
+                  label: context.tr('Comprada'),
                   background: context.palette.success.withValues(alpha: 0.14),
                   foreground: context.palette.success,
                 )
               else if (g.deadline != null)
                 Pill(
                   icon: LucideIcons.clock,
-                  label: 'Pagar até ${Fmt.dayMonth(g.deadline!)}',
+                  label: context.tr('Pagar até {date}', {'date': Fmt.dayMonth(g.deadline!)}),
                   background: context.palette.card,
                 ),
             ],
@@ -524,7 +532,7 @@ class _Header extends StatelessWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Ver prenda',
+                        context.tr('Ver prenda'),
                         style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -534,7 +542,7 @@ class _Header extends StatelessWidget {
             ),
           const SizedBox(height: 18),
           // Wrap: com letra grande, "de X recebidos" passa para baixo.
-          Text('JÁ REUNIMOS', style: AppTheme.eyebrow(context)),
+          Text(context.tr('JÁ REUNIMOS'), style: AppTheme.eyebrow(context)),
           const SizedBox(height: 2),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -548,7 +556,7 @@ class _Header extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        'de ${Fmt.money(g.targetAmount)}',
+                        context.tr('de {amount}', {'amount': Fmt.money(g.targetAmount)}),
                         style: TextStyle(color: context.palette.mutedForeground),
                       ),
                     ),
@@ -589,13 +597,18 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${g.members.where((m) => g.statusOf(m) == ContributionStatus.confirmed).length} de ${g.members.length} pessoas já pagaram',
+            context.tr('{paid} de {total} pessoas já pagaram', {
+              'paid': g.members.where((m) => g.statusOf(m) == ContributionStatus.confirmed).length,
+              'total': g.members.length,
+            }),
             style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
           ),
           if (g.awaitingConfirmationCount > 0) ...[
             const SizedBox(height: 2),
             Text(
-              '${g.awaitingConfirmationCount} pagamento${g.awaitingConfirmationCount == 1 ? '' : 's'} por confirmar',
+              g.awaitingConfirmationCount == 1
+                  ? context.tr('1 pagamento por confirmar')
+                  : context.tr('{count} pagamentos por confirmar', {'count': g.awaitingConfirmationCount}),
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),
           ],
@@ -603,8 +616,8 @@ class _Header extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               g.unassigned > 0
-                  ? 'Faltam distribuir ${Fmt.money(g.unassigned)} pelos participantes.'
-                  : 'As partes excedem o total em ${Fmt.money(-g.unassigned)}.',
+                  ? context.tr('Faltam distribuir {amount} pelos participantes.', {'amount': Fmt.money(g.unassigned)})
+                  : context.tr('As partes excedem o total em {amount}.', {'amount': Fmt.money(-g.unassigned)}),
               style: context.text.bodySmall?.copyWith(color: context.colors.error, fontWeight: FontWeight.w600),
             ),
           ],
@@ -626,20 +639,23 @@ class _MyShare extends StatelessWidget {
   Widget build(BuildContext context) {
     final share = group.shareOf(me);
     final status = group.statusOf(me);
-    final buyerName = group.buyer?.name ?? 'quem compra';
+    final buyerName = group.buyer?.name ?? context.tr('quem compra');
 
     return AppCard(
       child: switch (status) {
         ContributionStatus.pending => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('A tua parte', style: context.text.labelLarge?.copyWith(color: context.palette.mutedForeground)),
+            Text(
+              context.tr('A tua parte'),
+              style: context.text.labelLarge?.copyWith(color: context.palette.mutedForeground),
+            ),
             Text(Fmt.money(share), style: AppTheme.display(context, size: 34)),
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: share > 0 ? onPay : null,
               icon: const Icon(LucideIcons.send, size: 18),
-              label: Text('Pagar a $buyerName'),
+              label: Text(context.tr('Pagar a {name}', {'name': buyerName})),
             ),
           ],
         ),
@@ -652,17 +668,22 @@ class _MyShare extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pagaste ${Fmt.money(share)}${me.paidMethod == null ? '' : ' por ${me.paidMethod!.label}'}',
+                    me.paidMethod == null
+                        ? context.tr('Pagaste {amount}', {'amount': Fmt.money(share)})
+                        : context.tr('Pagaste {amount} por {method}', {
+                            'amount': Fmt.money(share),
+                            'method': me.paidMethod!.label,
+                          }),
                     style: context.text.titleSmall,
                   ),
                   Text(
-                    'A aguardar que $buyerName confirme.',
+                    context.tr('A aguardar que {name} confirme.', {'name': buyerName}),
                     style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                   ),
                 ],
               ),
             ),
-            TextButton(onPressed: onUndo, child: const Text('Anular')),
+            TextButton(onPressed: onUndo, child: Text(context.tr('Anular'))),
           ],
         ),
         ContributionStatus.confirmed => Row(
@@ -670,7 +691,10 @@ class _MyShare extends StatelessWidget {
             Icon(LucideIcons.circleCheck, color: context.palette.success),
             const SizedBox(width: 12),
             Expanded(
-              child: Text('A tua parte de ${Fmt.money(share)} está paga e confirmada.', style: context.text.titleSmall),
+              child: Text(
+                context.tr('A tua parte de {amount} está paga e confirmada.', {'amount': Fmt.money(share)}),
+                style: context.text.titleSmall,
+              ),
             ),
           ],
         ),
@@ -714,11 +738,13 @@ class _BuyerCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isMe ? 'Tu compras a prenda' : '${buyer.name} compra a prenda',
+                      isMe
+                          ? context.tr('Tu compras a prenda')
+                          : context.tr('{name} compra a prenda', {'name': buyer.name}),
                       style: context.text.titleSmall,
                     ),
                     Text(
-                      isMe ? 'Os outros pagam-te a ti.' : 'É a quem os outros pagam.',
+                      isMe ? context.tr('Os outros pagam-te a ti.') : context.tr('É a quem os outros pagam.'),
                       style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                     ),
                   ],
@@ -739,7 +765,7 @@ class _BuyerCard extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onAddPayment,
               icon: const Icon(LucideIcons.wallet, size: 18),
-              label: Text(isMe ? context.tr(Keys.receiveAction) : 'Indicar dados de pagamento'),
+              label: Text(isMe ? context.tr(Keys.receiveAction) : context.tr('Indicar dados de pagamento')),
             ),
           ],
         ],
@@ -776,7 +802,10 @@ class _PendingInviteRow extends StatelessWidget {
                   style: context.text.bodyLarge?.copyWith(color: muted, fontWeight: FontWeight.w600),
                 ),
                 Text(
-                  [if (invitation.username.isNotEmpty) '@${invitation.username}', 'Convite pendente'].join(' · '),
+                  [
+                    if (invitation.username.isNotEmpty) '@${invitation.username}',
+                    context.tr('Convite pendente'),
+                  ].join(' · '),
                   style: context.text.bodySmall?.copyWith(color: muted),
                 ),
               ],
@@ -784,7 +813,7 @@ class _PendingInviteRow extends StatelessWidget {
           ),
           if (onCancel != null)
             IconButton(
-              tooltip: 'Cancelar convite',
+              tooltip: context.tr('Cancelar convite'),
               onPressed: onCancel,
               icon: Icon(LucideIcons.x, size: 18, color: muted),
             ),

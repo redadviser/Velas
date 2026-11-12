@@ -84,13 +84,13 @@ class NotificationService {
 
   static AndroidNotificationDetails _channel({bool groupAction = false}) => AndroidNotificationDetails(
     'birthdays',
-    'Aniversários',
-    channelDescription: 'Lembretes de aniversários próximos',
+    tr('Aniversários'),
+    channelDescription: tr('Lembretes de aniversários próximos'),
     importance: Importance.high,
     priority: Priority.high,
     color: const Color(0xFFF05560),
     actions: groupAction
-        ? const [AndroidNotificationAction(ReminderCopy.groupAction, 'Prenda em grupo', showsUserInterface: true)]
+        ? [AndroidNotificationAction(ReminderCopy.groupAction, tr('Prenda em grupo'), showsUserInterface: true)]
         : null,
   );
 
@@ -165,7 +165,7 @@ class NotificationService {
               actions: [
                 DarwinNotificationAction.plain(
                   ReminderCopy.groupAction,
-                  'Prenda em grupo',
+                  tr('Prenda em grupo'),
                   options: {DarwinNotificationActionOption.foreground},
                 ),
               ],

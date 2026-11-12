@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/cards_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -50,7 +51,7 @@ class _WallScreenState extends ConsumerState<WallScreen> {
     final wall = ref.watch(wallProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('O teu mural'),
+        title: Text(context.tr('O teu mural')),
         actions: [
           _AlbumButton(year: DateTime.now().year),
           const SizedBox(width: 8),
@@ -63,13 +64,14 @@ class _WallScreenState extends ConsumerState<WallScreen> {
           onRefresh: () => ref.read(wallProvider.notifier).refresh(),
           child: cards.isEmpty
               ? ListView(
-                  children: const [
+                  children: [
                     EmptyState(
                       icon: LucideIcons.partyPopper,
-                      title: 'Ainda sem parabéns por aqui',
-                      message:
-                          'Quando alguém te mandar um cartão de parabéns pela Birthdayly, fica guardado neste mural. '
-                          'Só tu o vês.',
+                      title: context.tr('Ainda sem parabéns por aqui'),
+                      message: context.tr(
+                        'Quando alguém te mandar um cartão de parabéns pela Birthdayly, fica guardado neste mural. '
+                        'Só tu o vês.',
+                      ),
                     ),
                   ],
                 )
@@ -94,8 +96,12 @@ class _WallList extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
         child: Text(
-          '${cards.length} ${cards.length == 1 ? 'mensagem' : 'mensagens'} de parabéns'
-          ' de $people ${people == 1 ? 'pessoa' : 'pessoas'}',
+          context.tr('{messages} de parabéns de {people}', {
+            'messages': cards.length == 1
+                ? context.tr('1 mensagem')
+                : context.tr('{count} mensagens', {'count': cards.length}),
+            'people': people == 1 ? context.tr('1 pessoa') : context.tr('{count} pessoas', {'count': people}),
+          }),
           style: context.text.bodyMedium?.copyWith(color: muted),
         ),
       ),
@@ -158,7 +164,7 @@ class _WallCard extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Pill(
-                    label: 'Nova',
+                    label: context.tr('Nova'),
                     dense: true,
                     background: context.palette.brand.colors.first,
                     foreground: Colors.white,
@@ -194,8 +200,13 @@ class WallBanner extends ConsumerWidget {
     if (unseen.isEmpty) return const SizedBox.shrink();
     final senders = {for (final c in unseen) c.sender.userId}.length;
     final title = senders == 1
-        ? '${unseen.first.sender.firstName} deixou-te ${unseen.length == 1 ? 'uma mensagem' : '${unseen.length} mensagens'} de parabéns'
-        : 'Tens ${unseen.length} mensagens de parabéns novas';
+        ? (unseen.length == 1
+              ? context.tr('{name} deixou-te uma mensagem de parabéns', {'name': unseen.first.sender.firstName})
+              : context.tr('{name} deixou-te {count} mensagens de parabéns', {
+                  'name': unseen.first.sender.firstName,
+                  'count': unseen.length,
+                }))
+        : context.tr('Tens {count} mensagens de parabéns novas', {'count': unseen.length});
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Material(
@@ -220,7 +231,7 @@ class WallBanner extends ConsumerWidget {
                           style: context.text.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          'Abre o teu mural para as leres',
+                          context.tr('Abre o teu mural para as leres'),
                           style: context.text.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
                         ),
                       ],
@@ -247,18 +258,18 @@ class _AlbumButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return TextButton(
       onPressed: () async {
-        if (await requirePlus(context, ref, feature: 'O álbum do mural') && context.mounted) {
+        if (await requirePlus(context, ref, feature: context.tr('O álbum do mural')) && context.mounted) {
           context.push('/wall/album/$year');
         }
       },
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(LucideIcons.images, size: 16),
-          SizedBox(width: 6),
-          Text('Álbum'),
-          SizedBox(width: 6),
-          PlusBadge(),
+          const Icon(LucideIcons.images, size: 16),
+          const SizedBox(width: 6),
+          Text(context.tr('Álbum')),
+          const SizedBox(width: 6),
+          const PlusBadge(),
         ],
       ),
     );

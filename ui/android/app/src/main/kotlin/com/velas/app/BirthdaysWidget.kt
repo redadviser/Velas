@@ -40,7 +40,7 @@ class BirthdaysWidget : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         widgetData: SharedPreferences,
     ) {
-        val t = Texts.of(widgetData.getString("lang", "pt"))
+        val t = Texts.of(widgetData.getString("texts", null))
         val plus = widgetData.getBoolean("plus", false)
         val upcoming = parse(widgetData.getString("people", null).orEmpty())
         val first = upcoming.firstOrNull()
@@ -164,32 +164,20 @@ class BirthdaysWidget : HomeWidgetProvider() {
         }
 
         companion object {
-            fun of(lang: String?): Texts = when (lang) {
-                "en" -> Texts(
-                    "Birthdays", "No birthdays", "Tap to add one", "Get Birthdayly+ in the app",
-                    "Today", "turns {n}", "Tomorrow", "in {n} days",
-                    listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
-                    listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"),
-                )
-                "es" -> Texts(
-                    "Cumpleaños", "Sin cumpleaños", "Toca para añadir", "Activa Birthdayly+ en la app",
-                    "Hoy", "cumple {n}", "Mañana", "en {n} días",
-                    listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"),
-                    listOf("domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"),
-                )
-                "fr" -> Texts(
-                    "Anniversaires", "Aucun anniversaire", "Touchez pour ajouter", "Activez Birthdayly+ dans l'app",
-                    "Aujourd'hui", "{n} ans", "Demain", "dans {n} jours",
-                    listOf("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."),
-                    listOf("dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"),
-                )
-                else -> Texts(
-                    "Aniversários", "Sem aniversários", "Toca para acrescentar", "Ativa o Birthdayly+ na app",
-                    "Hoje", "faz {n} anos", "Amanhã", "em {n} dias",
-                    listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"),
-                    listOf("domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"),
-                )
+            /** Os textos que a app envia já traduzidos (ver homeWidgetTexts em home_widget_sync.dart). */
+            fun of(data: String?): Texts {
+                val f = data?.split('\u001F')
+                if (f == null || f.size != 10) return PT
+                return Texts(f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8].split(','), f[9].split(','))
             }
+
+            /** Antes de a app abrir pela primeira vez. */
+            private val PT = Texts(
+                "Aniversários", "Sem aniversários", "Toca para acrescentar", "Ativa o Birthdayly+ na app",
+                "Hoje", "faz {n} anos", "Amanhã", "em {n} dias",
+                listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"),
+                listOf("domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"),
+            )
         }
     }
 

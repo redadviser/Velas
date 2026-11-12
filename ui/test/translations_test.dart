@@ -20,6 +20,36 @@ List<({String key, bool plural})> constantKeys() {
   return keys;
 }
 
+/// Os textos em português usados como chave no código: os literais dentro de
+/// `tr('...')` / `context.tr('...')` e de `AppException('...')`.
+Set<String> textKeys() {
+  const singleQuoted = r"'(?:[^'\\]|\\.)*'";
+  const doubleQuoted = r'"(?:[^"\\]|\\.)*"';
+  const literal = '(?:$singleQuoted|$doubleQuoted)';
+  final call = RegExp(r'(?:^|[^\w])(?:tr|AppException)\(\s*((?:' + literal + r'\s*)+)[,)]', multiLine: true);
+  final part = RegExp(literal);
+  String decode(String s) => s
+      .substring(1, s.length - 1)
+      .replaceAllMapped(
+        RegExp(r'\\(.)'),
+        (m) => switch (m.group(1)!) {
+          'n' => '\n',
+          't' => '\t',
+          final c => c,
+        },
+      );
+  final keys = <String>{};
+  for (final f in Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
+    for (final m in call.allMatches(f.readAsStringSync())) {
+      final parts = part.allMatches(m.group(1)!).map((p) => p.group(0)!).toList();
+      // Com interpolação não é chave fixa (ex.: 'language.$code').
+      if (parts.any((p) => RegExp(r'(?<!\\)\$').hasMatch(p))) continue;
+      keys.add(parts.map(decode).join());
+    }
+  }
+  return keys;
+}
+
 Map<String, String> jsonFor(String lang) =>
     (jsonDecode(File('assets/translations/$lang.json').readAsStringSync()) as Map).cast<String, String>();
 
@@ -34,10 +64,33 @@ void main() {
   group('Ficheiros de tradução', () {
     final langs = Translations.languageCodes;
     final keys = constantKeys();
+    final texts = textKeys();
+    final plurals = {for (final k in keys.where((k) => k.plural)) k.key};
+    // Formas extra de plural que só algumas línguas usam.
+    bool extraPlural(String k) =>
+        RegExp(r'\.(zero|two|few|many)$').hasMatch(k) && plurals.contains(k.substring(0, k.lastIndexOf('.')));
 
-    test('existem as quatro línguas: pt, en, es, fr', () {
-      expect(langs, ['pt', 'en', 'es', 'fr']);
+    test('existem as 16 línguas', () {
+      expect(langs, [
+        'pt',
+        'pt_BR',
+        'en',
+        'es',
+        'fr',
+        'de',
+        'it',
+        'nl',
+        'pl',
+        'ro',
+        'uk',
+        'ru',
+        'tr',
+        'ar',
+        'zh',
+        'ja',
+      ]);
       expect(keys, isNotEmpty);
+      expect(texts, isNotEmpty);
     });
 
     for (final lang in langs) {
@@ -45,19 +98,30 @@ void main() {
         final json = jsonFor(lang);
         final expected = {
           for (final k in keys) ...(k.plural ? ['${k.key}.one', '${k.key}.other'] : [k.key]),
+          // No português, o próprio texto é a tradução.
+          if (lang != 'pt') ...texts,
         };
-        expect(json.keys.toSet().difference(expected), isEmpty, reason: 'chaves a mais em $lang.json');
+        final extra = json.keys.toSet().difference(expected).where((k) => !extraPlural(k));
+        expect(extra, isEmpty, reason: 'chaves a mais em $lang.json');
         expect(expected.difference(json.keys.toSet()), isEmpty, reason: 'chaves em falta em $lang.json');
         expect(json.values.where((v) => v.trim().isEmpty), isEmpty, reason: 'textos vazios em $lang.json');
       });
     }
 
     test('os {marcadores} são os mesmos em todas as línguas', () {
-      final pt = jsonFor('pt');
+      final pt = {...jsonFor('pt'), for (final t in texts) t: t};
       for (final lang in langs.skip(1)) {
         final other = jsonFor(lang);
-        for (final e in pt.entries) {
-          expect(placeholders(other[e.key]!), placeholders(e.value), reason: '${e.key} em $lang');
+        for (final e in other.entries) {
+          final base = pt[e.key] ?? pt['${e.key.substring(0, e.key.lastIndexOf('.'))}.other'];
+          // Nas formas de plural pode aparecer {count} mesmo que o português escreva "1"
+          // (em ucraniano ou russo, a forma "one" também serve para 21, 31...).
+          final plural = RegExp(r'\.(zero|one|two|few|many|other)$').hasMatch(e.key);
+          expect(
+            placeholders(e.value).difference(plural ? {'count'} : const <String>{}),
+            placeholders(base!).difference(plural ? {'count'} : const <String>{}),
+            reason: '${e.key} em $lang',
+          );
         }
       }
     });
@@ -75,17 +139,31 @@ void main() {
       final fr = await Translations.load(const Locale('fr'));
       expect(fr.plural(Keys.commonPeople, 0), '0 personne'); // em francês, 0 é singular
 
+      // Plurais com mais formas: em russo, 21 usa a forma "one" com o número.
+      final ru = await Translations.load(const Locale('ru'));
+      expect(ru.plural(Keys.homeInboxUnread, 21), contains('21'));
+      // 3 e 5 usam formas diferentes (.few e .many).
+      expect(
+        ru.plural(Keys.homeInboxUnread, 3).replaceAll('3', ''),
+        isNot(ru.plural(Keys.homeInboxUnread, 5).replaceAll('5', '')),
+      );
+
       // Língua não suportada: português.
-      final other = await Translations.load(const Locale('de'));
+      final other = await Translations.load(const Locale('ko'));
       expect(other.locale, Translations.fallbackLocale);
       expect(other.get(Keys.chatSeen), 'Vista');
     });
 
     test('escolhe a língua do telemóvel entre as suportadas', () {
       expect(Translations.resolve([const Locale('es', 'MX')]), const Locale('es'));
-      expect(Translations.resolve([const Locale('de'), const Locale('fr', 'CA')]), const Locale('fr'));
-      expect(Translations.resolve([const Locale('ja')]), Translations.fallbackLocale);
+      expect(Translations.resolve([const Locale('ko'), const Locale('fr', 'CA')]), const Locale('fr'));
+      expect(Translations.resolve([const Locale('ja', 'JP')]), const Locale('ja'));
+      expect(Translations.resolve([const Locale('pt', 'BR')]), const Locale('pt', 'BR'));
+      expect(Translations.resolve([const Locale('pt', 'AO')]), Translations.fallbackLocale);
+      expect(Translations.resolve([const Locale('ko')]), Translations.fallbackLocale);
       expect(Translations.resolve(null), Translations.fallbackLocale);
+      expect(Translations.tagOf(const Locale('pt', 'BR')), 'pt_BR');
+      expect(Translations.localeOf('pt_BR'), const Locale('pt', 'BR'));
     });
 
     test('frases das conversas em português e em inglês', () async {

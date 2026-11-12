@@ -11,6 +11,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../../data/models/party_models.dart';
 import '../auth/auth_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 /// Criar ou editar uma festa ([partyId] = editar; [personId] = já escolhida).
 class PartyFormScreen extends ConsumerStatefulWidget {
@@ -55,13 +56,13 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
       initialDate: _startsAt ?? suggested ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 3),
-      helpText: 'Dia da festa',
+      helpText: context.tr('Dia da festa'),
     );
     if (day == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: _startsAt == null ? const TimeOfDay(hour: 19, minute: 30) : TimeOfDay.fromDateTime(_startsAt!),
-      helpText: 'A que horas?',
+      helpText: context.tr('A que horas?'),
     );
     if (!mounted) return;
     final t = time ?? const TimeOfDay(hour: 19, minute: 30);
@@ -94,7 +95,7 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
     final people = [...ref.watch(dataProvider).people]..sort((a, b) => a.name.compareTo(b.name));
     final d = _startsAt;
     return Scaffold(
-      appBar: AppBar(title: Text(_existing == null ? 'Nova festa surpresa' : 'Editar festa')),
+      appBar: AppBar(title: Text(_existing == null ? context.tr('Nova festa surpresa') : context.tr('Editar festa'))),
       body: Form(
         key: _form,
         child: ListView(
@@ -109,7 +110,7 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Só tu e quem convidares veem esta festa. Não convides o aniversariante.',
+                      context.tr('Só tu e quem convidares veem esta festa. Não convides o aniversariante.'),
                       style: context.text.bodySmall,
                     ),
                   ),
@@ -117,14 +118,14 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('Para quem é?', style: context.text.titleSmall),
+            Text(context.tr('Para quem é?'), style: context.text.titleSmall),
             const SizedBox(height: 8),
             DropdownButtonFormField<String?>(
               initialValue: _personId,
               isExpanded: true,
-              decoration: const InputDecoration(hintText: 'Escolher da tua lista (opcional)'),
+              decoration: InputDecoration(hintText: context.tr('Escolher da tua lista (opcional)')),
               items: [
-                const DropdownMenuItem(value: null, child: Text('Outra pessoa')),
+                DropdownMenuItem(value: null, child: Text(context.tr('Outra pessoa'))),
                 for (final p in people)
                   DropdownMenuItem(
                     value: p.id,
@@ -136,7 +137,9 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
                 final p = v == null ? null : ref.read(dataProvider).person(v);
                 if (p != null) {
                   _celebrant.text = p.firstName;
-                  if (_title.text.trim().isEmpty) _title.text = 'Surpresa para ${p.firstName}';
+                  if (_title.text.trim().isEmpty) {
+                    _title.text = context.tr('Surpresa para {name}', {'name': p.firstName});
+                  }
                 }
               }),
             ),
@@ -144,17 +147,17 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
             TextFormField(
               controller: _celebrant,
               textCapitalization: TextCapitalization.words,
-              validator: (v) => Validators.required(v, 'Diz para quem é a festa.'),
-              decoration: const InputDecoration(hintText: 'Nome do aniversariante'),
+              validator: (v) => Validators.required(v, context.tr('Diz para quem é a festa.')),
+              decoration: InputDecoration(hintText: context.tr('Nome do aniversariante')),
             ),
             const SizedBox(height: 18),
-            Text('A festa', style: context.text.titleSmall),
+            Text(context.tr('A festa'), style: context.text.titleSmall),
             const SizedBox(height: 8),
             TextFormField(
               controller: _title,
               textCapitalization: TextCapitalization.sentences,
-              validator: (v) => Validators.required(v, 'Dá um nome à festa.'),
-              decoration: const InputDecoration(hintText: 'Ex.: Jantar surpresa dos 30'),
+              validator: (v) => Validators.required(v, context.tr('Dá um nome à festa.')),
+              decoration: InputDecoration(hintText: context.tr('Ex.: Jantar surpresa dos 30')),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
@@ -163,7 +166,7 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
               icon: const Icon(LucideIcons.calendarClock, size: 18),
               label: Text(
                 d == null
-                    ? 'Escolher dia e hora'
+                    ? context.tr('Escolher dia e hora')
                     : '${Fmt.weekdayDayMonth(d)} · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}',
               ),
             ),
@@ -171,9 +174,9 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
             TextFormField(
               controller: _place,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Onde? (opcional)',
-                prefixIcon: Icon(LucideIcons.mapPin, size: 18),
+              decoration: InputDecoration(
+                hintText: context.tr('Onde? (opcional)'),
+                prefixIcon: const Icon(LucideIcons.mapPin, size: 18),
               ),
             ),
             const SizedBox(height: 10),
@@ -182,15 +185,18 @@ class _PartyFormScreenState extends ConsumerState<PartyFormScreen> {
               minLines: 2,
               maxLines: 5,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Notas para os convidados (o que levar, código de vestuário…)',
+              decoration: InputDecoration(
+                hintText: context.tr('Notas para os convidados (o que levar, código de vestuário…)'),
               ),
             ),
             const SizedBox(height: 24),
-            FilledButton(onPressed: _saving ? null : _save, child: Text(_existing == null ? 'Criar festa' : 'Guardar')),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: Text(_existing == null ? context.tr('Criar festa') : context.tr('Guardar')),
+            ),
             const SizedBox(height: 8),
             Text(
-              'Depois de criar, partilha o código para os amigos entrarem.',
+              context.tr('Depois de criar, partilha o código para os amigos entrarem.'),
               textAlign: TextAlign.center,
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),

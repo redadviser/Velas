@@ -34,7 +34,11 @@ void main() {
     tester.view.physicalSize = const Size(360, 780) * 3;
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues({'velas.onboarded.me': true, 'velas.a11y.textScale': 2.0});
+    SharedPreferences.setMockInitialValues({
+      'velas.onboarded.me': true,
+      'velas.a11y.textScale': 2.0,
+      'velas.locale': 'pt', // o ambiente de teste é en_US
+    });
     final prefs = await SharedPreferences.getInstance();
     final noop = Provider<void>((_) {});
     await tester.pumpWidget(

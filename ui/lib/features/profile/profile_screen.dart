@@ -44,7 +44,7 @@ class ProfileScreen extends ConsumerWidget {
     final t = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: user.reminderHour, minute: user.reminderMinute),
-      helpText: 'Hora dos lembretes',
+      helpText: context.tr('Hora dos lembretes'),
     );
     if (t != null && context.mounted) {
       await _update(context, ref, user.copyWith(reminderHour: t.hour, reminderMinute: t.minute));
@@ -55,13 +55,17 @@ class ProfileScreen extends ConsumerWidget {
     final online = ref.read(apiClientProvider) != null;
     final ok = await confirmDialog(
       context,
-      title: 'Eliminar conta?',
+      title: context.tr('Eliminar conta?'),
       message: online
-          ? 'Vamos enviar-te um email com um link. A conta e todos os aniversários, presentes e mensagens só são '
-                'apagados quando abrires o link e confirmares. Depois disso não é possível recuperar.'
-          : 'Todos os aniversários, presentes e mensagens serão apagados de forma permanente. '
-                'Esta ação não pode ser desfeita.',
-      confirm: online ? 'Enviar email' : 'Eliminar conta',
+          ? context.tr(
+              'Vamos enviar-te um email com um link. A conta e todos os aniversários, presentes e mensagens só são '
+              'apagados quando abrires o link e confirmares. Depois disso não é possível recuperar.',
+            )
+          : context.tr(
+              'Todos os aniversários, presentes e mensagens serão apagados de forma permanente. '
+              'Esta ação não pode ser desfeita.',
+            ),
+      confirm: online ? context.tr('Enviar email') : context.tr('Eliminar conta'),
     );
     if (!ok || !context.mounted) return;
     String? email;
@@ -72,13 +76,16 @@ class ProfileScreen extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Vê o teu email', style: AppTheme.display(ctx, size: 22)),
+        title: Text(ctx.tr('Vê o teu email'), style: AppTheme.display(ctx, size: 22)),
         content: Text(
-          'Enviámos um email para $email. Abre o link e confirma para eliminar a conta. '
-          'O link vale 24 horas; se não o encontrares, vê o spam.',
+          ctx.tr(
+            'Enviámos um email para {email}. Abre o link e confirma para eliminar a conta. '
+            'O link vale 24 horas; se não o encontrares, vê o spam.',
+            {'email': email},
+          ),
           style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
         ),
-        actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+        actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('OK')))],
       ),
     );
   }
@@ -86,17 +93,22 @@ class ProfileScreen extends ConsumerWidget {
   List<Widget> _accountTiles(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider)!;
     return [
-      _Tile(icon: LucideIcons.user, title: 'Nome', value: user.name, onTap: () => _editName(context, ref, user)),
+      _Tile(
+        icon: LucideIcons.user,
+        title: context.tr('Nome'),
+        value: user.name,
+        onTap: () => _editName(context, ref, user),
+      ),
       _Tile(
         icon: LucideIcons.atSign,
-        title: 'Username',
-        value: user.username.isEmpty ? 'Definir' : '@${user.username}',
+        title: context.tr('Username'),
+        value: user.username.isEmpty ? context.tr('Definir') : '@${user.username}',
         onTap: () => showUsernameSheet(context),
       ),
       _Tile(
         icon: LucideIcons.smartphone,
-        title: 'Telemóvel',
-        value: user.phone.isEmpty ? 'Associar' : Identity.displayPhone(user.phone),
+        title: context.tr('Telemóvel'),
+        value: user.phone.isEmpty ? context.tr('Associar') : Identity.displayPhone(user.phone),
         onTap: () => showPhoneSheet(context),
       ),
       _Tile(
@@ -106,12 +118,12 @@ class ProfileScreen extends ConsumerWidget {
           if (user.payment.mbwayPhone.isNotEmpty) 'MB WAY',
           if (user.payment.revolutTag.isNotEmpty) 'Revolut',
           if (user.payment.paypalUser.isNotEmpty) 'PayPal',
-        ].join(', ').ifEmpty('Por definir'),
+        ].join(', ').ifEmpty(context.tr('Por definir')),
         onTap: () => context.push('/profile/payments'),
       ),
       _Tile(
         icon: LucideIcons.lock,
-        title: 'Alterar palavra-passe',
+        title: context.tr('Alterar palavra-passe'),
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ResetPasswordScreen())),
       ),
     ];
@@ -123,8 +135,8 @@ class ProfileScreen extends ConsumerWidget {
     return [
       SwitchListTile(
         secondary: const IconBadge(icon: LucideIcons.bell, size: 38),
-        title: const Text('Notificações'),
-        subtitle: Text(user.notificationsEnabled ? 'Ativas' : 'Desativadas'),
+        title: Text(context.tr('Notificações')),
+        subtitle: Text(user.notificationsEnabled ? context.tr('Ativas') : context.tr('Desativadas')),
         value: user.notificationsEnabled,
         onChanged: (v) async {
           if (v) await NotificationService.instance.requestPermission();
@@ -133,21 +145,21 @@ class ProfileScreen extends ConsumerWidget {
       ),
       _Tile(
         icon: LucideIcons.clock,
-        title: 'Hora do lembrete',
+        title: context.tr('Hora do lembrete'),
         value: time,
         onTap: () => _pickTime(context, ref, user),
       ),
       SwitchListTile(
         secondary: const IconBadge(icon: LucideIcons.calendarRange, size: 38),
-        title: const Wrap(
+        title: Wrap(
           spacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [Text('Resumo semanal'), PlusBadge()],
+          children: [Text(context.tr('Resumo semanal')), const PlusBadge()],
         ),
-        subtitle: const Text('À segunda-feira, os aniversários da semana'),
+        subtitle: Text(context.tr('À segunda-feira, os aniversários da semana')),
         value: user.weeklyDigest && user.isPlus,
         onChanged: (v) async {
-          if (v && !await requirePlus(context, ref, feature: 'O resumo semanal')) return;
+          if (v && !await requirePlus(context, ref, feature: context.tr('O resumo semanal'))) return;
           final current = ref.read(currentUserProvider) ?? user;
           if (context.mounted) await _update(context, ref, current.copyWith(weeklyDigest: v));
         },
@@ -157,7 +169,7 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Avisar-me por defeito', style: context.text.titleSmall),
+            Text(context.tr('Avisar-me por defeito'), style: context.text.titleSmall),
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
@@ -171,7 +183,7 @@ class ProfileScreen extends ConsumerWidget {
                       final set = {...user.defaultReminderDays};
                       s ? set.add(d) : set.remove(d);
                       if (set.isEmpty) {
-                        showMessage(context, 'Mantém pelo menos um lembrete.');
+                        showMessage(context, context.tr('Mantém pelo menos um lembrete.'));
                         return;
                       }
                       _update(context, ref, user.copyWith(defaultReminderDays: set.toList()..sort()));
@@ -192,19 +204,19 @@ class ProfileScreen extends ConsumerWidget {
     return [
       _Tile(
         icon: LucideIcons.accessibility,
-        title: 'Acessibilidade',
+        title: context.tr('Acessibilidade'),
         value: _a11ySummary(ref.watch(accessibilityProvider)),
         onTap: () => context.push('/profile/accessibility'),
       ),
       _Tile(
         icon: LucideIcons.palette,
-        title: 'Tema',
-        value: user.isPlus ? ref.watch(themeAccentProvider).label : 'Coral',
+        title: context.tr('Tema'),
+        value: user.isPlus ? ref.watch(themeAccentProvider).label : context.tr('Coral'),
         onTap: () => _pickAccent(context, ref),
       ),
       _Tile(
         icon: LucideIcons.tag,
-        title: 'Categorias',
+        title: context.tr('Categorias'),
         value: '${data.categories.length}',
         onTap: () => context.push('/profile/categories'),
       ),
@@ -219,7 +231,7 @@ class ProfileScreen extends ConsumerWidget {
         title: context.tr(Keys.settingsLanguage),
         value: switch (ref.watch(localeProvider)) {
           null => context.tr(Keys.settingsLanguageSystem),
-          final l => context.tr('language.${l.languageCode}'),
+          final l => Translations.languageNames[Translations.tagOf(l)]!,
         },
         onTap: () => _pickLanguage(context, ref),
       ),
@@ -228,16 +240,24 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Aspeto', style: context.text.titleSmall),
+            Text(context.tr('Aspeto'), style: context.text.titleSmall),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<ThemeMode>(
                 showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(value: ThemeMode.system, label: Text('Sistema')),
-                  ButtonSegment(value: ThemeMode.light, icon: Icon(LucideIcons.sun, size: 16), label: Text('Claro')),
-                  ButtonSegment(value: ThemeMode.dark, icon: Icon(LucideIcons.moon, size: 16), label: Text('Escuro')),
+                segments: [
+                  ButtonSegment(value: ThemeMode.system, label: Text(context.tr('Sistema'))),
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    icon: const Icon(LucideIcons.sun, size: 16),
+                    label: Text(context.tr('Claro')),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    icon: const Icon(LucideIcons.moon, size: 16),
+                    label: Text(context.tr('Escuro')),
+                  ),
                 ],
                 selected: {themeMode},
                 onSelectionChanged: (s) => ref.read(themeModeProvider.notifier).set(s.first),
@@ -251,21 +271,25 @@ class ProfileScreen extends ConsumerWidget {
 
   List<Widget> _privacyTiles(BuildContext context, WidgetRef ref) {
     return [
-      _Tile(icon: LucideIcons.download, title: 'Exportar os meus dados', onTap: () => exportMyData(context, ref)),
+      _Tile(
+        icon: LucideIcons.download,
+        title: context.tr('Exportar os meus dados'),
+        onTap: () => exportMyData(context, ref),
+      ),
       _Tile(
         icon: LucideIcons.shieldCheck,
-        title: 'Política de Privacidade',
+        title: context.tr('Política de Privacidade'),
         onTap: () => openLegal(context, LegalLinks.privacy),
       ),
       if (ref.watch(apiClientProvider) != null)
         _Tile(
           icon: LucideIcons.fileText,
-          title: 'Termos de Utilização',
+          title: context.tr('Termos de Utilização'),
           onTap: () => openLegal(context, LegalLinks.terms),
         ),
       _Tile(
         icon: LucideIcons.trash2,
-        title: 'Eliminar conta',
+        title: context.tr('Eliminar conta'),
         destructive: true,
         onTap: () => _deleteAccount(context, ref),
       ),
@@ -274,11 +298,15 @@ class ProfileScreen extends ConsumerWidget {
 
   List<Widget> _supportTiles(BuildContext context, WidgetRef ref) {
     return [
-      _Tile(icon: LucideIcons.lifeBuoy, title: 'Ajuda e contacto', onTap: () => context.push('/profile/help')),
+      _Tile(
+        icon: LucideIcons.lifeBuoy,
+        title: context.tr('Ajuda e contacto'),
+        onTap: () => context.push('/profile/help'),
+      ),
       if (ref.watch(chatRepositoryProvider) != null)
         _Tile(
           icon: LucideIcons.ban,
-          title: 'Utilizadores bloqueados',
+          title: context.tr('Utilizadores bloqueados'),
           onTap: () => context.push('/chat-settings/blocked'),
         ),
     ];
@@ -295,7 +323,7 @@ class ProfileScreen extends ConsumerWidget {
     final time = TimeOfDay(hour: user.reminderHour, minute: user.reminderMinute).format(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(title: Text(context.tr('Perfil'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         children: [
@@ -320,13 +348,21 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _MiniStat(value: '${data.people.length}', label: 'pessoas', onTap: () => context.go('/people')),
+              _MiniStat(
+                value: '${data.people.length}',
+                label: context.tr('pessoas'),
+                onTap: () => context.go('/people'),
+              ),
               const SizedBox(width: 10),
-              _MiniStat(value: '${data.gifts.length}', label: 'ideias', onTap: () => context.go('/gifts?tab=ideas')),
+              _MiniStat(
+                value: '${data.gifts.length}',
+                label: context.tr('ideias'),
+                onTap: () => context.go('/gifts?tab=ideas'),
+              ),
               const SizedBox(width: 10),
               _MiniStat(
                 value: '${data.messages.length}',
-                label: 'mensagens',
+                label: context.tr('mensagens'),
                 onTap: () => _showMessages(context, data),
               ),
             ],
@@ -341,7 +377,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Modo local: os dados estão guardados apenas neste dispositivo.',
+                      context.tr('Modo local: os dados estão guardados apenas neste dispositivo.'),
                       style: TextStyle(color: context.palette.accentForeground),
                     ),
                   ),
@@ -355,14 +391,14 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 _Tile(
                   icon: LucideIcons.partyPopper,
-                  title: 'O meu mural',
+                  title: context.tr('O meu mural'),
                   value: '${ref.watch(wallProvider).value?.length ?? 0}',
                   onTap: () => context.push('/wall'),
                 ),
                 _Tile(
                   icon: LucideIcons.sparkles,
-                  title: 'Plano',
-                  value: user.isPlus ? 'Birthdayly+' : 'Grátis',
+                  title: context.tr('Plano'),
+                  value: user.isPlus ? 'Birthdayly+' : context.tr('Grátis'),
                   onTap: () => context.push('/profile/plans'),
                 ),
               ],
@@ -373,52 +409,62 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               _Tile(
                 icon: LucideIcons.circleUserRound,
-                title: 'Conta',
+                title: context.tr('Conta'),
                 value: user.username.isEmpty ? user.name : '@${user.username}',
                 onTap: () => context.push('/profile/account'),
               ),
               _Tile(
                 icon: LucideIcons.bell,
-                title: 'Lembretes',
-                value: user.notificationsEnabled ? 'Ativos · $time' : 'Desligados',
+                title: context.tr('Lembretes'),
+                value: user.notificationsEnabled
+                    ? context.tr('Ativos · {time}', {'time': time})
+                    : context.tr('Desligados'),
                 onTap: () => context.push('/profile/reminders'),
               ),
               _Tile(
-                icon: LucideIcons.heart,
-                title: 'Gostos e desejos',
-                value: user.interests.isEmpty ? null : '${user.interests.length} gostos',
-                onTap: () => context.push('/profile/wishlist'),
+                icon: LucideIcons.lifeBuoy,
+                title: context.tr('Ajuda'),
+                onTap: () => context.push('/profile/support'),
               ),
               _Tile(
                 icon: LucideIcons.slidersHorizontal,
-                title: 'Preferências',
+                title: context.tr('Preferências'),
                 value: switch (themeMode) {
-                  ThemeMode.light => 'Claro',
-                  ThemeMode.dark => 'Escuro',
-                  ThemeMode.system => 'Tema do sistema',
+                  ThemeMode.light => context.tr('Claro'),
+                  ThemeMode.dark => context.tr('Escuro'),
+                  ThemeMode.system => context.tr('Tema do sistema'),
                 },
                 onTap: () => context.push('/profile/preferences'),
               ),
               if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
-                _Tile(icon: LucideIcons.layoutGrid, title: 'Widgets', onTap: () => context.push('/profile/widget')),
+                _Tile(
+                  icon: LucideIcons.layoutGrid,
+                  title: context.tr('Widgets'),
+                  onTap: () => context.push('/profile/widget'),
+                ),
               _Tile(
                 icon: LucideIcons.shieldCheck,
-                title: 'Privacidade e dados',
+                title: context.tr('Privacidade e dados'),
                 onTap: () => context.push('/profile/privacy'),
               ),
-              _Tile(icon: LucideIcons.lifeBuoy, title: 'Ajuda', onTap: () => context.push('/profile/support')),
+              _Tile(
+                icon: LucideIcons.heart,
+                title: context.tr('Gostos e desejos'),
+                value: user.interests.isEmpty ? null : context.tr('{count} gostos', {'count': user.interests.length}),
+                onTap: () => context.push('/profile/wishlist'),
+              ),
             ],
           ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: () => runGuarded(context, () => ref.read(authRepositoryProvider).signOut()),
             icon: const Icon(LucideIcons.logOut, size: 18),
-            label: const Text('Terminar sessão'),
+            label: Text(context.tr('Terminar sessão')),
           ),
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'Birthdayly · versão 1.0.0',
+              context.tr('Birthdayly · versão 1.0.0'),
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),
           ),
@@ -430,14 +476,19 @@ class ProfileScreen extends ConsumerWidget {
 
 /// As secções do perfil, cada uma na sua página.
 enum ProfileSection {
-  account('Conta'),
-  reminders('Lembretes'),
-  preferences('Preferências'),
-  privacy('Privacidade e dados'),
-  support('Ajuda');
+  account,
+  reminders,
+  preferences,
+  privacy,
+  support;
 
-  const ProfileSection(this.title);
-  final String title;
+  String get title => switch (this) {
+    account => tr('Conta'),
+    reminders => tr('Lembretes'),
+    preferences => tr('Preferências'),
+    privacy => tr('Privacidade e dados'),
+    support => tr('Ajuda'),
+  };
 }
 
 class ProfileSectionScreen extends ConsumerWidget {
@@ -484,13 +535,13 @@ void _showMessages(BuildContext context, AppData data) {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Mensagens guardadas', style: AppTheme.display(ctx, size: 22)),
+              child: Text(ctx.tr('Mensagens guardadas'), style: AppTheme.display(ctx, size: 22)),
             ),
             if (withMessage.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Text(
-                  'Ainda não escreveste nenhuma. Abre uma pessoa e toca em "Ver mensagem".',
+                  ctx.tr('Ainda não escreveste nenhuma. Abre uma pessoa e toca em "Ver mensagem".'),
                   style: TextStyle(color: ctx.palette.mutedForeground),
                 ),
               ),
@@ -634,18 +685,18 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
             children: [
               ListTile(
                 leading: const Icon(LucideIcons.images),
-                title: const Text('Escolher da galeria'),
+                title: Text(ctx.tr('Escolher da galeria')),
                 onTap: () => Navigator.pop(ctx, 'gallery'),
               ),
               ListTile(
                 leading: const Icon(LucideIcons.camera),
-                title: const Text('Tirar fotografia'),
+                title: Text(ctx.tr('Tirar fotografia')),
                 onTap: () => Navigator.pop(ctx, 'camera'),
               ),
               if (hasPhoto)
                 ListTile(
                   leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
-                  title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
+                  title: Text(ctx.tr('Remover fotografia'), style: TextStyle(color: ctx.colors.error)),
                   onTap: () => Navigator.pop(ctx, 'remove'),
                 ),
               const SizedBox(height: 8),
@@ -658,20 +709,22 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
     final auth = ref.read(authRepositoryProvider);
     if (action == 'remove') {
       setState(() => _busy = true);
-      await runGuarded(context, () => auth.updatePhoto(null), success: 'Fotografia removida.');
+      await runGuarded(context, () => auth.updatePhoto(null), success: tr('Fotografia removida.'));
     } else {
       PickedImage? picked;
       try {
         // Pequena e quadrada o suficiente para os avatares (até 2 MB no servidor).
         picked = await pickChatImage(action == 'camera' ? ImageSource.camera : ImageSource.gallery, maxSide: 640);
       } catch (_) {
-        if (mounted) showMessage(context, 'Não foi possível aceder às fotografias. Verifica as permissões.');
+        if (mounted) {
+          showMessage(context, context.tr('Não foi possível aceder às fotografias. Verifica as permissões.'));
+        }
         return;
       }
       if (picked == null || !mounted) return;
       setState(() => _busy = true);
       final bytes = picked.bytes;
-      await runGuarded(context, () => auth.updatePhoto(bytes), success: 'Fotografia atualizada.');
+      await runGuarded(context, () => auth.updatePhoto(bytes), success: tr('Fotografia atualizada.'));
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -682,7 +735,7 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
     const size = 64.0;
     return Semantics(
       button: true,
-      label: 'Alterar fotografia de perfil',
+      label: context.tr('Alterar fotografia de perfil'),
       child: GestureDetector(
         onTap: _busy ? null : _change,
         child: Stack(
@@ -743,15 +796,15 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
 String _a11ySummary(AccessibilitySettings a) {
   final parts = [
     if (a.textScale != null) '${(a.textScale! * 100).round()}%',
-    if (a.highContrast) 'contraste',
-    if (a.reduceMotion) 'sem animações',
+    if (a.highContrast) tr('contraste'),
+    if (a.reduceMotion) tr('sem animações'),
   ];
-  return parts.isEmpty ? 'Do telemóvel' : parts.join(', ');
+  return parts.isEmpty ? tr('Do telemóvel') : parts.join(', ');
 }
 
 /// Tema de cor da app (Birthdayly+).
 Future<void> _pickAccent(BuildContext context, WidgetRef ref) async {
-  if (!await requirePlus(context, ref, feature: 'Mudar o tema')) return;
+  if (!await requirePlus(context, ref, feature: context.tr('Mudar o tema'))) return;
   if (!context.mounted) return;
   final current = ref.read(themeAccentProvider);
   final picked = await showModalBottomSheet<AppAccent>(
@@ -765,7 +818,7 @@ Future<void> _pickAccent(BuildContext context, WidgetRef ref) async {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Tema', style: AppTheme.display(ctx, size: 22)),
+              child: Text(ctx.tr('Tema'), style: AppTheme.display(ctx, size: 22)),
             ),
             for (final a in AppAccent.values)
               ListTile(
@@ -795,12 +848,8 @@ Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
       child: SingleChildScrollView(
         // Desliza quando não cabe (letra grande).
         child: RadioGroup<String>(
-          groupValue: current?.languageCode ?? '',
-          onChanged: (code) => Navigator.pop(ctx, (
-            code == null || code.isEmpty
-                ? null
-                : Translations.supportedLocales.firstWhere((l) => l.languageCode == code),
-          )),
+          groupValue: current == null ? '' : Translations.tagOf(current),
+          onChanged: (tag) => Navigator.pop(ctx, (tag == null || tag.isEmpty ? null : Translations.localeOf(tag),)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -810,8 +859,12 @@ Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
                 child: Text(ctx.tr(Keys.settingsLanguage), style: AppTheme.display(ctx, size: 22)),
               ),
               RadioListTile<String>(value: '', title: Text(ctx.tr(Keys.settingsLanguageSystem))),
-              for (final code in Translations.languageCodes)
-                RadioListTile<String>(value: code, title: Text(ctx.tr('language.$code'))),
+              for (final code
+                  in Translations.languageCodes.toList()..sort(
+                    (a, b) =>
+                        foldText(Translations.languageNames[a]!).compareTo(foldText(Translations.languageNames[b]!)),
+                  ))
+                RadioListTile<String>(value: code, title: Text(Translations.languageNames[code]!)),
               const SizedBox(height: 8),
             ],
           ),
@@ -850,7 +903,7 @@ class _NameSheetState extends State<_NameSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('O teu nome', style: AppTheme.display(context, size: 22)),
+          Text(context.tr('O teu nome'), style: AppTheme.display(context, size: 22)),
           const SizedBox(height: 16),
           TextField(
             controller: _ctrl,
@@ -859,7 +912,7 @@ class _NameSheetState extends State<_NameSheet> {
             onSubmitted: (v) => Navigator.pop(context, v),
           ),
           const SizedBox(height: 16),
-          FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text), child: const Text('Guardar')),
+          FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text), child: Text(context.tr('Guardar'))),
         ],
       ),
     );

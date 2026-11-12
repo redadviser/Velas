@@ -60,7 +60,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
         padding: EdgeInsets.fromLTRB(20, 16, chat ? 8 : 20, 12),
         child: Row(
           children: [
-            Expanded(child: Text('Prendas', style: AppTheme.display(context, size: 30))),
+            Expanded(child: Text(context.tr('Prendas'), style: AppTheme.display(context, size: 30))),
             if (chat)
               IconButton(
                 tooltip: context.tr(Keys.chatFriendsTooltip),
@@ -88,10 +88,10 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
         child: Row(
           spacing: 8,
           children: [
-            for (final (v, label) in const [
-              (_View.ongoing, 'Em curso'),
-              (_View.done, 'Concluídos'),
-              (_View.ideas, 'Ideias guardadas'),
+            for (final (v, label) in [
+              (_View.ongoing, context.tr('Em curso')),
+              (_View.done, context.tr('Concluídos')),
+              (_View.ideas, context.tr('Ideias guardadas')),
             ])
               _Tab(
                 label: label,
@@ -105,12 +105,15 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
     ];
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'fab-gifts',
-        onPressed: () => plans ? showNewConversationSheet(context, ref) : pickPersonThenAddGift(context, ref),
-        icon: const Icon(LucideIcons.plus, size: 20),
-        label: Text(plans ? context.tr(Keys.chatNewTitle) : 'Nova ideia'),
-      ),
+      // Prendas em grupo e festas criam-se no "+" do meio.
+      floatingActionButton: plans
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'fab-gifts',
+              onPressed: () => pickPersonThenAddGift(context, ref),
+              icon: const Icon(LucideIcons.plus, size: 20),
+              label: Text(context.tr('Nova ideia')),
+            ),
       body: SafeArea(
         bottom: false,
         child: plans
@@ -157,13 +160,13 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                           child: Row(
                             children: [
                               _Summary(
-                                label: 'Por comprar',
+                                label: context.tr('Por comprar'),
                                 value: '${pending.length}',
                                 sub: toSpend > 0 ? '≈ ${Fmt.money(toSpend)}' : null,
                               ),
                               Container(width: 1, height: 44, color: context.palette.border),
                               _Summary(
-                                label: 'Comprados',
+                                label: context.tr('Comprados'),
                                 value: '${purchased.length}',
                                 sub: spent > 0 ? Fmt.money(spent) : null,
                               ),
@@ -176,9 +179,9 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: SegmentedButton<bool>(
                           showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(value: false, label: Text('Por comprar')),
-                            ButtonSegment(value: true, label: Text('Comprados')),
+                          segments: [
+                            ButtonSegment(value: false, label: Text(context.tr('Por comprar'))),
+                            ButtonSegment(value: true, label: Text(context.tr('Comprados'))),
                           ],
                           selected: {_showPurchased},
                           onSelectionChanged: (s) => setState(() => _showPurchased = s.first),
@@ -187,10 +190,12 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
                       if (groups.isEmpty)
                         EmptyState(
                           icon: LucideIcons.gift,
-                          title: _showPurchased ? 'Nada comprado ainda' : 'Sem ideias pendentes',
+                          title: _showPurchased
+                              ? context.tr('Nada comprado ainda')
+                              : context.tr('Sem ideias pendentes'),
                           message: _showPurchased
-                              ? 'Quando marcares um presente como comprado, aparece aqui.'
-                              : 'Guarda ideias de presentes ao longo do ano e chega ao dia sem stress.',
+                              ? context.tr('Quando marcares um presente como comprado, aparece aqui.')
+                              : context.tr('Guarda ideias de presentes ao longo do ano e chega ao dia sem stress.'),
                         )
                       else
                         for (final (person, gifts) in groups) _PersonGroup(person: person, gifts: gifts, data: data),
@@ -308,7 +313,12 @@ class _PersonGroup extends ConsumerWidget {
                           Text(
                             person.giftBudget == null
                                 ? Fmt.dayMonth(person.nextBirthday())
-                                : 'Orçamento ${Fmt.money(person.giftBudget!)} · gasto ${Fmt.money(allGifts.where((g) => g.purchased).fold<double>(0, (a, g) => a + (g.price ?? 0)))}',
+                                : context.tr('Orçamento {budget} · gasto {spent}', {
+                                    'budget': Fmt.money(person.giftBudget!),
+                                    'spent': Fmt.money(
+                                      allGifts.where((g) => g.purchased).fold<double>(0, (a, g) => a + (g.price ?? 0)),
+                                    ),
+                                  }),
                             style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                           ),
                         ],
@@ -347,9 +357,13 @@ class _StatsBanner extends ConsumerWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
-            child: Text(value, maxLines: 1, style: AppTheme.display(context, size: 24, color: Colors.white)),
+            child: Text(
+              value,
+              maxLines: 1,
+              style: AppTheme.display(context, size: 24, color: context.colors.secondary),
+            ),
           ),
-          Text(label, style: context.text.labelSmall?.copyWith(color: Colors.white)),
+          Text(label, style: context.text.labelSmall?.copyWith(color: context.colors.onSurface)),
         ],
       ),
     );
@@ -357,20 +371,17 @@ class _StatsBanner extends ConsumerWidget {
       width: 1,
       height: 36,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: Colors.white.withValues(alpha: 0.3),
+      color: context.palette.border,
     );
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(21),
-        gradient: const LinearGradient(colors: [Color(0xFF6650CC), Color(0xFF7A63DA)]),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(21), color: context.palette.violetSoft),
       child: Row(
         children: [
-          stat('$active', active == 1 ? 'grupo ativo' : 'grupos ativos'),
+          stat('$active', active == 1 ? context.tr('grupo ativo') : context.tr('grupos ativos')),
           divider(),
-          stat(Fmt.money(collected), 'reunidos'),
+          stat(Fmt.money(collected), context.tr('reunidos')),
         ],
       ),
     );

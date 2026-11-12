@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/cards_providers.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -39,30 +40,41 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   bool _uploading = false;
 
   Future<void> _add() async {
-    if (!await requirePlus(context, ref, feature: 'O álbum do mural')) return;
+    if (!await requirePlus(context, ref, feature: context.tr('O álbum do mural'))) return;
     final api = ref.read(apiClientProvider);
     if (api == null) return;
     List<XFile> files;
     try {
       files = await ImagePicker().pickMultiImage(maxWidth: 1600, maxHeight: 1600, imageQuality: 85, limit: 10);
     } catch (_) {
-      if (mounted) showMessage(context, 'Não foi possível aceder às fotografias. Verifica as permissões.');
+      if (mounted) showMessage(context, context.tr('Não foi possível aceder às fotografias. Verifica as permissões.'));
       return;
     }
     if (files.isEmpty || !mounted) return;
     setState(() => _uploading = true);
-    await runGuarded(context, () async {
-      for (final f in files) {
-        await api.postBytes('/wall/photos?year=${widget.year}', await f.readAsBytes(), 'image/jpeg');
-      }
-    }, success: files.length == 1 ? 'Fotografia acrescentada.' : '${files.length} fotografias acrescentadas.');
+    await runGuarded(
+      context,
+      () async {
+        for (final f in files) {
+          await api.postBytes('/wall/photos?year=${widget.year}', await f.readAsBytes(), 'image/jpeg');
+        }
+      },
+      success: files.length == 1
+          ? context.tr('Fotografia acrescentada.')
+          : context.tr('{count} fotografias acrescentadas.', {'count': files.length}),
+    );
     if (!mounted) return;
     setState(() => _uploading = false);
     ref.invalidate(wallPhotosProvider(widget.year));
   }
 
   Future<void> _remove(WallPhoto p) async {
-    final ok = await confirmDialog(context, title: 'Tirar do álbum?', message: 'A fotografia é apagada do teu mural.', confirm: 'Tirar');
+    final ok = await confirmDialog(
+      context,
+      title: context.tr('Tirar do álbum?'),
+      message: context.tr('A fotografia é apagada do teu mural.'),
+      confirm: context.tr('Tirar'),
+    );
     if (!ok || !mounted) return;
     await runGuarded(context, () => ref.read(apiClientProvider)!.delete('/wall/photos/${p.id}'));
     ref.invalidate(wallPhotosProvider(widget.year));
@@ -72,28 +84,31 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
   Widget build(BuildContext context) {
     final cardPhotos = [
       for (final c in ref.watch(wallProvider).value ?? const <ReceivedCard>[])
-        if (c.receivedAt.year == widget.year && c.media?.kind == CardMediaKind.image) (url: c.media!.url, from: c.sender.firstName),
+        if (c.receivedAt.year == widget.year && c.media?.kind == CardMediaKind.image)
+          (url: c.media!.url, from: c.sender.firstName),
     ];
     final photos = ref.watch(wallPhotosProvider(widget.year));
     final mine = photos.value ?? const <WallPhoto>[];
     final empty = cardPhotos.isEmpty && mine.isEmpty;
     return Scaffold(
-      appBar: AppBar(title: Text('Álbum de ${widget.year}')),
+      appBar: AppBar(title: Text(context.tr('Álbum de {year}', {'year': widget.year}))),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-album',
         onPressed: _uploading ? null : _add,
         icon: _uploading
             ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(LucideIcons.imagePlus),
-        label: const Text('Acrescentar'),
+        label: Text(context.tr('Acrescentar')),
       ),
       body: photos.isLoading && empty
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
           : empty
-          ? const EmptyState(
+          ? EmptyState(
               icon: LucideIcons.images,
-              title: 'O álbum ainda está vazio',
-              message: 'As fotografias dos cartões que receberes aparecem aqui. Acrescenta também as da festa.',
+              title: context.tr('O álbum ainda está vazio'),
+              message: context.tr(
+                'As fotografias dos cartões que receberes aparecem aqui. Acrescenta também as da festa.',
+              ),
             )
           : GridView.count(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -104,10 +119,11 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                 for (final p in mine)
                   _Tile(
                     url: p.url,
-                    title: p.caption.isEmpty ? 'O meu mural' : p.caption,
+                    title: p.caption.isEmpty ? context.tr('O meu mural') : p.caption,
                     onLongPress: () => _remove(p),
                   ),
-                for (final c in cardPhotos) _Tile(url: c.url, title: 'De ${c.from}', badge: c.from),
+                for (final c in cardPhotos)
+                  _Tile(url: c.url, title: context.tr('De {name}', {'name': c.from}), badge: c.from),
               ],
             ),
     );

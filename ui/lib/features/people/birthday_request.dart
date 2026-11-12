@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/chat_providers.dart';
 import '../../core/config/env.dart';
 import '../../core/providers.dart';
@@ -68,9 +69,10 @@ class BirthdayRequestLinks {
     return '$base/b/$token';
   }
 
-  static String shareMessage(String token) =>
-      'Estou a juntar os aniversários de quem gosto para nunca me esquecer 🎂 '
-      'Deixa aqui o teu, demora 10 segundos: ${shareLink(token)}';
+  static String shareMessage(String token) => tr(
+    'Estou a juntar os aniversários de quem gosto para nunca me esquecer 🎂 Deixa aqui o teu, demora 10 segundos: {link}',
+    {'link': shareLink(token)},
+  );
 }
 
 /// Partilhar o link (WhatsApp, etc.). Desligado ou expirado, troca primeiro por um novo.
@@ -96,9 +98,9 @@ Future<void> _manage(BuildContext context, WidgetRef ref, String action) async {
       _ => api.patch('/birthday-request', {'enabled': true}),
     },
     success: switch (action) {
-      'reset' => 'Link novo criado. O antigo deixou de funcionar.',
-      'off' => 'Link desligado: ninguém consegue responder.',
-      _ => 'Link ligado outra vez.',
+      'reset' => context.tr('Link novo criado. O antigo deixou de funcionar.'),
+      'off' => context.tr('Link desligado: ninguém consegue responder.'),
+      _ => context.tr('Link ligado outra vez.'),
     },
   );
   ref.invalidate(birthdayRequestProvider);
@@ -115,12 +117,18 @@ class BirthdayRequestCard extends ConsumerWidget {
     final fg = context.palette.accentForeground;
     final pending = link?.pending ?? 0;
     final subtitle = link != null && !link.open
-        ? (link.enabled ? 'O link expirou. Partilha para criar um novo.' : 'O link está desligado: ninguém consegue responder.')
+        ? (link.enabled
+              ? context.tr('O link expirou. Partilha para criar um novo.')
+              : context.tr('O link está desligado: ninguém consegue responder.'))
         : pending > 0
-        ? '${pending == 1 ? '1 resposta à espera' : '$pending respostas à espera'} de confirmação. Toca para ver.'
+        ? (pending == 1
+              ? context.tr('1 resposta à espera de confirmação. Toca para ver.')
+              : context.tr('{count} respostas à espera de confirmação. Toca para ver.', {'count': pending}))
         : (link?.answers ?? 0) > 0
-        ? '${link!.answers == 1 ? '1 pessoa já deixou' : '${link.answers} pessoas já deixaram'} a data pelo teu link.'
-        : 'Envia um link ao grupo da família ou dos amigos: cada um deixa a sua data e tu confirmas.';
+        ? (link!.answers == 1
+              ? context.tr('1 pessoa já deixou a data pelo teu link.')
+              : context.tr('{count} pessoas já deixaram a data pelo teu link.', {'count': link.answers}))
+        : context.tr('Envia um link ao grupo da família ou dos amigos: cada um deixa a sua data e tu confirmas.');
     return AppCard(
       color: context.palette.accent,
       onTap: pending > 0 ? () => context.push('/people/requests') : null,
@@ -133,23 +141,23 @@ class BirthdayRequestCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Não sabes a data? Pede-a', style: context.text.titleSmall?.copyWith(color: fg)),
+                Text(context.tr('Não sabes a data? Pede-a'), style: context.text.titleSmall?.copyWith(color: fg)),
                 Text(subtitle, style: context.text.bodySmall?.copyWith(color: fg.withValues(alpha: 0.85))),
               ],
             ),
           ),
-          TextButton(onPressed: () => shareBirthdayRequest(context, ref), child: const Text('Partilhar')),
+          TextButton(onPressed: () => shareBirthdayRequest(context, ref), child: Text(context.tr('Partilhar'))),
           if (link != null)
             PopupMenuButton<String>(
-              tooltip: 'Gerir o link',
+              tooltip: context.tr('Gerir o link'),
               icon: Icon(LucideIcons.ellipsisVertical, size: 18, color: fg),
               onSelected: (a) => _manage(context, ref, a),
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'reset', child: Text('Trocar link')),
+                PopupMenuItem(value: 'reset', child: Text(context.tr('Trocar link'))),
                 if (link.enabled)
-                  const PopupMenuItem(value: 'off', child: Text('Desligar link'))
+                  PopupMenuItem(value: 'off', child: Text(context.tr('Desligar link')))
                 else
-                  const PopupMenuItem(value: 'on', child: Text('Ligar link')),
+                  PopupMenuItem(value: 'on', child: Text(context.tr('Ligar link'))),
               ],
             ),
         ],

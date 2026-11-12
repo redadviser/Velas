@@ -140,7 +140,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (!mine && m.senderId != null && m.state == SendState.sent && !m.deleted)
                 ListTile(
                   leading: Icon(LucideIcons.flag, color: ctx.colors.error),
-                  title: Text('Denunciar mensagem', style: TextStyle(color: ctx.colors.error)),
+                  title: Text(ctx.tr('Denunciar mensagem'), style: TextStyle(color: ctx.colors.error)),
                   onTap: () => Navigator.pop(ctx, 'report'),
                 ),
               if (mine && m.state == SendState.sent)

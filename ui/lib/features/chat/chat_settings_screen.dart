@@ -53,7 +53,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                 const Divider(indent: 16, endIndent: 16),
                 ListTile(
                   leading: const Icon(LucideIcons.ban, size: 20),
-                  title: const Text('Bloqueados'),
+                  title: Text(context.tr('Bloqueados')),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

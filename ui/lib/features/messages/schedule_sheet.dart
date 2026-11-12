@@ -8,6 +8,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/models/models.dart';
 import '../people/linked_friend.dart';
+import '../../core/i18n/translations.dart';
 
 /// O que se escolheu ao agendar: quando e como ([friend] só no mural).
 typedef ScheduleChoice = ({DateTime at, ScheduleVia via, ChatUser? friend});
@@ -26,7 +27,8 @@ DateTime defaultScheduleTime(Person p, [DateTime? now]) {
 String _two(int v) => v.toString().padLeft(2, '0');
 
 /// "Segunda-feira, 2 de março, às 09:00".
-String scheduleLabel(DateTime at) => '${Fmt.weekdayDayMonth(at)}, às ${_two(at.hour)}:${_two(at.minute)}';
+String scheduleLabel(DateTime at) =>
+    tr('{date}, às {time}', {'date': Fmt.weekdayDayMonth(at), 'time': '${_two(at.hour)}:${_two(at.minute)}'});
 
 /// Agendar a mensagem para [person]. Com um amigo na Birthdayly ([friends] /
 /// [match]), pode ir sozinha para o mural dele; senão (ou se se preferir), a
@@ -83,7 +85,7 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
 
   Future<void> _chooseWall() async {
     if (_friend == null) {
-      final f = await pickFriend(context, widget.friends, title: 'Para o mural de quem?');
+      final f = await pickFriend(context, widget.friends, title: context.tr('Para o mural de quem?'));
       if (f == null || !mounted) return;
       setState(() => _friend = f);
     }
@@ -136,9 +138,12 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Agendar a mensagem', style: AppTheme.display(context, size: 22)),
+            Text(context.tr('Agendar a mensagem'), style: AppTheme.display(context, size: 22)),
             const SizedBox(height: 4),
-            Text('Escreve agora e envia na hora certa.', style: context.text.bodyMedium?.copyWith(color: muted)),
+            Text(
+              context.tr('Escreve agora e envia na hora certa.'),
+              style: context.text.bodyMedium?.copyWith(color: muted),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -163,7 +168,7 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Escolhe uma hora no futuro.',
+                  context.tr('Escolhe uma hora no futuro.'),
                   style: context.text.bodySmall?.copyWith(color: context.colors.error),
                 ),
               ),
@@ -173,16 +178,19 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
                 ScheduleVia.wall,
                 LucideIcons.partyPopper,
                 _friend != null
-                    ? 'Enviar sozinha para o mural de ${_friend!.firstName}'
-                    : 'Enviar sozinha para o mural de um amigo',
-                'Publicamos a mensagem no mural à hora marcada e avisamos-te quando for enviada.',
+                    ? context.tr('Enviar sozinha para o mural de {name}', {'name': _friend!.firstName})
+                    : context.tr('Enviar sozinha para o mural de um amigo'),
+                context.tr('Publicamos a mensagem no mural à hora marcada e avisamos-te quando for enviada.'),
                 _chooseWall,
               ),
             option(
               ScheduleVia.remind,
               LucideIcons.bellRing,
-              'Lembrar-me de enviar',
-              'Para WhatsApp, SMS ou cartão por link: à hora marcada avisamos-te com a mensagem pronta para $first.',
+              context.tr('Lembrar-me de enviar'),
+              context.tr(
+                'Para WhatsApp, SMS ou cartão por link: à hora marcada avisamos-te com a mensagem pronta para {name}.',
+                {'name': first},
+              ),
               () => setState(() => _via = ScheduleVia.remind),
             ),
             const SizedBox(height: 8),
@@ -195,7 +203,7 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
                       friend: _via == ScheduleVia.wall ? _friend : null,
                     )),
               icon: const Icon(LucideIcons.calendarClock, size: 18),
-              label: const Text('Agendar'),
+              label: Text(context.tr('Agendar')),
             ),
           ],
         ),

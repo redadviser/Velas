@@ -83,9 +83,9 @@ export async function tx<T>(db: Db, uid: string | null, fn: (c: Tx) => Promise<T
   try {
     await client.query('begin');
     if (uid) await client.query(`select set_config('app.user_id', $1, true)`, [uid]);
-    const result = await fn(client);
+    const out = await fn(client);
     await client.query('commit');
-    return result;
+    return out;
   } catch (e) {
     await client.query('rollback').catch(() => {});
     throw e;

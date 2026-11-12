@@ -151,11 +151,11 @@ class PlansList extends ConsumerWidget {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => context.push('/parties/new'),
-                  child: const Text('Organizar uma festa surpresa'),
+                  child: Text(context.tr('Organizar uma festa surpresa')),
                 ),
                 if (supportsInvites)
                   TextButton(
-                    onPressed: () => showJoinGroupSheet(context, ref),
+                    onPressed: () => showJoinCodeSheet(context, ref),
                     child: Text(context.tr(Keys.chatEmptyHaveCode)),
                   ),
                 if (chat)
@@ -170,7 +170,9 @@ class PlansList extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(40),
             child: Text(
-              done ? 'Ainda não há prendas compradas nem festas passadas.' : 'Nada em curso de momento.',
+              done
+                  ? context.tr('Ainda não há prendas compradas nem festas passadas.')
+                  : context.tr('Nada em curso de momento.'),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.palette.mutedForeground),
             ),
@@ -243,7 +245,7 @@ class _PlanCard extends StatelessWidget {
                         eyebrow,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTheme.eyebrow(context, color: eyebrowColor).copyWith(fontSize: 11),
+                        style: context.text.labelMedium?.copyWith(color: eyebrowColor, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -283,16 +285,16 @@ class GiftPlanCard extends StatelessWidget {
     final subtitle = g.giftDescription.trim().isNotEmpty
         ? g.giftDescription.trim()
         : next == null
-        ? 'Para ${g.celebrantName}'
-        : 'Para ${g.celebrantName} · ${Fmt.dayMonth(next)}';
+        ? context.tr('Para {name}', {'name': g.celebrantName})
+        : context.tr('Para {name} · {date}', {'name': g.celebrantName, 'date': Fmt.dayMonth(next)});
     final mustPay = !bought && me != null && g.statusOf(me) == ContributionStatus.pending;
 
     return _PlanCard(
       icon: bought ? LucideIcons.packageCheck : LucideIcons.gift,
-      iconBackground: dark ? context.palette.muted : const Color(0xFFF4EADC),
-      iconColor: dark ? context.colors.onSurface : const Color(0xFF7A570C),
-      eyebrowIcon: bought ? LucideIcons.check : LucideIcons.lock,
-      eyebrow: bought ? 'COMPRADA' : 'SECRETO',
+      iconBackground: dark ? context.palette.muted : AppColors.tones[3].$1,
+      iconColor: dark ? context.colors.onSurface : AppColors.tones[3].$2,
+      eyebrowIcon: bought ? LucideIcons.check : LucideIcons.eyeOff,
+      eyebrow: bought ? context.tr('Comprada') : context.tr('Em segredo'),
       eyebrowColor: bought ? context.palette.success : context.colors.primary,
       title: g.title,
       unread: conversation?.unreadCount ?? 0,
@@ -307,7 +309,7 @@ class GiftPlanCard extends StatelessWidget {
         ),
         if (!bought && g.targetAmount > 0) ...[
           const SizedBox(height: 10),
-          SoftProgress(value: ratio, semanticsLabel: 'Valor juntado'),
+          SoftProgress(value: ratio, semanticsLabel: context.tr('Valor juntado')),
         ],
         const SizedBox(height: 8),
         Wrap(
@@ -317,15 +319,20 @@ class GiftPlanCard extends StatelessWidget {
           children: [
             Text(
               [
-                '${Fmt.money(g.confirmedAmount)} de ${Fmt.money(g.targetAmount)}',
+                context.tr('{confirmed} de {target}', {
+                  'confirmed': Fmt.money(g.confirmedAmount),
+                  'target': Fmt.money(g.targetAmount),
+                }),
                 if (!bought && g.pendingCount > 0)
-                  g.pendingCount == 1 ? 'falta 1 pagamento' : 'faltam ${g.pendingCount} pagamentos',
+                  g.pendingCount == 1
+                      ? context.tr('falta 1 pagamento')
+                      : context.tr('faltam {count} pagamentos', {'count': g.pendingCount}),
               ].join(' · '),
               style: context.text.labelSmall?.copyWith(color: muted),
             ),
             if (mustPay)
               Pill(
-                label: 'Pagar ${Fmt.money(g.shareOf(me))}',
+                label: context.tr('Pagar {amount}', {'amount': Fmt.money(g.shareOf(me))}),
                 background: context.colors.primary,
                 foreground: context.colors.onPrimary,
                 dense: true,
@@ -348,10 +355,10 @@ class PartyPlanCard extends StatelessWidget {
     final p = party;
     final n = p.guests.length;
     return _PlanCard(
-      icon: LucideIcons.sparkles,
+      icon: LucideIcons.partyPopper,
       iconBackground: context.palette.violetSoft,
       iconColor: context.colors.secondary,
-      eyebrow: 'SURPRESA',
+      eyebrow: context.tr('Surpresa para {name}', {'name': p.celebrantName}),
       eyebrowColor: context.colors.secondary,
       title: p.title,
       onTap: () => context.push('/parties/${p.id}'),
@@ -359,8 +366,8 @@ class PartyPlanCard extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           [
-            p.startsAt == null ? 'Data por marcar' : Fmt.dayMonth(p.startsAt!),
-            n == 1 ? '1 convidado' : '$n convidados',
+            p.startsAt == null ? context.tr('Data por marcar') : Fmt.dayMonth(p.startsAt!),
+            n == 1 ? context.tr('1 convidado') : context.tr('{count} convidados', {'count': n}),
           ].join(' · '),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -368,56 +375,5 @@ class PartyPlanCard extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-/// "Nova": prenda em grupo, festa surpresa ou entrar com código.
-Future<void> showNewConversationSheet(BuildContext context, WidgetRef ref) async {
-  final supportsInvites = ref.read(groupRepositoryProvider)?.supportsInvites ?? false;
-  final action = await showModalBottomSheet<String>(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: SingleChildScrollView(
-        // Desliza quando não cabe (letra grande).
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(ctx.tr(Keys.chatNewTitle), style: AppTheme.display(ctx, size: 22)),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.gift),
-              title: Text(ctx.tr(Keys.chatNewGroup)),
-              subtitle: Text(ctx.tr(Keys.chatNewGroupHint)),
-              onTap: () => Navigator.pop(ctx, 'group'),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.sparkles),
-              title: const Text('Festa surpresa'),
-              subtitle: const Text('Convidados, tarefas e a hora certa'),
-              onTap: () => Navigator.pop(ctx, 'party'),
-            ),
-            if (supportsInvites)
-              ListTile(
-                leading: const Icon(LucideIcons.ticket),
-                title: Text(ctx.tr(Keys.chatNewCode)),
-                onTap: () => Navigator.pop(ctx, 'code'),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    ),
-  );
-  if (action == null || !context.mounted) return;
-  switch (action) {
-    case 'group':
-      context.push('/groups/new');
-    case 'party':
-      context.push('/parties/new');
-    case 'code':
-      await showJoinGroupSheet(context, ref);
   }
 }

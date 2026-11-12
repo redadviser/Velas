@@ -13,6 +13,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../auth/auth_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 /// Idade mínima para usar a app (igual ao servidor, modules/legal).
 const kMinimumAge = 16;
@@ -52,7 +53,7 @@ Future<void> openLegal(BuildContext context, String url) async {
   final uri = Uri.parse(url);
   var ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView).catchError((_) => false);
   if (!ok) ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
-  if (!ok && context.mounted) showMessage(context, 'Não foi possível abrir a página. Tenta mais tarde.');
+  if (!ok && context.mounted) showMessage(context, context.tr('Não foi possível abrir a página. Tenta mais tarde.'));
 }
 
 bool _online(BuildContext context) => ProviderScope.containerOf(context, listen: false).read(apiClientProvider) != null;
@@ -77,30 +78,43 @@ Future<void> showPrivacySheet(BuildContext context) {
         controller: scroll,
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
         children: [
-          Text('Privacidade, em linguagem simples', style: AppTheme.display(ctx, size: 22)),
+          Text(ctx.tr('Privacidade, em linguagem simples'), style: AppTheme.display(ctx, size: 22)),
           const SizedBox(height: 16),
-          for (final (title, body) in const [
+          for (final (title, body) in [
             (
-              'Que dados guardamos',
-              'A tua conta (nome, email, username), os aniversários que acrescentas e o que partilhas na app: conversas, cartões, mural e prendas em grupo.',
+              ctx.tr('Que dados guardamos'),
+              ctx.tr(
+                'A tua conta (nome, email, username), os aniversários que acrescentas e o que partilhas na app: conversas, cartões, mural e prendas em grupo.',
+              ),
             ),
             (
-              'Para que servem',
-              'Para te lembrar de aniversários e para as conversas, os cartões e as prendas em grupo funcionarem. Não vendemos os teus dados nem os usamos para publicidade.',
+              ctx.tr('Para que servem'),
+              ctx.tr(
+                'Para te lembrar de aniversários e para as conversas, os cartões e as prendas em grupo funcionarem. Não vendemos os teus dados nem os usamos para publicidade.',
+              ),
             ),
             (
-              'Com quem partilhamos',
-              'Só com os serviços de que a app precisa (alojamento, entrar com o Google, notificações, GIFs do GIPHY, email e, se subscreveres o Birthdayly+, a App Store ou o Google Play) e com as pessoas a quem envias mensagens ou cartões.',
+              ctx.tr('Com quem partilhamos'),
+              ctx.tr(
+                'Só com os serviços de que a app precisa (alojamento, entrar com o Google, notificações, GIFs do GIPHY, email e, se subscreveres o Birthdayly+, a App Store ou o Google Play) e com as pessoas a quem envias mensagens ou cartões.',
+              ),
             ),
             (
-              'Como os protegemos',
-              'As comunicações são cifradas (HTTPS), as palavras-passe nunca são guardadas em texto simples e cada conta só tem acesso aos seus próprios dados.',
+              ctx.tr('Como os protegemos'),
+              ctx.tr(
+                'As comunicações são cifradas (HTTPS), as palavras-passe nunca são guardadas em texto simples e cada conta só tem acesso aos seus próprios dados.',
+              ),
             ),
             (
-              'Os teus direitos',
-              'Podes exportar, corrigir ou eliminar os teus dados a qualquer momento, no Perfil. Também podes reclamar à CNPD.',
+              ctx.tr('Os teus direitos'),
+              ctx.tr(
+                'Podes exportar, corrigir ou eliminar os teus dados a qualquer momento, no Perfil. Também podes reclamar à CNPD.',
+              ),
             ),
-            ('Idade mínima', 'A Birthdayly é para pessoas com $kMinimumAge anos ou mais.'),
+            (
+              ctx.tr('Idade mínima'),
+              ctx.tr('A Birthdayly é para pessoas com {age} anos ou mais.', {'age': kMinimumAge}),
+            ),
           ]) ...[
             Text(title, style: ctx.text.titleSmall),
             const SizedBox(height: 4),
@@ -109,13 +123,13 @@ Future<void> showPrivacySheet(BuildContext context) {
           ],
           OutlinedButton(
             onPressed: () => openLegal(ctx, LegalLinks.privacy),
-            child: const Text('Política de Privacidade completa'),
+            child: Text(ctx.tr('Política de Privacidade completa')),
           ),
           if (online) ...[
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => openLegal(ctx, LegalLinks.terms),
-              child: const Text('Termos de Utilização'),
+              child: Text(ctx.tr('Termos de Utilização')),
             ),
           ],
         ],
@@ -137,7 +151,7 @@ Future<void> exportMyData(BuildContext context, WidgetRef ref) async {
     ShareParams(
       files: [XFile.fromData(bytes!, name: 'birthdayly-dados.json', mimeType: 'application/json')],
       fileNameOverrides: const ['birthdayly-dados.json'],
-      subject: 'Birthdayly: os meus dados',
+      subject: tr('Birthdayly: os meus dados'),
     ),
   );
 }
@@ -189,13 +203,17 @@ class _TermsGateState extends ConsumerState<TermsGate> {
                             Icon(LucideIcons.fileCheck, size: 44, color: context.colors.primary),
                             const SizedBox(height: 16),
                             Text(
-                              firstTime ? 'Antes de continuares' : 'Atualizámos os nossos termos',
+                              firstTime
+                                  ? context.tr('Antes de continuares')
+                                  : context.tr('Atualizámos os nossos termos'),
                               textAlign: TextAlign.center,
                               style: AppTheme.display(context, size: 26),
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'Para continuares a usar a Birthdayly, lê e aceita os Termos de Utilização e a Política de Privacidade.',
+                              context.tr(
+                                'Para continuares a usar a Birthdayly, lê e aceita os Termos de Utilização e a Política de Privacidade.',
+                              ),
                               textAlign: TextAlign.center,
                               style: context.text.bodyMedium?.copyWith(color: muted),
                             ),
@@ -203,13 +221,13 @@ class _TermsGateState extends ConsumerState<TermsGate> {
                             OutlinedButton.icon(
                               onPressed: () => openLegal(context, info.termsUrl),
                               icon: const Icon(LucideIcons.fileText, size: 18),
-                              label: const Text('Termos de Utilização'),
+                              label: Text(context.tr('Termos de Utilização')),
                             ),
                             const SizedBox(height: 8),
                             OutlinedButton.icon(
                               onPressed: () => openLegal(context, info.privacyUrl),
                               icon: const Icon(LucideIcons.shieldCheck, size: 18),
-                              label: const Text('Política de Privacidade'),
+                              label: Text(context.tr('Política de Privacidade')),
                             ),
                           ],
                         ),
@@ -223,12 +241,14 @@ class _TermsGateState extends ConsumerState<TermsGate> {
                               controlAffinity: ListTileControlAffinity.leading,
                               contentPadding: EdgeInsets.zero,
                               title: Text(
-                                'Tenho $kMinimumAge anos ou mais e aceito os Termos e a Política de Privacidade.',
+                                context.tr('Tenho {age} anos ou mais e aceito os Termos e a Política de Privacidade.', {
+                                  'age': kMinimumAge,
+                                }),
                               ),
                             ),
                             const SizedBox(height: 8),
                             LoadingButton(
-                              label: 'Aceitar e continuar',
+                              label: context.tr('Aceitar e continuar'),
                               loading: _accepting,
                               onPressed: !_checked
                                   ? null
@@ -240,7 +260,7 @@ class _TermsGateState extends ConsumerState<TermsGate> {
                             ),
                             TextButton(
                               onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                              child: const Text('Agora não (terminar sessão)'),
+                              child: Text(context.tr('Agora não (terminar sessão)')),
                             ),
                           ],
                         ),

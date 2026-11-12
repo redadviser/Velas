@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -19,23 +20,23 @@ import '../gifts/wishlist_widgets.dart';
 import 'birthday_picker.dart';
 import 'linked_friend.dart';
 
-const _relationSuggestions = [
-  'Mãe',
-  'Pai',
-  'Irmã',
-  'Irmão',
-  'Filha',
-  'Filho',
-  'Avó',
-  'Avô',
-  'Amiga',
-  'Amigo',
-  'Colega',
-  'Namorado(a)',
-  'Tia',
-  'Tio',
-  'Prima',
-  'Primo',
+List<String> get _relationSuggestions => [
+  tr('Mãe'),
+  tr('Pai'),
+  tr('Irmã'),
+  tr('Irmão'),
+  tr('Filha'),
+  tr('Filho'),
+  tr('Avó'),
+  tr('Avô'),
+  tr('Amiga'),
+  tr('Amigo'),
+  tr('Colega'),
+  tr('Namorado(a)'),
+  tr('Tia'),
+  tr('Tio'),
+  tr('Prima'),
+  tr('Primo'),
 ];
 
 class PersonFormScreen extends ConsumerStatefulWidget {
@@ -87,7 +88,9 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
       _categoryId = p.categoryId;
       _linkedUserId = p.linkedUserId;
       _interests = p.interests;
-      if (p.reminderHour != null && p.reminderMinute != null) _time = (hour: p.reminderHour!, minute: p.reminderMinute!);
+      if (p.reminderHour != null && p.reminderMinute != null) {
+        _time = (hour: p.reminderHour!, minute: p.reminderMinute!);
+      }
       _useDefaultReminders = p.reminderDays == null;
       if (p.reminderDays != null) _reminders = {...p.reminderDays!};
     }
@@ -117,18 +120,18 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
             children: [
               ListTile(
                 leading: const Icon(LucideIcons.image),
-                title: const Text('Escolher da galeria'),
+                title: Text(ctx.tr('Escolher da galeria')),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
               ListTile(
                 leading: const Icon(LucideIcons.camera),
-                title: const Text('Tirar fotografia'),
+                title: Text(ctx.tr('Tirar fotografia')),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
               if (hasPhoto)
                 ListTile(
                   leading: Icon(LucideIcons.trash2, color: ctx.colors.error),
-                  title: Text('Remover fotografia', style: TextStyle(color: ctx.colors.error)),
+                  title: Text(ctx.tr('Remover fotografia'), style: TextStyle(color: ctx.colors.error)),
                   onTap: () => Navigator.pop(ctx, 'remove'),
                 ),
               const SizedBox(height: 8),
@@ -159,18 +162,21 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
         _removePhoto = false;
       });
     } catch (_) {
-      if (mounted) showMessage(context, 'Não foi possível aceder às fotografias. Verifica as permissões.');
+      if (mounted) showMessage(context, context.tr('Não foi possível aceder às fotografias. Verifica as permissões.'));
     }
   }
 
   Future<void> _pickTime() async {
-    if (!await requirePlus(context, ref, feature: 'Escolher a hora por pessoa')) return;
+    if (!await requirePlus(context, ref, feature: context.tr('Escolher a hora por pessoa'))) return;
     if (!mounted) return;
     final user = ref.read(currentUserProvider);
     final t = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(hour: _time?.hour ?? user?.reminderHour ?? 9, minute: _time?.minute ?? user?.reminderMinute ?? 0),
-      helpText: 'Hora dos lembretes desta pessoa',
+      initialTime: TimeOfDay(
+        hour: _time?.hour ?? user?.reminderHour ?? 9,
+        minute: _time?.minute ?? user?.reminderMinute ?? 0,
+      ),
+      helpText: context.tr('Hora dos lembretes desta pessoa'),
     );
     if (t != null) setState(() => _time = (hour: t.hour, minute: t.minute));
   }
@@ -195,7 +201,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
     setState(() => _dateError = _date == null);
     if (!valid || _date == null) return;
     if (!_useDefaultReminders && _reminders.isEmpty) {
-      showMessage(context, 'Escolhe pelo menos um lembrete ou usa as predefinições.');
+      showMessage(context, context.tr('Escolhe pelo menos um lembrete ou usa as predefinições.'));
       return;
     }
 
@@ -225,7 +231,9 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
     final ok = await runGuarded(
       context,
       () => repo.savePerson(person, photo: _newPhoto, removePhoto: _removePhoto),
-      success: _isEdit ? 'Alterações guardadas.' : '${person.firstName} foi adicionado(a).',
+      success: _isEdit
+          ? context.tr('Alterações guardadas.')
+          : context.tr('{name} foi adicionado(a).', {'name': person.firstName}),
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -248,7 +256,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(LucideIcons.x), onPressed: () => context.pop()),
-        title: Text(_isEdit ? 'Editar pessoa' : 'Novo aniversário'),
+        title: Text(_isEdit ? context.tr('Editar pessoa') : context.tr('Novo aniversário')),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -257,7 +265,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
               style: FilledButton.styleFrom(minimumSize: const Size(88, 40)),
               child: _saving
                   ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Guardar'),
+                  : Text(context.tr('Guardar')),
             ),
           ),
         ],
@@ -293,17 +301,17 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
               ),
             ),
             const SizedBox(height: 28),
-            const FieldLabel('Nome'),
+            FieldLabel(context.tr('Nome')),
             TextFormField(
               controller: _name,
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
               onChanged: (_) => setState(() {}),
-              validator: (v) => Validators.required(v, 'Indica o nome.'),
-              decoration: const InputDecoration(hintText: 'Ex.: Ana Silva'),
+              validator: (v) => Validators.required(v, context.tr('Indica o nome.')),
+              decoration: InputDecoration(hintText: context.tr('Ex.: Ana Silva')),
             ),
             const SizedBox(height: 20),
-            const FieldLabel('Data de aniversário'),
+            FieldLabel(context.tr('Data de aniversário')),
             _DateField(date: _date, error: _dateError, onTap: _pickDate),
             LinkedFriendField(
               linkedUserId: _linkedUserId,
@@ -312,12 +320,12 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
               onChanged: (id) => setState(() => _linkedUserId = id),
             ),
             const SizedBox(height: 20),
-            const FieldLabel('Relação'),
+            FieldLabel(context.tr('Relação')),
             TextFormField(
               controller: _relation,
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(hintText: 'Ex.: Mãe, amigo de infância, colega…'),
+              decoration: InputDecoration(hintText: context.tr('Ex.: Mãe, amigo de infância, colega…')),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -335,11 +343,11 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
             ),
             const SizedBox(height: 24),
             FieldLabel(
-              'Categoria',
+              context.tr('Categoria'),
               trailing: GestureDetector(
                 onTap: () => context.push('/profile/categories'),
                 child: Text(
-                  'Gerir',
+                  context.tr('Gerir'),
                   style: context.text.labelMedium?.copyWith(color: context.colors.primary, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -356,11 +364,11 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
                     onSelected: (s) => setState(() => _categoryId = s ? c.id : null),
                   ),
                 if (data.categories.isEmpty)
-                  Text('Sem categorias.', style: TextStyle(color: context.palette.mutedForeground)),
+                  Text(context.tr('Sem categorias.'), style: TextStyle(color: context.palette.mutedForeground)),
               ],
             ),
             const SizedBox(height: 24),
-            const FieldLabel('Lembretes'),
+            FieldLabel(context.tr('Lembretes')),
             AppCard(
               padding: const EdgeInsets.fromLTRB(16, 4, 8, 12),
               child: Column(
@@ -368,7 +376,7 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Usar as minhas predefinições'),
+                    title: Text(context.tr('Usar as minhas predefinições')),
                     subtitle: Text(
                       (user?.defaultReminderDays ?? kDefaultReminderDays).map(reminderLabel).join(', '),
                       style: TextStyle(color: context.palette.mutedForeground),
@@ -380,17 +388,22 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
                     contentPadding: EdgeInsets.zero,
                     onTap: _pickTime,
                     leading: const Icon(LucideIcons.clock, size: 20),
-                    title: const Row(children: [Text('Hora'), SizedBox(width: 8), PlusBadge()]),
+                    title: Row(children: [Text(context.tr('Hora')), const SizedBox(width: 8), const PlusBadge()]),
                     subtitle: Text(
                       _time != null && ref.watch(isPlusProvider)
                           ? TimeOfDay(hour: _time!.hour, minute: _time!.minute).format(context)
-                          : 'A hora geral (${TimeOfDay(hour: user?.reminderHour ?? 9, minute: user?.reminderMinute ?? 0).format(context)})',
+                          : context.tr('A hora geral ({time})', {
+                              'time': TimeOfDay(
+                                hour: user?.reminderHour ?? 9,
+                                minute: user?.reminderMinute ?? 0,
+                              ).format(context),
+                            }),
                       style: TextStyle(color: context.palette.mutedForeground),
                     ),
                     trailing: _time == null
                         ? null
                         : IconButton(
-                            tooltip: 'Usar a hora geral',
+                            tooltip: context.tr('Usar a hora geral'),
                             icon: const Icon(LucideIcons.x, size: 18),
                             onPressed: () => setState(() => _time = null),
                           ),
@@ -412,36 +425,37 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const FieldLabel('Gostos e hobbies'),
+            FieldLabel(context.tr('Gostos e hobbies')),
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Text(
-                'Ajudam a escolher a prenda: as sugestões passam a ter isto em conta.',
+                context.tr('Ajudam a escolher a prenda: as sugestões passam a ter isto em conta.'),
                 style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
               ),
             ),
             InterestPicker(selected: _interests, onChanged: (v) => setState(() => _interests = v)),
             const SizedBox(height: 24),
-            const FieldLabel('Orçamento para presente'),
+            FieldLabel(context.tr('Orçamento para presente')),
             TextFormField(
               controller: _budget,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-              validator: (v) => (v != null && v.trim().isNotEmpty && _parseBudget() == null) ? 'Valor inválido.' : null,
-              decoration: const InputDecoration(
-                hintText: 'Opcional',
-                prefixIcon: Icon(LucideIcons.wallet, size: 18),
+              validator: (v) =>
+                  (v != null && v.trim().isNotEmpty && _parseBudget() == null) ? context.tr('Valor inválido.') : null,
+              decoration: InputDecoration(
+                hintText: context.tr('Opcional'),
+                prefixIcon: const Icon(LucideIcons.wallet, size: 18),
                 suffixText: '€',
               ),
             ),
             const SizedBox(height: 20),
-            const FieldLabel('Notas'),
+            FieldLabel(context.tr('Notas')),
             TextFormField(
               controller: _notes,
               minLines: 3,
               maxLines: 6,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Gostos, tamanhos, alergias, ideias…'),
+              decoration: InputDecoration(hintText: context.tr('Gostos, tamanhos, alergias, ideias…')),
             ),
           ],
         ),
@@ -481,13 +495,13 @@ class _DateField extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      d == null ? 'Escolher data' : Fmt.birthDate(d.day, d.month, d.year),
+                      d == null ? context.tr('Escolher data') : Fmt.birthDate(d.day, d.month, d.year),
                       style: context.text.bodyLarge?.copyWith(
                         color: d == null ? context.palette.mutedForeground.withValues(alpha: 0.7) : null,
                       ),
                     ),
                   ),
-                  if (age != null) Pill(label: 'Faz $age'),
+                  if (age != null) Pill(label: context.tr('Faz {age}', {'age': age})),
                   const SizedBox(width: 4),
                   Icon(LucideIcons.chevronDown, size: 18, color: context.palette.mutedForeground),
                 ],
@@ -499,7 +513,7 @@ class _DateField extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 14, top: 6),
             child: Text(
-              'Escolhe a data de aniversário.',
+              context.tr('Escolhe a data de aniversário.'),
               style: context.text.bodySmall?.copyWith(color: context.colors.error),
             ),
           ),

@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../i18n/translations.dart';
+
 /// Cálculos de datas de aniversário. Todas as funções trabalham ao nível do
 /// dia (sem horas) para que "hoje" e "amanhã" sejam sempre coerentes.
 class BirthdayUtils {
@@ -79,18 +81,18 @@ class Fmt {
       NumberFormat.currency(locale: _locale, symbol: '€', decimalDigits: v % 1 == 0 ? 0 : 2).format(v);
 
   static String relativeDays(int days) => switch (days) {
-    0 => 'Hoje',
-    1 => 'Amanhã',
-    < 7 => 'Daqui a $days dias',
-    < 14 => 'Daqui a 1 semana',
-    < 31 => 'Daqui a ${days ~/ 7} semanas',
-    _ => 'Daqui a $days dias',
+    0 => tr('Hoje'),
+    1 => tr('Amanhã'),
+    < 7 => tr('Daqui a {count} dias', {'count': days}),
+    < 14 => tr('Daqui a 1 semana'),
+    < 31 => tr('Daqui a {count} semanas', {'count': days ~/ 7}),
+    _ => tr('Daqui a {count} dias', {'count': days}),
   };
 
   static String shortRelative(int days) => switch (days) {
-    0 => 'Hoje',
-    1 => 'Amanhã',
-    _ => '$days dias',
+    0 => tr('Hoje'),
+    1 => tr('Amanhã'),
+    _ => tr('{count} dias', {'count': days}),
   };
 
   static String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

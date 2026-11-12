@@ -15,6 +15,7 @@ import 'gift_widgets.dart';
 import 'wishlist_widgets.dart';
 import '../../core/wishlist_providers.dart';
 import '../people/linked_friend.dart';
+import '../../core/i18n/translations.dart';
 
 class IdeasScreen extends ConsumerStatefulWidget {
   const IdeasScreen({super.key, required this.personId});
@@ -43,7 +44,7 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
             createdAt: DateTime.now(),
           ),
         ),
-    success: 'Guardada nas ideias para ${person.firstName}.',
+    success: tr('Guardada nas ideias para {name}.', {'name': person.firstName}),
   );
 
   @override
@@ -68,7 +69,7 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
     final muted = context.palette.mutedForeground;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Ideias para ${person.firstName}')),
+      appBar: AppBar(title: Text(context.tr('Ideias para {name}', {'name': person.firstName}))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
@@ -87,7 +88,10 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
             ],
           ],
           if (theirs != null && theirs.items.isNotEmpty) ...[
-            SectionTitle('Pedido por ${person.firstName}', padding: const EdgeInsets.fromLTRB(4, 24, 0, 8)),
+            SectionTitle(
+              context.tr('Pedido por {name}', {'name': person.firstName}),
+              padding: const EdgeInsets.fromLTRB(4, 24, 0, 8),
+            ),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -103,7 +107,7 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
               ),
             ),
           ],
-          SectionTitle('Sugestões', padding: const EdgeInsets.fromLTRB(4, 24, 0, 8)),
+          SectionTitle(context.tr('Sugestões'), padding: const EdgeInsets.fromLTRB(4, 24, 0, 8)),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -111,7 +115,7 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
               children: [
                 if (hasLikes) ...[
                   FilterChip(
-                    label: Text('Gostos de ${person.firstName}'),
+                    label: Text(context.tr('Gostos de {name}', {'name': person.firstName})),
                     selected: _onlyLiked,
                     onSelected: (v) => setState(() => _onlyLiked = v),
                   ),
@@ -119,7 +123,7 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
                 ],
                 if (budget != null) ...[
                   FilterChip(
-                    label: Text('Até ${Fmt.money(budget)}'),
+                    label: Text(context.tr('Até {amount}', {'amount': Fmt.money(budget)})),
                     selected: _withinBudget,
                     onSelected: (v) => setState(() => _withinBudget = v),
                   ),
@@ -141,7 +145,7 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Text(
-                'Nada com estes filtros. Experimenta tirar algum.',
+                context.tr('Nada com estes filtros. Experimenta tirar algum.'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: muted),
               ),
@@ -157,8 +161,10 @@ class _IdeasScreenState extends ConsumerState<IdeasScreen> {
           const SizedBox(height: 6),
           Text(
             hasLikes
-                ? 'Primeiro aparecem as que combinam com os gostos de ${person.firstName}.'
-                : 'Escolhe os gostos de ${person.firstName} (em Editar) e as sugestões passam a ter isso em conta.',
+                ? context.tr('Primeiro aparecem as que combinam com os gostos de {name}.', {'name': person.firstName})
+                : context.tr('Escolhe os gostos de {name} (em Editar) e as sugestões passam a ter isso em conta.', {
+                    'name': person.firstName,
+                  }),
             style: context.text.bodySmall?.copyWith(color: muted),
           ),
         ],
@@ -183,7 +189,7 @@ class _Featured extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Pill(label: 'NAS TUAS IDEIAS', icon: LucideIcons.heart, dense: true),
+        Pill(label: context.tr('NAS TUAS IDEIAS'), icon: LucideIcons.heart, dense: true),
         const SizedBox(height: 10),
         Text(gift.title, style: AppTheme.display(context, size: 20)),
         if (gift.notes.isNotEmpty) ...[
@@ -198,7 +204,7 @@ class _Featured extends StatelessWidget {
         FilledButton.icon(
           onPressed: () => context.push('/groups/new?personId=${person.id}'),
           icon: const Icon(LucideIcons.usersRound, size: 18),
-          label: const Text('Criar grupo com esta ideia'),
+          label: Text(context.tr('Criar grupo com esta ideia')),
         ),
       ],
     ),
@@ -242,10 +248,14 @@ class _SuggestionCard extends StatelessWidget {
           saved
               ? Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Icon(LucideIcons.check, color: context.palette.accentForeground, semanticLabel: 'Guardada'),
+                  child: Icon(
+                    LucideIcons.check,
+                    color: context.palette.accentForeground,
+                    semanticLabel: context.tr('Guardada'),
+                  ),
                 )
               : IconButton(
-                  tooltip: 'Guardar ideia',
+                  tooltip: context.tr('Guardar ideia'),
                   onPressed: onSave,
                   icon: Icon(LucideIcons.bookmarkPlus, color: context.colors.primary),
                 ),

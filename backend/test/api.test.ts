@@ -587,6 +587,15 @@ describe('festas surpresa', () => {
     expect(joined.status).toBe(200);
     expect(joined.body.guests.find((g: { user_id: string }) => g.user_id === guest.user.id).rsvp).toBe('pending');
     expect((await call('POST', '/parties/join', { token: guest.access_token, body: { code: 'NAOEXISTE' } })).status).toBe(404);
+
+    // Link partilhado: abre a app na festa ou manda para a loja, sem revelar a festa.
+    const page = await call('GET', `/f/${res.body.invite_code.toLowerCase()}`);
+    expect(page.status).toBe(200);
+    expect(page.raw.body).toContain('Foste convidado para uma festa surpresa');
+    expect(page.raw.body).toContain(`com.eupasoft.velas://app/party/${res.body.invite_code}`);
+    expect(page.raw.body).toContain(`intent://app/party/${res.body.invite_code}#Intent;scheme=com.eupasoft.velas;`);
+    expect(page.raw.body).not.toContain('Festa do Pedro');
+    expect((await call('GET', '/f/%3Cscript%3E')).status).toBe(404);
   });
 
   it('respostas, convidados sem conta e tarefas por papel', async () => {

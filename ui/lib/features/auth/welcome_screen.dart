@@ -12,6 +12,7 @@ import '../../core/providers.dart';
 import '../../core/widgets/common.dart';
 import 'auth_widgets.dart';
 import '../profile/legal.dart';
+import '../../core/i18n/translations.dart';
 
 /// Um destaque do carrossel de boas-vindas (fotografias em assets/images/welcome).
 class _Slide {
@@ -23,24 +24,24 @@ class _Slide {
   final String body;
 }
 
-const _slides = [
+List<_Slide> get _slides => [
   _Slide(
     image: 'assets/images/welcome/candles.jpg',
-    eyebrow: 'ANIVERSÁRIOS',
-    title: 'Nunca mais te esqueças de quem importa.',
-    body: 'Os aniversários da família e dos amigos num só lugar, sempre à mão.',
+    eyebrow: tr('ANIVERSÁRIOS'),
+    title: tr('Nunca mais te esqueças de quem importa.'),
+    body: tr('Os aniversários da família e dos amigos num só lugar, sempre à mão.'),
   ),
   _Slide(
     image: 'assets/images/welcome/wish.jpg',
-    eyebrow: 'LEMBRETES',
-    title: 'Chega a tempo de todos os parabéns.',
-    body: 'Avisos no dia, na véspera ou uma semana antes, com mensagens prontas a enviar.',
+    eyebrow: tr('LEMBRETES'),
+    title: tr('Chega a tempo de todos os parabéns.'),
+    body: tr('Avisos no dia, na véspera ou uma semana antes, com mensagens prontas a enviar.'),
   ),
   _Slide(
     image: 'assets/images/welcome/gift.jpg',
-    eyebrow: 'PRENDAS EM GRUPO',
-    title: 'Prendas a meias, sem contas complicadas.',
-    body: 'Junta os amigos, divide o valor e vê quem já pagou, tudo na app.',
+    eyebrow: tr('PRENDAS EM GRUPO'),
+    title: tr('Prendas a meias, sem contas complicadas.'),
+    body: tr('Junta os amigos, divide o valor e vê quem já pagou, tudo na app.'),
   ),
 ];
 
@@ -264,7 +265,7 @@ class _Actions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FilledButton(onPressed: () => context.push('/register'), child: const Text('Criar conta gratuita')),
+        FilledButton(onPressed: () => context.push('/register'), child: Text(context.tr('Criar conta gratuita'))),
         if (google) ...[
           const SizedBox(height: 12),
           Theme(
@@ -277,11 +278,11 @@ class _Actions extends StatelessWidget {
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('Já tens conta?', style: TextStyle(color: muted, fontSize: 15)),
+            Text(context.tr('Já tens conta?'), style: TextStyle(color: muted, fontSize: 15)),
             TextButton(
               onPressed: () => context.push('/login'),
               style: TextButton.styleFrom(foregroundColor: Colors.white, padding: const EdgeInsets.all(8)),
-              child: const Text('Entrar', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              child: Text(context.tr('Entrar'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ),
           ],
         ),
@@ -290,17 +291,19 @@ class _Actions extends StatelessWidget {
             TextSpan(
               style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12, height: 1.4),
               children: [
-                const TextSpan(
-                  text: 'Ao continuar com o Google, confirmas que tens $kMinimumAge anos ou mais e aceitas os ',
+                TextSpan(
+                  text: context.tr('Ao continuar com o Google, confirmas que tens {age} anos ou mais e aceitas os ', {
+                    'age': kMinimumAge,
+                  }),
                 ),
                 TextSpan(
-                  text: 'Termos de Utilização',
+                  text: context.tr('Termos de Utilização'),
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                   recognizer: TapGestureRecognizer()..onTap = () => openTerms(context),
                 ),
-                const TextSpan(text: ' e a '),
+                TextSpan(text: context.tr(' e a ')),
                 TextSpan(
-                  text: 'Política de Privacidade',
+                  text: context.tr('Política de Privacidade'),
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                   recognizer: TapGestureRecognizer()..onTap = () => openPrivacy(context),
                 ),

@@ -10,6 +10,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../auth/auth_widgets.dart';
 import '../auth/identity_fields.dart';
+import '../../core/i18n/translations.dart';
 
 Future<void> showUsernameSheet(BuildContext context) => showModalBottomSheet<void>(
   context: context,
@@ -54,31 +55,37 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
     final auth = ref.read(authRepositoryProvider);
     final nav = Navigator.of(context);
     setState(() => _saving = true);
-    final ok = await runGuarded(context, () async {
-      if (widget.editPhone) {
-        final phone = remove ? '' : Identity.toE164(_ctrl.text)!;
-        if (phone.isNotEmpty && phone != _user.phone) {
-          final check = await auth.checkAvailability(username: '', phone: phone);
-          if (check.phoneTaken) {
-            setState(() => _phoneTaken = true);
-            _form.currentState!.validate();
-            throw const SilentException();
+    final ok = await runGuarded(
+      context,
+      () async {
+        if (widget.editPhone) {
+          final phone = remove ? '' : Identity.toE164(_ctrl.text)!;
+          if (phone.isNotEmpty && phone != _user.phone) {
+            final check = await auth.checkAvailability(username: '', phone: phone);
+            if (check.phoneTaken) {
+              setState(() => _phoneTaken = true);
+              _form.currentState!.validate();
+              throw const SilentException();
+            }
           }
-        }
-        await auth.updateProfile(_user.copyWith(phone: phone));
-      } else {
-        final username = Identity.normalizeUsername(_ctrl.text);
-        if (username != _user.username) {
-          final check = await auth.checkAvailability(username: username);
-          if (check.usernameTaken) {
-            _usernameKey.currentState?.markTaken();
-            _form.currentState!.validate();
-            throw const SilentException();
+          await auth.updateProfile(_user.copyWith(phone: phone));
+        } else {
+          final username = Identity.normalizeUsername(_ctrl.text);
+          if (username != _user.username) {
+            final check = await auth.checkAvailability(username: username);
+            if (check.usernameTaken) {
+              _usernameKey.currentState?.markTaken();
+              _form.currentState!.validate();
+              throw const SilentException();
+            }
           }
+          await auth.updateProfile(_user.copyWith(username: username));
         }
-        await auth.updateProfile(_user.copyWith(username: username));
-      }
-    }, success: widget.editPhone ? (remove ? 'Telemóvel removido.' : 'Telemóvel guardado.') : 'Username guardado.');
+      },
+      success: widget.editPhone
+          ? (remove ? tr('Telemóvel removido.') : tr('Telemóvel guardado.'))
+          : tr('Username guardado.'),
+    );
     if (!mounted) return;
     setState(() => _saving = false);
     if (ok) nav.pop();
@@ -95,12 +102,17 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.editPhone ? 'Telemóvel' : 'Username', style: AppTheme.display(context, size: 22)),
+              Text(
+                widget.editPhone ? context.tr('Telemóvel') : context.tr('Username'),
+                style: AppTheme.display(context, size: 22),
+              ),
               const SizedBox(height: 4),
               Text(
                 widget.editPhone
-                    ? 'Os teus amigos podem convidar-te para grupos pelo número. Não é mostrado a ninguém.'
-                    : 'É assim que os teus amigos te encontram e convidam. Também podes usá-lo para entrar.',
+                    ? context.tr('Os teus amigos podem convidar-te para grupos pelo número. Não é mostrado a ninguém.')
+                    : context.tr(
+                        'É assim que os teus amigos te encontram e convidam. Também podes usá-lo para entrar.',
+                      ),
                 style: TextStyle(color: context.palette.mutedForeground),
               ),
               const SizedBox(height: 16),
@@ -109,12 +121,12 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
               else
                 UsernameField(key: _usernameKey, controller: _ctrl, currentUsername: _user.username),
               const SizedBox(height: 20),
-              LoadingButton(label: 'Guardar', loading: _saving, onPressed: _save),
+              LoadingButton(label: context.tr('Guardar'), loading: _saving, onPressed: _save),
               if (widget.editPhone && _user.phone.isNotEmpty)
                 TextButton(
                   onPressed: _saving ? null : () => _save(remove: true),
                   style: TextButton.styleFrom(foregroundColor: context.colors.error),
-                  child: const Text('Remover telemóvel'),
+                  child: Text(context.tr('Remover telemóvel')),
                 ),
             ],
           ),

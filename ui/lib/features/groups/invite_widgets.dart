@@ -55,7 +55,7 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
       _feedback = null;
     });
     if (kind == IdentifierKind.invalid) {
-      setState(() => _feedback = 'Escreve um email, um telemóvel (ex.: 912 345 678) ou um @username.');
+      setState(() => _feedback = context.tr('Escreve um email, um telemóvel (ex.: 912 345 678) ou um @username.'));
       return;
     }
     FocusScope.of(context).unfocus();
@@ -67,9 +67,9 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
         _found = user;
         if (user == null) {
           _notFound = switch (kind) {
-            IdentifierKind.email => 'Não existe nenhuma conta com este email.',
-            IdentifierKind.phone => 'Não existe nenhuma conta com este número de telemóvel.',
-            _ => 'Não existe nenhuma conta com este username.',
+            IdentifierKind.email => context.tr('Não existe nenhuma conta com este email.'),
+            IdentifierKind.phone => context.tr('Não existe nenhuma conta com este número de telemóvel.'),
+            _ => context.tr('Não existe nenhuma conta com este username.'),
           };
         }
       });
@@ -128,9 +128,9 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
                     });
                   }
                 },
-                decoration: const InputDecoration(
-                  hintText: 'Email, telemóvel ou @user',
-                  prefixIcon: Icon(LucideIcons.search, size: 18),
+                decoration: InputDecoration(
+                  hintText: context.tr('Email, telemóvel ou @user'),
+                  prefixIcon: const Icon(LucideIcons.search, size: 18),
                 ),
               ),
             ),
@@ -143,7 +143,7 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
               ),
               child: _busy && found == null
                   ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Procurar'),
+                  : Text(context.tr('Procurar')),
             ),
           ],
         ),
@@ -171,7 +171,7 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
                   ),
                 ),
                 if (found.userId == me?.id)
-                  const Pill(label: 'És tu')
+                  Pill(label: context.tr('És tu'))
                 else
                   FilledButton(
                     onPressed: _busy ? null : () => _act(found),
@@ -199,14 +199,14 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
                 if (widget.onShareLink != null) ...[
                   const SizedBox(height: 6),
                   Text(
-                    'Envia-lhe o link de convite: depois de criar conta, entra diretamente no grupo.',
+                    context.tr('Envia-lhe o link de convite: depois de criar conta, entra diretamente no grupo.'),
                     style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: widget.onShareLink,
                     icon: const Icon(LucideIcons.share2, size: 16),
-                    label: const Text('Partilhar link de convite'),
+                    label: Text(context.tr('Partilhar link de convite')),
                     style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
                   ),
                 ],
@@ -243,19 +243,19 @@ class _ContactLookupState extends ConsumerState<ContactLookup> {
 }
 
 String inviteResultMessage(InviteResult r, String name) => switch (r) {
-  InviteResult.invited => 'Convite enviado a $name. Aparece-lhe na app para aceitar.',
-  InviteResult.alreadyInvited => '$name já tem um convite pendente.',
-  InviteResult.alreadyMember => '$name já está no grupo.',
-  InviteResult.groupClosed => 'O grupo já fechou: a prenda foi comprada.',
-  InviteResult.notFound => 'Esta conta já não existe.',
+  InviteResult.invited => tr('Convite enviado a {name}. Aparece-lhe na app para aceitar.', {'name': name}),
+  InviteResult.alreadyInvited => tr('{name} já tem um convite pendente.', {'name': name}),
+  InviteResult.alreadyMember => tr('{name} já está no grupo.', {'name': name}),
+  InviteResult.groupClosed => tr('O grupo já fechou: a prenda foi comprada.'),
+  InviteResult.notFound => tr('Esta conta já não existe.'),
 };
 
 void _shareLink(GiftGroup g) => SharePlus.instance.share(
-  ShareParams(text: InviteLinks.linkMessage(g), subject: 'Convite para a prenda "${g.title}"'),
+  ShareParams(text: InviteLinks.linkMessage(g), subject: tr('Convite para a prenda "{title}"', {'title': g.title})),
 );
 
 void _shareCode(GiftGroup g) => SharePlus.instance.share(
-  ShareParams(text: InviteLinks.codeMessage(g), subject: 'Convite para a prenda "${g.title}"'),
+  ShareParams(text: InviteLinks.codeMessage(g), subject: tr('Convite para a prenda "{title}"', {'title': g.title})),
 );
 
 /// Código e link de convite do grupo, com as ações de partilha. Quem o
@@ -291,9 +291,9 @@ class InviteCodeCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Convidar pessoas', style: context.text.titleSmall),
+                    Text(context.tr('Convidar pessoas'), style: context.text.titleSmall),
                     Text(
-                      'Partilha o link ou o código do grupo.',
+                      context.tr('Partilha o link ou o código do grupo.'),
                       style: context.text.bodySmall?.copyWith(color: muted),
                     ),
                   ],
@@ -307,12 +307,15 @@ class InviteCodeCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => _copy(context, code, 'Código copiado.'),
+              onTap: () => _copy(context, code, context.tr('Código copiado.')),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
                 child: Column(
                   children: [
-                    Text('CÓDIGO DO GRUPO', style: context.text.labelSmall?.copyWith(color: muted, letterSpacing: 1.2)),
+                    Text(
+                      context.tr('CÓDIGO DO GRUPO'),
+                      style: context.text.labelSmall?.copyWith(color: muted, letterSpacing: 1.2),
+                    ),
                     const SizedBox(height: 4),
                     // O código encolhe para caber (com letra grande não cabe a 30 pt).
                     FittedBox(
@@ -332,7 +335,7 @@ class InviteCodeCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     GestureDetector(
-                      onTap: () => _copy(context, InviteLinks.shareLink(code), 'Link copiado.'),
+                      onTap: () => _copy(context, InviteLinks.shareLink(code), context.tr('Link copiado.')),
                       child: Text(
                         InviteLinks.displayLink(code),
                         maxLines: 1,
@@ -349,20 +352,20 @@ class InviteCodeCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: () => _shareLink(group),
             icon: const Icon(LucideIcons.link, size: 18),
-            label: const Text('Partilhar link'),
+            label: Text(context.tr('Partilhar link')),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: () => _shareCode(group),
             icon: const Icon(LucideIcons.hash, size: 18),
-            label: const Text('Partilhar código'),
+            label: Text(context.tr('Partilhar código')),
           ),
           if (onInviteContact != null) ...[
             const SizedBox(height: 4),
             TextButton.icon(
               onPressed: onInviteContact,
               icon: const Icon(LucideIcons.atSign, size: 16),
-              label: const Text('Convidar por contacto'),
+              label: Text(context.tr('Convidar por contacto')),
             ),
           ],
         ],
@@ -393,10 +396,10 @@ class _InviteSheet extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Convidar por contacto', style: AppTheme.display(context, size: 22)),
+              Text(context.tr('Convidar por contacto'), style: AppTheme.display(context, size: 22)),
               const SizedBox(height: 4),
               Text(
-                'Se a pessoa já tiver conta, recebe o convite na app.',
+                context.tr('Se a pessoa já tiver conta, recebe o convite na app.'),
                 style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
               ),
               const SizedBox(height: 16),
@@ -511,7 +514,7 @@ class InvitationsInbox extends ConsumerWidget {
         () => ref.read(groupsProvider.notifier).mutate((repo) async {
           gid = await repo.respondInvitation(inv.id, accept: accept);
         }),
-        success: accept ? null : 'Convite recusado.',
+        success: accept ? null : context.tr('Convite recusado.'),
       );
       ref.invalidate(invitationsProvider);
       if (ok && accept && gid != null) onAccepted?.call(gid!);
@@ -522,7 +525,7 @@ class InvitationsInbox extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-          child: Text('Convites', style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          child: Text(context.tr('Convites'), style: context.text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         ),
         for (final inv in invitations)
           Padding(
@@ -533,13 +536,17 @@ class InvitationsInbox extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    '${inv.inviterName.isEmpty ? 'Alguém' : inv.inviterName} convidou-te',
+                    inv.inviterName.isEmpty
+                        ? context.tr('Alguém convidou-te')
+                        : context.tr('{name} convidou-te', {'name': inv.inviterName}),
                     style: context.text.labelMedium?.copyWith(color: context.palette.accentForeground),
                   ),
                   const SizedBox(height: 2),
                   Text(inv.title, style: AppTheme.display(context, size: 19, color: context.palette.accentForeground)),
                   Text(
-                    '${inv.celebrantName} · ${inv.memberCount} ${inv.memberCount == 1 ? 'pessoa' : 'pessoas'}',
+                    inv.memberCount == 1
+                        ? context.tr('{name} · 1 pessoa', {'name': inv.celebrantName})
+                        : context.tr('{name} · {count} pessoas', {'name': inv.celebrantName, 'count': inv.memberCount}),
                     style: context.text.bodySmall?.copyWith(
                       color: context.palette.accentForeground.withValues(alpha: 0.8),
                     ),
@@ -551,7 +558,7 @@ class InvitationsInbox extends ConsumerWidget {
                         child: OutlinedButton(
                           onPressed: () => respond(inv, false),
                           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                          child: const Text('Recusar'),
+                          child: Text(context.tr('Recusar')),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -559,7 +566,7 @@ class InvitationsInbox extends ConsumerWidget {
                         child: FilledButton(
                           onPressed: () => respond(inv, true),
                           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                          child: const Text('Aceitar'),
+                          child: Text(context.tr('Aceitar')),
                         ),
                       ),
                     ],

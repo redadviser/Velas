@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -30,7 +31,9 @@ class _PendingAnswersScreenState extends ConsumerState<PendingAnswersScreen> {
     await runGuarded(
       context,
       () => api.post(path),
-      success: id != null ? null : (accept ? 'Aniversários acrescentados à tua lista.' : 'Respostas ignoradas.'),
+      success: id != null
+          ? null
+          : (accept ? context.tr('Aniversários acrescentados à tua lista.') : context.tr('Respostas ignoradas.')),
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -46,10 +49,10 @@ class _PendingAnswersScreenState extends ConsumerState<PendingAnswersScreen> {
     final list = answers.value ?? const <PendingAnswer>[];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Por confirmar'),
+        title: Text(context.tr('Por confirmar')),
         actions: [
           if (list.length > 1)
-            TextButton(onPressed: _busy ? null : () => _act(accept: true), child: const Text('Aceitar todos')),
+            TextButton(onPressed: _busy ? null : () => _act(accept: true), child: Text(context.tr('Aceitar todos'))),
           const SizedBox(width: 8),
         ],
       ),
@@ -57,10 +60,10 @@ class _PendingAnswersScreenState extends ConsumerState<PendingAnswersScreen> {
         loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
         error: (e, _) => ErrorRetry(error: e, onRetry: () => ref.invalidate(pendingAnswersProvider)),
         data: (list) => list.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: LucideIcons.inbox,
-                title: 'Nada por confirmar',
-                message: 'Quando alguém deixar a data pelo teu link, aparece aqui para a aceitares.',
+                title: context.tr('Nada por confirmar'),
+                message: context.tr('Quando alguém deixar a data pelo teu link, aparece aqui para a aceitares.'),
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(0, 4, 0, 32),
@@ -68,7 +71,7 @@ class _PendingAnswersScreenState extends ConsumerState<PendingAnswersScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                     child: Text(
-                      'Só entram na tua lista os que aceitares. Ignora os que não conheces.',
+                      context.tr('Só entram na tua lista os que aceitares. Ignora os que não conheces.'),
                       style: context.text.bodyMedium?.copyWith(color: muted),
                     ),
                   ),
@@ -84,12 +87,12 @@ class _PendingAnswersScreenState extends ConsumerState<PendingAnswersScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            tooltip: 'Ignorar',
+                            tooltip: context.tr('Ignorar'),
                             onPressed: _busy ? null : () => _act(id: a.id, accept: false),
                             icon: Icon(LucideIcons.x, color: muted),
                           ),
                           IconButton(
-                            tooltip: 'Aceitar',
+                            tooltip: context.tr('Aceitar'),
                             onPressed: _busy ? null : () => _act(id: a.id, accept: true),
                             icon: Icon(LucideIcons.check, color: context.colors.primary),
                           ),
@@ -101,7 +104,7 @@ class _PendingAnswersScreenState extends ConsumerState<PendingAnswersScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                       child: TextButton(
                         onPressed: _busy ? null : () => _act(accept: false),
-                        child: const Text('Ignorar todos'),
+                        child: Text(context.tr('Ignorar todos')),
                       ),
                     ),
                 ],

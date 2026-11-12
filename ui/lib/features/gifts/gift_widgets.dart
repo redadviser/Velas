@@ -12,6 +12,7 @@ import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../auth/auth_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 /// Linha de uma ideia de presente com caixa para marcar como comprado.
 class GiftRow extends ConsumerWidget {
@@ -107,7 +108,7 @@ class BudgetBar extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
-                  limit == null ? 'gastos' : 'de ${Fmt.money(limit)}',
+                  limit == null ? context.tr('gastos') : context.tr('de {amount}', {'amount': Fmt.money(limit)}),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: context.palette.mutedForeground),
@@ -117,7 +118,7 @@ class BudgetBar extends StatelessWidget {
             if (over)
               Flexible(
                 child: Pill(
-                  label: 'Acima do orçamento',
+                  label: context.tr('Acima do orçamento'),
                   background: context.colors.error.withValues(alpha: 0.12),
                   foreground: context.colors.error,
                 ),
@@ -125,7 +126,7 @@ class BudgetBar extends StatelessWidget {
             else if (limit != null)
               Flexible(
                 child: Text(
-                  'Restam ${Fmt.money(limit - spent)}',
+                  context.tr('Restam {amount}', {'amount': Fmt.money(limit - spent)}),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
@@ -158,7 +159,7 @@ class BudgetBar extends StatelessWidget {
           if (planned > spent) ...[
             const SizedBox(height: 6),
             Text(
-              'Ideias planeadas: ${Fmt.money(planned)}',
+              context.tr('Ideias planeadas: {amount}', {'amount': Fmt.money(planned)}),
               style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
             ),
           ],
@@ -180,7 +181,7 @@ Future<void> showGiftEditor(BuildContext context, WidgetRef ref, {required Strin
 Future<void> pickPersonThenAddGift(BuildContext context, WidgetRef ref) async {
   final data = ref.read(dataProvider);
   if (data.people.isEmpty) {
-    showMessage(context, 'Adiciona primeiro uma pessoa.');
+    showMessage(context, context.tr('Adiciona primeiro uma pessoa.'));
     return;
   }
   final person = await showModalBottomSheet<Person>(
@@ -195,7 +196,7 @@ Future<void> pickPersonThenAddGift(BuildContext context, WidgetRef ref) async {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Presente para quem?', style: AppTheme.display(ctx, size: 22)),
+              child: Text(ctx.tr('Presente para quem?'), style: AppTheme.display(ctx, size: 22)),
             ),
           ),
           Expanded(
@@ -271,7 +272,7 @@ class _GiftEditorState extends ConsumerState<_GiftEditor> {
     final ok = await runGuarded(
       context,
       () => ref.read(dataRepositoryProvider)!.deleteGift(widget.gift!.id),
-      success: 'Ideia removida.',
+      success: context.tr('Ideia removida.'),
     );
     if (ok) nav.pop();
   }
@@ -291,18 +292,21 @@ class _GiftEditorState extends ConsumerState<_GiftEditor> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  widget.gift == null ? 'Nova ideia de presente' : 'Editar presente',
+                  widget.gift == null ? context.tr('Nova ideia de presente') : context.tr('Editar presente'),
                   style: AppTheme.display(context, size: 22),
                 ),
                 if (person != null)
-                  Text('Para ${person.name}', style: TextStyle(color: context.palette.mutedForeground)),
+                  Text(
+                    context.tr('Para {name}', {'name': person.name}),
+                    style: TextStyle(color: context.palette.mutedForeground),
+                  ),
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _title,
                   autofocus: widget.gift == null,
                   textCapitalization: TextCapitalization.sentences,
-                  validator: (v) => Validators.required(v, 'Descreve o presente.'),
-                  decoration: const InputDecoration(hintText: 'O quê? Ex.: Livro do Saramago'),
+                  validator: (v) => Validators.required(v, context.tr('Descreve o presente.')),
+                  decoration: InputDecoration(hintText: context.tr('O quê? Ex.: Livro do Saramago')),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -312,8 +316,9 @@ class _GiftEditorState extends ConsumerState<_GiftEditor> {
                         controller: _price,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                        validator: (v) => (v != null && v.trim().isNotEmpty && _priceValue == null) ? 'Inválido' : null,
-                        decoration: const InputDecoration(hintText: 'Preço', suffixText: '€'),
+                        validator: (v) =>
+                            (v != null && v.trim().isNotEmpty && _priceValue == null) ? context.tr('Inválido') : null,
+                        decoration: InputDecoration(hintText: context.tr('Preço'), suffixText: '€'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -339,7 +344,7 @@ class _GiftEditorState extends ConsumerState<_GiftEditor> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Comprado',
+                                  context.tr('Comprado'),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: _purchased ? context.palette.success : null,
@@ -357,23 +362,23 @@ class _GiftEditorState extends ConsumerState<_GiftEditor> {
                 TextFormField(
                   controller: _link,
                   keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    hintText: 'Link (opcional)',
-                    prefixIcon: Icon(LucideIcons.link, size: 16),
+                  decoration: InputDecoration(
+                    hintText: context.tr('Link (opcional)'),
+                    prefixIcon: const Icon(LucideIcons.link, size: 16),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _notes,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(hintText: 'Notas (tamanho, cor, loja…)'),
+                  decoration: InputDecoration(hintText: context.tr('Notas (tamanho, cor, loja…)')),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
                     if (widget.gift != null) ...[
                       IconButton.outlined(
-                        tooltip: 'Eliminar',
+                        tooltip: context.tr('Eliminar'),
                         onPressed: _delete,
                         style: IconButton.styleFrom(fixedSize: const Size(52, 52)),
                         icon: Icon(LucideIcons.trash2, color: context.colors.error, size: 20),
@@ -381,7 +386,7 @@ class _GiftEditorState extends ConsumerState<_GiftEditor> {
                       const SizedBox(width: 12),
                     ],
                     Expanded(
-                      child: FilledButton(onPressed: _save, child: const Text('Guardar')),
+                      child: FilledButton(onPressed: _save, child: Text(context.tr('Guardar'))),
                     ),
                   ],
                 ),

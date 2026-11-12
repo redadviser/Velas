@@ -1,3 +1,5 @@
+import '../i18n/translations.dart';
+
 /// Regras de username, telemóvel de conta e identificação de contactos.
 class Identity {
   const Identity._();
@@ -10,12 +12,12 @@ class Identity {
   /// Mensagem de erro, ou `null` se o username for válido.
   static String? usernameError(String input) {
     final u = normalizeUsername(input);
-    if (u.isEmpty) return 'Escolhe um username.';
-    if (u.length < 3) return 'Usa pelo menos 3 caracteres.';
-    if (u.length > 20) return 'Usa no máximo 20 caracteres.';
-    if (!_username.hasMatch(u)) return 'Só letras, números, ponto e underscore.';
+    if (u.isEmpty) return tr('Escolhe um username.');
+    if (u.length < 3) return tr('Usa pelo menos 3 caracteres.');
+    if (u.length > 20) return tr('Usa no máximo 20 caracteres.');
+    if (!_username.hasMatch(u)) return tr('Só letras, números, ponto e underscore.');
     if (u.startsWith('.') || u.startsWith('_') || u.endsWith('.') || u.endsWith('_')) {
-      return 'Não pode começar nem acabar em ponto ou underscore.';
+      return tr('Não pode começar nem acabar em ponto ou underscore.');
     }
     return null;
   }
@@ -62,11 +64,15 @@ class Identity {
 }
 
 enum IdentifierKind {
-  email('email'),
-  phone('telemóvel'),
-  username('username'),
-  invalid('');
+  email,
+  phone,
+  username,
+  invalid;
 
-  const IdentifierKind(this.label);
-  final String label;
+  String get label => switch (this) {
+    email => 'email',
+    phone => tr('telemóvel'),
+    username => 'username',
+    invalid => '',
+  };
 }

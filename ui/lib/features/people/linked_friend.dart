@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/chat_providers.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -97,7 +98,7 @@ class LinkedFriendField extends ConsumerWidget {
 
     final muted = context.palette.mutedForeground;
     Future<void> choose() async {
-      final f = await pickFriend(context, available, title: 'Quem é na Birthdayly?');
+      final f = await pickFriend(context, available, title: context.tr('Quem é na Birthdayly?'));
       if (f != null) onChanged(f.userId);
     }
 
@@ -114,14 +115,14 @@ class LinkedFriendField extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(linked?.name ?? 'Amigo da Birthdayly', style: context.text.bodyLarge),
+                  Text(linked?.name ?? context.tr('Amigo da Birthdayly'), style: context.text.bodyLarge),
                   if (linked != null && linked.username.isNotEmpty)
                     Text('@${linked.username}', style: context.text.bodySmall?.copyWith(color: muted)),
                 ],
               ),
             ),
             IconButton(
-              tooltip: 'Desligar',
+              tooltip: context.tr('Desligar'),
               icon: Icon(LucideIcons.x, size: 18, color: muted),
               onPressed: () => onChanged(null),
             ),
@@ -143,11 +144,11 @@ class LinkedFriendField extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '${suggestion.name} está na Birthdayly. É esta pessoa?',
+                      context.tr('{name} está na Birthdayly. É esta pessoa?', {'name': suggestion.name}),
                       style: context.text.bodyMedium?.copyWith(color: context.palette.accentForeground),
                     ),
                   ),
-                  TextButton(onPressed: () => onChanged(suggestion.userId), child: const Text('Ligar')),
+                  TextButton(onPressed: () => onChanged(suggestion.userId), child: Text(context.tr('Ligar'))),
                 ],
               ),
             ),
@@ -155,7 +156,7 @@ class LinkedFriendField extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: choose,
             icon: const Icon(LucideIcons.userPlus, size: 18),
-            label: const Text('Ligar a um amigo da Birthdayly'),
+            label: Text(context.tr('Ligar a um amigo da Birthdayly')),
           ),
         ],
       );
@@ -165,12 +166,12 @@ class LinkedFriendField extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 20),
-        const FieldLabel('Na Birthdayly'),
+        FieldLabel(context.tr('Na Birthdayly')),
         body,
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
           child: Text(
-            'Ligado a um amigo, os parabéns podem ir diretamente para o mural e a conversa dele.',
+            context.tr('Ligado a um amigo, os parabéns podem ir diretamente para o mural e a conversa dele.'),
             style: context.text.bodySmall?.copyWith(color: muted),
           ),
         ),

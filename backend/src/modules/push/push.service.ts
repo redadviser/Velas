@@ -5,13 +5,14 @@ import type { Db } from '../../core/database.js';
 import { HttpError } from '../../core/errors.js';
 import { id } from '../../core/validation.js';
 import type { MessageJson } from '../chat/chat.model.js';
-import { previewOf, pushCopy } from './push.copy.js';
+import { previewOf, pushCopy, pushLangs } from './push.copy.js';
 import type { PushMessage, PushPlatform, PushSender } from './push.gateway.js';
 
 export const pushTokenSchema = z.object({
   token: z.string().min(20).max(4096),
   platform: z.enum(['android', 'ios']),
-  lang: z.enum(['pt', 'en', 'es', 'fr']).default('pt'),
+  // Uma língua que o servidor ainda não conheça recebe as notificações em português.
+  lang: z.enum(pushLangs).default('pt').catch('pt'),
 });
 export type PushTokenInput = z.infer<typeof pushTokenSchema>;
 

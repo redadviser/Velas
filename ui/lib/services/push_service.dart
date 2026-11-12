@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -50,7 +49,9 @@ Future<void> firebaseBackgroundMessage(RemoteMessage message) async {
   try {
     // Os botões na língua da app.
     final saved = (await SharedPreferences.getInstance()).getString('velas.locale');
-    await Translations.load(saved != null ? Locale(saved) : Translations.resolve(PlatformDispatcher.instance.locales));
+    await Translations.load(
+      (saved == null ? null : Translations.localeOf(saved)) ?? Translations.resolve(PlatformDispatcher.instance.locales),
+    );
   } catch (_) {}
   await NotificationService.instance.showPush(message.data);
 }

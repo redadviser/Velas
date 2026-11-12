@@ -778,7 +778,7 @@ final pushRegistrationProvider = Provider<void>((ref) {
           .put('/me/push-token', {
             'token': token,
             'platform': Platform.isIOS ? 'ios' : 'android',
-            'lang': Translations.current.locale.languageCode,
+            'lang': Translations.tagOf(Translations.current.locale),
           })
           .catchError((_) => null),
     );

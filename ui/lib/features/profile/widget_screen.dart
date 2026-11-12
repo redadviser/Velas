@@ -10,6 +10,7 @@ import '../../core/utils/birthday_utils.dart';
 import '../../core/widgets/birthday_widgets.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
+import '../../core/i18n/translations.dart';
 
 /// O widget do ecrã principal (só Android: BirthdaysWidget.kt).
 class WidgetScreen extends ConsumerStatefulWidget {
@@ -62,8 +63,8 @@ class _WidgetScreenState extends ConsumerState<WidgetScreen> {
     showMessage(
       context,
       now > before
-          ? 'Widget adicionado ao ecrã principal. Para o mudar de sítio, toca sem soltar nele.'
-          : 'O widget não foi adicionado.',
+          ? context.tr('Widget adicionado ao ecrã principal. Para o mudar de sítio, toca sem soltar nele.')
+          : context.tr('O widget não foi adicionado.'),
     );
   }
 
@@ -73,7 +74,7 @@ class _WidgetScreenState extends ConsumerState<WidgetScreen> {
     final next = data.upcoming.take(3).toList();
     final muted = context.palette.mutedForeground;
     return Scaffold(
-      appBar: AppBar(title: const Text('Widgets')),
+      appBar: AppBar(title: Text(context.tr('Widgets'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
@@ -87,7 +88,7 @@ class _WidgetScreenState extends ConsumerState<WidgetScreen> {
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Text(
-                      'Quando guardares aniversários, aparecem aqui os próximos.',
+                      context.tr('Quando guardares aniversários, aparecem aqui os próximos.'),
                       textAlign: TextAlign.center,
                       style: context.text.bodyMedium?.copyWith(color: muted),
                     ),
@@ -103,7 +104,9 @@ class _WidgetScreenState extends ConsumerState<WidgetScreen> {
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    _installed == 1 ? 'Já está no teu ecrã principal.' : 'Tens $_installed no ecrã principal.',
+                    _installed == 1
+                        ? context.tr('Já está no teu ecrã principal.')
+                        : context.tr('Tens {count} no ecrã principal.', {'count': _installed}),
                     style: context.text.bodyMedium?.copyWith(color: context.palette.success),
                   ),
                 ),
@@ -118,17 +121,21 @@ class _WidgetScreenState extends ConsumerState<WidgetScreen> {
                 : const Icon(LucideIcons.layoutGrid, size: 18),
             label: Text(
               _waiting
-                  ? 'A adicionar…'
+                  ? context.tr('A adicionar…')
                   : _installed > 0
-                  ? 'Adicionar outro'
-                  : 'Adicionar ao ecrã principal',
+                  ? context.tr('Adicionar outro')
+                  : context.tr('Adicionar ao ecrã principal'),
             ),
           ),
           const SizedBox(height: 10),
           Text(
             _canPin
-                ? 'O telemóvel põe-no num espaço livre. Para o mudar de sítio ou de tamanho, toca sem soltar no widget.'
-                : 'Este telemóvel não deixa adicionar widgets a partir da app: procura o Birthdayly na lista de widgets do ecrã principal.',
+                ? context.tr(
+                    'O telemóvel põe-no num espaço livre. Para o mudar de sítio ou de tamanho, toca sem soltar no widget.',
+                  )
+                : context.tr(
+                    'Este telemóvel não deixa adicionar widgets a partir da app: procura o Birthdayly na lista de widgets do ecrã principal.',
+                  ),
             textAlign: TextAlign.center,
             style: context.text.bodySmall?.copyWith(color: muted),
           ),
@@ -183,7 +190,7 @@ class _MediumPreview extends StatelessWidget {
           children: [
             const _Logo(),
             const SizedBox(width: 8),
-            Expanded(child: Text('Próximos aniversários', style: context.text.titleSmall)),
+            Expanded(child: Text(context.tr('Próximos aniversários'), style: context.text.titleSmall)),
           ],
         ),
         for (final p in people) ...[

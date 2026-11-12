@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/group_models.dart';
 import '../auth/auth_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 final _previewProvider = FutureProvider.autoDispose.family<GroupPreview, String>((ref, code) {
   return ref.watch(groupRepositoryProvider)!.previewByCode(code);
@@ -70,7 +71,9 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  '${g.adminName.isEmpty ? 'Alguém' : g.adminName} convidou-te para',
+                  g.adminName.isEmpty
+                      ? context.tr('Alguém convidou-te para')
+                      : context.tr('{name} convidou-te para', {'name': g.adminName}),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: context.palette.mutedForeground),
                 ),
@@ -84,15 +87,17 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                     Pill(icon: LucideIcons.cake, label: g.celebrantName),
                     Pill(
                       icon: LucideIcons.usersRound,
-                      label: '${g.memberCount} ${g.memberCount == 1 ? 'pessoa' : 'pessoas'}',
+                      label: g.memberCount == 1
+                          ? context.tr('1 pessoa')
+                          : context.tr('{count} pessoas', {'count': g.memberCount}),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 Text(
                   g.closed
-                      ? 'A prenda já foi comprada e o grupo está fechado.'
-                      : 'Ao entrares, vês o valor combinado, quanto te cabe e a quem pagar.',
+                      ? context.tr('A prenda já foi comprada e o grupo está fechado.')
+                      : context.tr('Ao entrares, vês o valor combinado, quanto te cabe e a quem pagar.'),
                   textAlign: TextAlign.center,
                   style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
                 ),
@@ -100,12 +105,15 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                 if (g.alreadyMember)
                   FilledButton(
                     onPressed: () => context.pushReplacement('/groups/${g.id}'),
-                    child: const Text('Abrir grupo'),
+                    child: Text(context.tr('Abrir grupo')),
                   )
                 else if (!g.closed)
-                  LoadingButton(label: 'Entrar no grupo', loading: _joining, onPressed: _join),
+                  LoadingButton(label: context.tr('Entrar no grupo'), loading: _joining, onPressed: _join),
                 const SizedBox(height: 8),
-                TextButton(onPressed: _close, child: Text(g.alreadyMember || g.closed ? 'Fechar' : 'Agora não')),
+                TextButton(
+                  onPressed: _close,
+                  child: Text(g.alreadyMember || g.closed ? context.tr('Fechar') : context.tr('Agora não')),
+                ),
               ],
             ),
           ),

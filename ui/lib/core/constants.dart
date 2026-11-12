@@ -32,11 +32,6 @@ abstract final class Keys {
   static const settingsLanguage = 'settings.language';
   static const settingsLanguageSystem = 'settings.language.system';
 
-  // Nomes das línguas (iguais em todas) -----------------------------------
-  static const languagePt = 'language.pt';
-  static const languageEn = 'language.en';
-  static const languageEs = 'language.es';
-  static const languageFr = 'language.fr';
 
   // Conversas -------------------------------------------------------------
   static const chatFriendsTooltip = 'chat.friendsTooltip';
@@ -52,10 +47,6 @@ abstract final class Keys {
   static const chatPreviewYou = 'chat.previewYou';
   static const chatPreviewSender = 'chat.previewSender';
   static const chatGiftCollected = 'chat.gift.collected';
-  static const chatNewTitle = 'chat.new.title';
-  static const chatNewGroup = 'chat.new.group';
-  static const chatNewGroupHint = 'chat.new.groupHint';
-  static const chatNewCode = 'chat.new.code';
   static const chatTypingOne = 'chat.typingOne';
   static const chatTypingTwo = 'chat.typingTwo';
   static const chatTypingMany = 'chat.typingMany';

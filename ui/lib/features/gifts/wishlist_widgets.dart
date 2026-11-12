@@ -13,6 +13,7 @@ import '../../core/wishlist_providers.dart';
 import '../../data/models/models.dart';
 import '../auth/auth_widgets.dart';
 import 'gift_suggestions.dart';
+import '../../core/i18n/translations.dart';
 
 /// Escolher gostos e hobbies (chips que se ligam e desligam).
 class InterestPicker extends StatelessWidget {
@@ -124,7 +125,7 @@ Future<bool> keepWishAsIdea(BuildContext context, WidgetRef ref, Person person, 
           createdAt: DateTime.now(),
         ),
       ),
-  success: 'Guardado nas tuas ideias para ${person.firstName}.',
+  success: context.tr('Guardado nas tuas ideias para {name}.', {'name': person.firstName}),
 );
 
 /// Botão "guardar nas minhas ideias" (ou o visto, se já lá estiver).
@@ -147,11 +148,11 @@ class KeepWishButton extends ConsumerWidget {
               LucideIcons.check,
               size: 20,
               color: context.palette.success,
-              semanticLabel: 'Já está nas tuas ideias',
+              semanticLabel: context.tr('Já está nas tuas ideias'),
             ),
           )
         : IconButton(
-            tooltip: 'Guardar nas minhas ideias',
+            tooltip: context.tr('Guardar nas minhas ideias'),
             onPressed: () => keepWishAsIdea(context, ref, person, wish),
             icon: Icon(LucideIcons.bookmarkPlus, color: context.colors.primary),
           );
@@ -196,7 +197,7 @@ class _WishEditorState extends ConsumerState<_WishEditor> {
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     final t = _price.text.trim().replaceAll(',', '.');
-    final item = WishItem(
+    final wish = WishItem(
       id: widget.item?.id ?? const Uuid().v4(),
       title: _title.text.trim(),
       price: t.isEmpty ? null : double.tryParse(t),
@@ -205,7 +206,7 @@ class _WishEditorState extends ConsumerState<_WishEditor> {
       createdAt: widget.item?.createdAt ?? DateTime.now(),
     );
     final nav = Navigator.of(context);
-    if (await runGuarded(context, () => ref.read(myWishlistProvider.notifier).save(item))) nav.pop();
+    if (await runGuarded(context, () => ref.read(myWishlistProvider.notifier).save(wish))) nav.pop();
   }
 
   Future<void> _delete() async {
@@ -213,7 +214,7 @@ class _WishEditorState extends ConsumerState<_WishEditor> {
     final ok = await runGuarded(
       context,
       () => ref.read(myWishlistProvider.notifier).remove(widget.item!.id),
-      success: 'Desejo apagado.',
+      success: context.tr('Desejo apagado.'),
     );
     if (ok) nav.pop();
   }
@@ -230,42 +231,45 @@ class _WishEditorState extends ConsumerState<_WishEditor> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.item == null ? 'Novo desejo' : 'Editar desejo', style: AppTheme.display(context, size: 22)),
+              Text(
+                widget.item == null ? context.tr('Novo desejo') : context.tr('Editar desejo'),
+                style: AppTheme.display(context, size: 22),
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _title,
                 autofocus: widget.item == null,
                 textCapitalization: TextCapitalization.sentences,
-                validator: (v) => Validators.required(v, 'O que gostavas de receber?'),
-                decoration: const InputDecoration(hintText: 'Ex.: Edição ilustrada de "Dune"'),
+                validator: (v) => Validators.required(v, context.tr('O que gostavas de receber?')),
+                decoration: InputDecoration(hintText: context.tr('Ex.: Edição ilustrada de "Dune"')),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _price,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(hintText: 'Preço aproximado (opcional)', suffixText: '€'),
+                decoration: InputDecoration(hintText: context.tr('Preço aproximado (opcional)'), suffixText: '€'),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _link,
                 keyboardType: TextInputType.url,
-                decoration: const InputDecoration(
-                  hintText: 'Link (opcional)',
-                  prefixIcon: Icon(LucideIcons.link, size: 16),
+                decoration: InputDecoration(
+                  hintText: context.tr('Link (opcional)'),
+                  prefixIcon: const Icon(LucideIcons.link, size: 16),
                 ),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _notes,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(hintText: 'Tamanho, cor, edição… (opcional)'),
+                decoration: InputDecoration(hintText: context.tr('Tamanho, cor, edição… (opcional)')),
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
                   if (widget.item != null) ...[
                     IconButton.outlined(
-                      tooltip: 'Apagar',
+                      tooltip: context.tr('Apagar'),
                       onPressed: _delete,
                       style: IconButton.styleFrom(fixedSize: const Size(52, 52)),
                       icon: Icon(LucideIcons.trash2, color: context.colors.error, size: 20),
@@ -273,7 +277,7 @@ class _WishEditorState extends ConsumerState<_WishEditor> {
                     const SizedBox(width: 12),
                   ],
                   Expanded(
-                    child: FilledButton(onPressed: _save, child: const Text('Guardar')),
+                    child: FilledButton(onPressed: _save, child: Text(context.tr('Guardar'))),
                   ),
                 ],
               ),

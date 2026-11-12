@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/birthday_utils.dart';
@@ -107,9 +108,9 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
   String get _summary {
     if (_day == null) {
       return switch (_view) {
-        _View.years => 'Escolhe o ano',
-        _View.months => 'Escolhe o mês',
-        _View.days => 'Escolhe o dia',
+        _View.years => context.tr('Escolhe o ano'),
+        _View.months => context.tr('Escolhe o mês'),
+        _View.days => context.tr('Escolhe o dia'),
       };
     }
     return Fmt.birthDate(_day!, _month, _year);
@@ -125,7 +126,7 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Data de aniversário', style: AppTheme.display(context, size: 22)),
+            Text(context.tr('Data de aniversário'), style: AppTheme.display(context, size: 22)),
             const SizedBox(height: 4),
             Text(_summary, style: TextStyle(color: muted)),
             const SizedBox(height: 12),
@@ -147,10 +148,10 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
             const SizedBox(height: 8),
             Text(
               _isFuture
-                  ? 'A data não pode estar no futuro.'
+                  ? context.tr('A data não pode estar no futuro.')
                   : _year == null && _yearPicked
-                  ? 'Sem ano: só não mostramos a idade.'
-                  : 'Não sabes o ano? Toca no ano e escolhe "Sem ano".',
+                  ? context.tr('Sem ano: só não mostramos a idade.')
+                  : context.tr('Não sabes o ano? Toca no ano e escolhe "Sem ano".'),
               textAlign: TextAlign.center,
               style: context.text.bodySmall?.copyWith(color: _isFuture ? context.colors.error : muted),
             ),
@@ -159,7 +160,7 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
               onPressed: _day == null || _isFuture
                   ? null
                   : () => Navigator.pop(context, (day: _day!, month: _month, year: _year)),
-              child: const Text('Confirmar'),
+              child: Text(context.tr('Confirmar')),
             ),
           ],
         ),
@@ -183,7 +184,7 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
 
     return Row(
       children: [
-        arrow(-1, Icons.chevron_left, 'Mês anterior'),
+        arrow(-1, Icons.chevron_left, context.tr('Mês anterior')),
         Expanded(
           child: Wrap(
             alignment: WrapAlignment.center,
@@ -195,14 +196,14 @@ class _BirthdayPickerState extends State<_BirthdayPicker> {
                 onTap: () => _toggle(_View.months),
               ),
               _HeaderChip(
-                label: _year?.toString() ?? (_yearPicked ? 'Sem ano' : 'Ano'),
+                label: _year?.toString() ?? (_yearPicked ? context.tr('Sem ano') : context.tr('Ano')),
                 open: _view == _View.years,
                 onTap: () => _toggle(_View.years),
               ),
             ],
           ),
         ),
-        arrow(1, Icons.chevron_right, 'Mês seguinte'),
+        arrow(1, Icons.chevron_right, context.tr('Mês seguinte')),
       ],
     );
   }
@@ -328,7 +329,7 @@ class _YearGridState extends State<_YearGrid> {
       itemBuilder: (_, i) {
         final y = items[i];
         return _Cell(
-          label: y?.toString() ?? 'Sem ano',
+          label: y?.toString() ?? context.tr('Sem ano'),
           selected: y == null ? widget.noYearSelected : y == widget.selected,
           onTap: () => widget.onPick(y),
         );
@@ -380,9 +381,7 @@ class _Cell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final shape = StadiumBorder(
-      side: outlined && !selected ? BorderSide(color: colors.primary) : BorderSide.none,
-    );
+    final shape = StadiumBorder(side: outlined && !selected ? BorderSide(color: colors.primary) : BorderSide.none);
     final color = selected
         ? colors.onPrimary
         : enabled
@@ -403,10 +402,7 @@ class _Cell extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.fade,
               softWrap: false,
-              style: context.text.bodyLarge?.copyWith(
-                color: color,
-                fontWeight: selected ? FontWeight.w600 : null,
-              ),
+              style: context.text.bodyLarge?.copyWith(color: color, fontWeight: selected ? FontWeight.w600 : null),
             ),
           ),
         ),

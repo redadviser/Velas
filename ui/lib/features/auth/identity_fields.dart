@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/identity.dart';
+import '../../core/i18n/translations.dart';
 
 enum _Check { idle, checking, available, taken, failed }
 
@@ -91,15 +92,15 @@ class UsernameFieldState extends ConsumerState<UsernameField> {
         final error = Identity.usernameError(v ?? '');
         if (error != null) return error;
         if (_check == _Check.taken && _checked == Identity.normalizeUsername(v!)) {
-          return 'Este username já está a ser usado.';
+          return context.tr('Este username já está a ser usado.');
         }
         return null;
       },
       decoration: InputDecoration(
-        hintText: 'o_teu_username',
+        hintText: context.tr('o_teu_username'),
         prefixIcon: const Icon(LucideIcons.atSign, size: 18),
         suffixIcon: suffix,
-        helperText: _check == _Check.available ? 'Disponível' : null,
+        helperText: _check == _Check.available ? context.tr('Disponível') : null,
         helperStyle: TextStyle(color: context.palette.success, fontWeight: FontWeight.w600),
       ),
     );
@@ -131,9 +132,9 @@ class PhoneField extends StatelessWidget {
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]'))],
       validator: (v) {
         final t = v?.trim() ?? '';
-        if (t.isEmpty) return required ? 'Indica o número.' : null;
-        if (Identity.toE164(t) == null) return 'Número inválido. Ex.: 912 345 678';
-        if (taken) return 'Este telemóvel já está associado a outra conta.';
+        if (t.isEmpty) return required ? context.tr('Indica o número.') : null;
+        if (Identity.toE164(t) == null) return context.tr('Número inválido. Ex.: 912 345 678');
+        if (taken) return context.tr('Este telemóvel já está associado a outra conta.');
         return null;
       },
       decoration: const InputDecoration(hintText: '912 345 678', prefixIcon: Icon(LucideIcons.smartphone, size: 18)),

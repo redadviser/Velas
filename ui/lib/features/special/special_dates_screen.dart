@@ -12,6 +12,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../auth/auth_widgets.dart';
 import '../people/birthday_picker.dart';
+import '../../core/i18n/translations.dart';
 
 /// Ícone e tom (índice de [AppColors.tones]) de cada tipo.
 (IconData, int) specialDateStyle(SpecialDateKind kind) => switch (kind) {
@@ -31,10 +32,10 @@ class SpecialDatesScreen extends ConsumerWidget {
     final dates = data.upcomingSpecialDates;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Datas especiais'),
+        title: Text(context.tr('Datas especiais')),
         actions: [
           IconButton(
-            tooltip: 'Nova data',
+            tooltip: context.tr('Nova data'),
             icon: const Icon(LucideIcons.plus),
             onPressed: () => showSpecialDateEditor(context, ref),
           ),
@@ -54,13 +55,13 @@ class SpecialDatesScreen extends ConsumerWidget {
                 IconBadge(icon: LucideIcons.heart, size: 48),
                 const SizedBox(height: 10),
                 Text(
-                  'Mais datas, mais carinho',
+                  context.tr('Mais datas, mais carinho'),
                   textAlign: TextAlign.center,
                   style: AppTheme.display(context, size: 20),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Casamentos, namoros, o Dia da Mãe ou um dia só vosso. Guarda-os e lembramos-te a tempo.',
+                  context.tr('Casamentos, namoros, o Dia da Mãe ou um dia só vosso. Guarda-os e lembramos-te a tempo.'),
                   textAlign: TextAlign.center,
                   style: context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground),
                 ),
@@ -78,7 +79,7 @@ class SpecialDatesScreen extends ConsumerWidget {
           ],
           DashedButton(
             icon: LucideIcons.plus,
-            label: dates.isEmpty ? 'Criar a primeira data' : 'Criar outra data',
+            label: dates.isEmpty ? context.tr('Criar a primeira data') : context.tr('Criar outra data'),
             onTap: () => showSpecialDateEditor(context, ref),
           ),
         ],
@@ -120,7 +121,7 @@ class SpecialDateTile extends StatelessWidget {
                   [
                     ?person?.firstName,
                     Fmt.dayMonth(date.nextDate()),
-                    if (years != null && years > 0) '$years anos',
+                    if (years != null && years > 0) context.tr('{years} anos', {'years': years}),
                   ].join(' · '),
                   style: context.text.bodySmall?.copyWith(color: context.palette.mutedForeground),
                 ),
@@ -198,7 +199,7 @@ class _EditorState extends ConsumerState<_Editor> {
     final ok = await runGuarded(
       context,
       () => ref.read(dataRepositoryProvider)!.deleteSpecialDate(widget.date!.id),
-      success: 'Data apagada.',
+      success: context.tr('Data apagada.'),
     );
     if (ok) nav.pop();
   }
@@ -219,7 +220,7 @@ class _EditorState extends ConsumerState<_Editor> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  widget.date == null ? 'Nova data especial' : 'Editar data',
+                  widget.date == null ? context.tr('Nova data especial') : context.tr('Editar data'),
                   style: AppTheme.display(context, size: 22),
                 ),
                 const SizedBox(height: 16),
@@ -227,8 +228,8 @@ class _EditorState extends ConsumerState<_Editor> {
                   controller: _title,
                   autofocus: widget.date == null,
                   textCapitalization: TextCapitalization.sentences,
-                  validator: (v) => Validators.required(v, 'Dá um nome à data.'),
-                  decoration: const InputDecoration(hintText: 'Ex.: Casamento dos avós'),
+                  validator: (v) => Validators.required(v, context.tr('Dá um nome à data.')),
+                  decoration: InputDecoration(hintText: context.tr('Ex.: Casamento dos avós')),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -259,20 +260,23 @@ class _EditorState extends ConsumerState<_Editor> {
                     side: BorderSide(color: _missingDate ? context.colors.error : context.palette.border),
                   ),
                   icon: const Icon(LucideIcons.calendarHeart, size: 18),
-                  label: Text(w == null ? 'Escolher o dia' : Fmt.birthDate(w.day, w.month, w.year)),
+                  label: Text(w == null ? context.tr('Escolher o dia') : Fmt.birthDate(w.day, w.month, w.year)),
                 ),
                 if (_missingDate)
                   Padding(
                     padding: const EdgeInsets.only(top: 6, left: 12),
-                    child: Text('Escolhe o dia.', style: context.text.bodySmall?.copyWith(color: context.colors.error)),
+                    child: Text(
+                      context.tr('Escolhe o dia.'),
+                      style: context.text.bodySmall?.copyWith(color: context.colors.error),
+                    ),
                   ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
                   initialValue: _personId,
                   isExpanded: true,
-                  decoration: const InputDecoration(hintText: 'De quem é? (opcional)'),
+                  decoration: InputDecoration(hintText: context.tr('De quem é? (opcional)')),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('Ninguém em especial')),
+                    DropdownMenuItem(value: null, child: Text(context.tr('Ninguém em especial'))),
                     for (final p in people)
                       DropdownMenuItem(
                         value: p.id,
@@ -285,14 +289,14 @@ class _EditorState extends ConsumerState<_Editor> {
                 TextFormField(
                   controller: _notes,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(hintText: 'Notas (opcional)'),
+                  decoration: InputDecoration(hintText: context.tr('Notas (opcional)')),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
                     if (widget.date != null) ...[
                       IconButton.outlined(
-                        tooltip: 'Apagar',
+                        tooltip: context.tr('Apagar'),
                         onPressed: _delete,
                         style: IconButton.styleFrom(fixedSize: const Size(52, 52)),
                         icon: Icon(LucideIcons.trash2, color: context.colors.error, size: 20),
@@ -300,7 +304,7 @@ class _EditorState extends ConsumerState<_Editor> {
                       const SizedBox(width: 12),
                     ],
                     Expanded(
-                      child: FilledButton(onPressed: _save, child: const Text('Guardar')),
+                      child: FilledButton(onPressed: _save, child: Text(context.tr('Guardar'))),
                     ),
                   ],
                 ),

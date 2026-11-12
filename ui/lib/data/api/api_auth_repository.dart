@@ -206,7 +206,9 @@ class ApiAuthRepository implements AuthRepository {
       final json = ((await _api.post('/me/deletion')) as Map).cast<String, dynamic>();
       return json['email'] as String;
     } on ApiException catch (e) {
-      if (e.code == 'mail_failed') throw const AppException('Não foi possível enviar o email. Tenta outra vez daqui a pouco.');
+      if (e.code == 'mail_failed') {
+        throw const AppException('Não foi possível enviar o email. Tenta outra vez daqui a pouco.');
+      }
       rethrow;
     }
   }

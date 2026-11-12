@@ -1,3 +1,4 @@
+import '../core/i18n/translations.dart';
 import 'dart:io';
 
 import 'package:adapty_flutter/adapty_flutter.dart';
@@ -64,7 +65,8 @@ class AdaptyStore implements PlusStore {
     final products = await Adapty().getPaywallProducts(flow: flow);
     return [
       for (final p in products)
-        if (p.subscription?.period.unit case final unit? when unit == AdaptyPeriodUnit.month || unit == AdaptyPeriodUnit.year)
+        if (p.subscription?.period.unit case final unit?
+            when unit == AdaptyPeriodUnit.month || unit == AdaptyPeriodUnit.year)
           (
             id: p.vendorProductId,
             yearly: unit == AdaptyPeriodUnit.year,
@@ -88,7 +90,7 @@ class AdaptyStore implements PlusStore {
       };
     } on AdaptyError catch (e) {
       if (e.code == AdaptyErrorCode.paymentCancelled) return false;
-      throw AppException('Não foi possível concluir a compra: ${e.message}');
+      throw AppException(tr('Não foi possível concluir a compra: {error}', {'error': e.message}));
     }
   }
 

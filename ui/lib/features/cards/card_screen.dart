@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/i18n/translations.dart';
 import '../../core/cards_providers.dart';
 import '../../core/chat_providers.dart';
 import '../../core/providers.dart';
@@ -79,38 +80,42 @@ class _CardScreenState extends ConsumerState<CardScreen> {
   List<Widget> _actions(GreetingCard card) {
     final me = ref.watch(currentUserProvider);
     final muted = context.text.bodyMedium?.copyWith(color: context.palette.mutedForeground);
-    const keep = 'Guardar no meu mural';
+    final keep = context.tr('Guardar no meu mural');
     if (me == null) {
       return [
         Text(
-          'Cria conta para guardares a mensagem de ${card.senderFirstName} e não te esqueceres '
-          'dos aniversários de quem gostas.',
+          context.tr(
+            'Cria conta para guardares a mensagem de {name} e não te esqueceres dos aniversários de quem gostas.',
+            {'name': card.senderFirstName},
+          ),
           textAlign: TextAlign.center,
           style: muted,
         ),
         const SizedBox(height: 16),
-        FilledButton(onPressed: () => context.go('/register'), child: const Text('Criar conta')),
+        FilledButton(onPressed: () => context.go('/register'), child: Text(context.tr('Criar conta'))),
         const SizedBox(height: 8),
-        TextButton(onPressed: () => context.go('/login'), child: const Text('Já tenho conta')),
+        TextButton(onPressed: () => context.go('/login'), child: Text(context.tr('Já tenho conta'))),
       ];
     }
     if (card.senderId == me.id) {
       return [
-        Text('Este é o cartão que enviaste.', textAlign: TextAlign.center, style: muted),
+        Text(context.tr('Este é o cartão que enviaste.'), textAlign: TextAlign.center, style: muted),
         const SizedBox(height: 16),
-        OutlinedButton(onPressed: _close, child: const Text('Fechar')),
+        OutlinedButton(onPressed: _close, child: Text(context.tr('Fechar'))),
       ];
     }
     return [
       Text(
-        'Fica no teu mural e passas a ter ${card.senderFirstName} nos teus amigos da Birthdayly.',
+        context.tr('Fica no teu mural e passas a ter {name} nos teus amigos da Birthdayly.', {
+          'name': card.senderFirstName,
+        }),
         textAlign: TextAlign.center,
         style: muted,
       ),
       const SizedBox(height: 16),
       LoadingButton(label: keep, icon: LucideIcons.bookmark, loading: _claiming, onPressed: () => _keep(card)),
       const SizedBox(height: 8),
-      TextButton(onPressed: _close, child: const Text('Agora não')),
+      TextButton(onPressed: _close, child: Text(context.tr('Agora não'))),
     ];
   }
 }
@@ -137,13 +142,13 @@ class _CardBody extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          '${card.senderName} deixou-te uma mensagem',
+          context.tr('{name} deixou-te uma mensagem', {'name': card.senderName}),
           textAlign: TextAlign.center,
           style: TextStyle(color: muted),
         ),
         const SizedBox(height: 6),
         Text(
-          'Parabéns, ${card.recipientName}! 🎉',
+          context.tr('Parabéns, {name}! 🎉', {'name': card.recipientName}),
           textAlign: TextAlign.center,
           style: AppTheme.display(context, size: 28),
         ),
@@ -160,7 +165,7 @@ class _CardBody extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'De ${card.senderName}',
+                context.tr('De {name}', {'name': card.senderName}),
                 textAlign: TextAlign.right,
                 style: context.text.bodyMedium?.copyWith(color: muted, fontStyle: FontStyle.italic),
               ),

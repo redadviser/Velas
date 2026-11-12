@@ -46,6 +46,7 @@ import '../../features/special/special_dates_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/parties/parties_screen.dart';
 import '../../features/parties/party_detail_screen.dart';
+import '../../features/parties/join_party_screen.dart';
 import '../../features/parties/party_form_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../services/deferred_link.dart';
@@ -76,7 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       final public = _publicRoutes.contains(loc);
       if (!loggedIn && !public) {
-        if (loc.startsWith('/join/')) pendingInvite = loc;
+        if (loc.startsWith('/join/') || loc.startsWith('/party-join/')) pendingInvite = loc;
         // O cartão lê-se sem conta; para responder, entra-se e volta-se a ele.
         if (loc.startsWith('/card/')) {
           pendingInvite = loc;
@@ -97,6 +98,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/join/:code',
         parentNavigatorKey: _rootKey,
         builder: (_, s) => JoinGroupScreen(code: s.pathParameters['code']!),
+      ),
+      GoRoute(
+        path: '/party-join/:code',
+        parentNavigatorKey: _rootKey,
+        builder: (_, s) => JoinPartyScreen(code: s.pathParameters['code']!),
       ),
       GoRoute(
         path: '/card/:token',
@@ -126,8 +132,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/profile',
                 builder: (_, _) => const ProfileScreen(),
                 routes: [
-                  GoRoute(path: 'categories', parentNavigatorKey: _rootKey, builder: (_, _) => const CategoriesScreen()),
-                  GoRoute(path: 'payments', parentNavigatorKey: _rootKey, builder: (_, _) => const PaymentDetailsScreen()),
+                  GoRoute(
+                    path: 'categories',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const CategoriesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'payments',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const PaymentDetailsScreen(),
+                  ),
                   GoRoute(path: 'plans', parentNavigatorKey: _rootKey, builder: (_, _) => const PlansScreen()),
                   GoRoute(path: 'help', parentNavigatorKey: _rootKey, builder: (_, _) => const HelpScreen()),
                   GoRoute(path: 'widget', parentNavigatorKey: _rootKey, builder: (_, _) => const WidgetScreen()),
@@ -180,9 +194,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chat-settings',
         parentNavigatorKey: _rootKey,
         builder: (_, _) => const ChatSettingsScreen(),
-        routes: [
-          GoRoute(path: 'blocked', parentNavigatorKey: _rootKey, builder: (_, _) => const BlockedUsersScreen()),
-        ],
+        routes: [GoRoute(path: 'blocked', parentNavigatorKey: _rootKey, builder: (_, _) => const BlockedUsersScreen())],
       ),
       GoRoute(path: '/person/new', parentNavigatorKey: _rootKey, builder: (_, _) => const PersonFormScreen()),
       GoRoute(path: '/special', parentNavigatorKey: _rootKey, builder: (_, _) => const SpecialDatesScreen()),
@@ -227,10 +239,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'message',
             parentNavigatorKey: _rootKey,
-            builder: (_, s) => MessageScreen(
-              personId: s.pathParameters['id']!,
-              autoSend: s.uri.queryParameters['send'] == '1',
-            ),
+            builder: (_, s) =>
+                MessageScreen(personId: s.pathParameters['id']!, autoSend: s.uri.queryParameters['send'] == '1'),
           ),
           GoRoute(
             path: 'history',
@@ -285,6 +295,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     }
     final code = InviteLinks.codeFrom(uri);
     if (code != null) router.go('/join/${code.toUpperCase()}');
+    final party = InviteLinks.partyCodeFrom(uri);
+    if (party != null) router.go('/party-join/${party.toUpperCase()}');
   }
 
   // Tocar numa notificação abre a conversa, a pessoa, a mensagem ou a prenda em grupo.

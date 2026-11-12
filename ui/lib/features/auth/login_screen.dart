@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/identity.dart';
 import '../../core/widgets/common.dart';
 import 'auth_widgets.dart';
+import '../../core/i18n/translations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -43,15 +44,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
-      title: 'Bem-vindo de volta',
-      subtitle: 'Inicia sessão para veres quem faz anos a seguir.',
+      title: context.tr('Bem-vindo de volta'),
+      subtitle: context.tr('Inicia sessão para veres quem faz anos a seguir.'),
       // Wrap: com letra grande o botão passa para a linha de baixo.
       footer: Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('Ainda não tens conta?', style: TextStyle(color: context.palette.mutedForeground)),
-          TextButton(onPressed: () => context.pushReplacement('/register'), child: const Text('Criar conta')),
+          Text(context.tr('Ainda não tens conta?'), style: TextStyle(color: context.palette.mutedForeground)),
+          TextButton(onPressed: () => context.pushReplacement('/register'), child: Text(context.tr('Criar conta'))),
         ],
       ),
       children: [
@@ -61,7 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const FieldLabel('Email ou username'),
+                FieldLabel(context.tr('Email ou username')),
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
@@ -70,20 +71,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.next,
                   validator: (v) {
                     final t = v?.trim() ?? '';
-                    if (t.isEmpty) return 'Indica o teu email ou username.';
+                    if (t.isEmpty) return context.tr('Indica o teu email ou username.');
                     if (t.contains('@') && !t.startsWith('@')) return Validators.email(t);
-                    return Identity.usernameError(t) == null ? null : 'Username inválido.';
+                    return Identity.usernameError(t) == null ? null : context.tr('Username inválido.');
                   },
-                  decoration: const InputDecoration(
-                    hintText: 'nome@exemplo.com ou @user',
-                    prefixIcon: Icon(LucideIcons.atSign, size: 18),
+                  decoration: InputDecoration(
+                    hintText: context.tr('nome@exemplo.com ou @user'),
+                    prefixIcon: const Icon(LucideIcons.atSign, size: 18),
                   ),
                 ),
                 const SizedBox(height: 18),
-                const FieldLabel('Palavra-passe'),
+                FieldLabel(context.tr('Palavra-passe')),
                 PasswordField(
                   controller: _password,
-                  validator: (v) => (v == null || v.isEmpty) ? 'Indica a palavra-passe.' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? context.tr('Indica a palavra-passe.') : null,
                   onSubmitted: (_) => _submit(),
                 ),
                 Align(
@@ -94,11 +95,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       textStyle: context.text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    child: const Text('Esqueceste-te da palavra-passe?'),
+                    child: Text(context.tr('Esqueceste-te da palavra-passe?')),
                   ),
                 ),
                 const SizedBox(height: 12),
-                LoadingButton(label: 'Entrar', loading: _loading, onPressed: _submit),
+                LoadingButton(label: context.tr('Entrar'), loading: _loading, onPressed: _submit),
                 const GoogleAuthButton(),
               ],
             ),

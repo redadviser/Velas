@@ -25,6 +25,7 @@ import '../cards/card_media.dart';
 import '../profile/plus.dart';
 import '../people/linked_friend.dart';
 import 'schedule_sheet.dart';
+import '../../core/i18n/translations.dart';
 
 enum _SendAs { card, wall, text }
 
@@ -58,7 +59,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   String? _uploadedKey;
 
   Future<void> _attach(CardMediaKind kind) async {
-    if (!await requirePlus(context, ref, feature: 'Juntar uma fotografia, um vídeo ou um áudio')) return;
+    if (!await requirePlus(context, ref, feature: context.tr('Juntar uma fotografia, um vídeo ou um áudio'))) return;
     if (!mounted) return;
     final picked = await pickCardMedia(context, kind);
     if (picked == null || !mounted) return;
@@ -125,7 +126,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               .copyWith(body: body, tone: _tone.label, schedule: schedule);
       await repo.saveMessage(msg);
       _existing = msg;
-    }, success: quiet ? null : (success ?? (body.isEmpty ? 'Mensagem removida.' : 'Mensagem guardada.')));
+    }, success: quiet ? null : (success ?? (body.isEmpty ? tr('Mensagem removida.') : tr('Mensagem guardada.'))));
     if (mounted) setState(() => _saving = false);
     return ok;
   }
@@ -153,13 +154,13 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     }
     final ok = await _save(
       schedule: () => (at: choice.at, via: choice.via, friendId: choice.friend?.userId, mediaKey: mediaKey),
-      success: 'Agendada para ${scheduleLabel(choice.at).toLowerCase()}.',
+      success: tr('Agendada para {when}.', {'when': scheduleLabel(choice.at).toLowerCase()}),
     );
     // O aviso do "lembrar-me" é uma notificação deste telemóvel.
     if (ok && choice.via == ScheduleVia.remind) await NotificationService.instance.requestPermission();
   }
 
-  Future<void> _cancelSchedule() => _save(schedule: () => null, success: 'Agendamento cancelado.');
+  Future<void> _cancelSchedule() => _save(schedule: () => null, success: tr('Agendamento cancelado.'));
 
   Future<void> _share(Person person) async {
     final body = _text.text.trim();
@@ -183,7 +184,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       case _SendAs.card:
         await _sendCard(cards, person, body);
       case _SendAs.wall:
-        final friend = match ?? await pickFriend(context, friends, title: 'No mural de quem?');
+        final friend = match ?? await pickFriend(context, friends, title: context.tr('No mural de quem?'));
         if (friend != null && mounted) await _postToWall(cards, person, friend, body);
     }
   }
@@ -224,7 +225,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         _media == null &&
         (ref.read(sentCardsProvider(person.id)).value?.any((c) => c.body == body && c.onWall) ?? false);
     if (already) {
-      showMessage(context, 'Esta mensagem já está no mural de ${friend.firstName}.');
+      showMessage(context, context.tr('Esta mensagem já está no mural de {name}.', {'name': friend.firstName}));
       return;
     }
     final ok = await runGuarded(
@@ -236,7 +237,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         friendId: friend.userId,
         mediaKey: await _mediaKey(cards),
       ),
-      success: 'Publicado no mural de ${friend.firstName} 🎉',
+      success: context.tr('Publicado no mural de {name} 🎉', {'name': friend.firstName}),
     );
     if (!ok) return;
     ref.invalidate(sentCardsProvider(person.id));
@@ -245,67 +246,67 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   }
 
   /// Com um amigo que é esta pessoa ([match]), o mural é a opção recomendada.
-  Future<_SendAs?> _chooseFormat(
-    Person person, {
-    required bool hasFriends,
-    ChatUser? match,
-  }) => showModalBottomSheet<_SendAs>(
-    context: context,
-    isScrollControlled: true,
-    builder: (ctx) {
-      Widget title(String text, {bool recommended = false}) => Row(
-        children: [
-          Flexible(child: Text(text)),
-          if (recommended) ...[const SizedBox(width: 8), const Pill(label: 'Recomendado', dense: true)],
-        ],
-      );
-      final wall = ListTile(
-        leading: const Icon(LucideIcons.partyPopper),
-        title: title(
-          match != null ? 'No mural de ${match.firstName}' : 'No mural de um amigo',
-          recommended: match != null,
-        ),
-        subtitle: Text(
-          match != null
-              ? '${match.firstName} já está na Birthdayly: a mensagem chega logo ao mural.'
-              : 'Para amigos que já estão na Birthdayly: a mensagem chega logo ao mural.',
-        ),
-        onTap: () => Navigator.pop(ctx, _SendAs.wall),
-      );
-      // Desliza quando não cabe (letra grande).
-      return SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+  Future<_SendAs?> _chooseFormat(Person person, {required bool hasFriends, ChatUser? match}) =>
+      showModalBottomSheet<_SendAs>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) {
+          Widget title(String text, {bool recommended = false}) => Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text('Como queres enviar?', style: AppTheme.display(ctx, size: 22)),
-              ),
-              if (match != null) wall,
-              ListTile(
-                leading: const Icon(LucideIcons.mailOpen),
-                title: title('Cartão de parabéns', recommended: match == null),
-                subtitle: Text(
-                  '${person.firstName} abre a tua mensagem num cartão, mesmo sem a app, e pode responder-te na Birthdayly.',
-                ),
-                onTap: () => Navigator.pop(ctx, _SendAs.card),
-              ),
-              if (match == null && hasFriends) wall,
-              ListTile(
-                leading: const Icon(LucideIcons.messageSquareText),
-                title: const Text('Só o texto'),
-                subtitle: const Text('Envia a mensagem como texto normal.'),
-                onTap: () => Navigator.pop(ctx, _SendAs.text),
-              ),
-              const SizedBox(height: 8),
+              Flexible(child: Text(text)),
+              if (recommended) ...[const SizedBox(width: 8), Pill(label: ctx.tr('Recomendado'), dense: true)],
             ],
-          ),
-        ),
+          );
+          final wall = ListTile(
+            leading: const Icon(LucideIcons.partyPopper),
+            title: title(
+              match != null ? ctx.tr('No mural de {name}', {'name': match.firstName}) : ctx.tr('No mural de um amigo'),
+              recommended: match != null,
+            ),
+            subtitle: Text(
+              match != null
+                  ? ctx.tr('{name} já está na Birthdayly: a mensagem chega logo ao mural.', {'name': match.firstName})
+                  : ctx.tr('Para amigos que já estão na Birthdayly: a mensagem chega logo ao mural.'),
+            ),
+            onTap: () => Navigator.pop(ctx, _SendAs.wall),
+          );
+          // Desliza quando não cabe (letra grande).
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: Text(ctx.tr('Como queres enviar?'), style: AppTheme.display(ctx, size: 22)),
+                  ),
+                  if (match != null) wall,
+                  ListTile(
+                    leading: const Icon(LucideIcons.mailOpen),
+                    title: title(ctx.tr('Cartão de parabéns'), recommended: match == null),
+                    subtitle: Text(
+                      ctx.tr(
+                        '{name} abre a tua mensagem num cartão, mesmo sem a app, e pode responder-te na Birthdayly.',
+                        {'name': person.firstName},
+                      ),
+                    ),
+                    onTap: () => Navigator.pop(ctx, _SendAs.card),
+                  ),
+                  if (match == null && hasFriends) wall,
+                  ListTile(
+                    leading: const Icon(LucideIcons.messageSquareText),
+                    title: Text(ctx.tr('Só o texto')),
+                    subtitle: Text(ctx.tr('Envia a mensagem como texto normal.')),
+                    onTap: () => Navigator.pop(ctx, _SendAs.text),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
       );
-    },
-  );
 
   /// Troca o texto por uma sugestão do tom escolhido (a seguinte, em "Gerar outra").
   void _suggest(Person person, {bool next = false}) {
@@ -340,9 +341,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         if (didPop) return;
         final discard = await confirmDialog(
           context,
-          title: 'Descartar alterações?',
-          message: 'A mensagem ainda não foi guardada.',
-          confirm: 'Descartar',
+          title: context.tr('Descartar alterações?'),
+          message: context.tr('A mensagem ainda não foi guardada.'),
+          confirm: context.tr('Descartar'),
         );
         if (discard && context.mounted) {
           _text.text = _existing?.body ?? '';
@@ -351,7 +352,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Mensagem para ${person.firstName}', overflow: TextOverflow.ellipsis),
+          title: Text(context.tr('Mensagem para {name}', {'name': person.firstName}), overflow: TextOverflow.ellipsis),
           actions: [
             TextButton(
               onPressed: _saving || !_dirty
@@ -359,7 +360,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                   : () async {
                       if (await _save() && context.mounted) context.pop();
                     },
-              child: const Text('Guardar'),
+              child: Text(context.tr('Guardar')),
             ),
             const SizedBox(width: 8),
           ],
@@ -381,9 +382,14 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Para ${person.firstName}', style: AppTheme.display(context, size: 19)),
                         Text(
-                          person.isToday ? 'Faz anos hoje' : 'Faz anos a ${Fmt.dayMonth(person.nextBirthday())}',
+                          context.tr('Para {name}', {'name': person.firstName}),
+                          style: AppTheme.display(context, size: 19),
+                        ),
+                        Text(
+                          person.isToday
+                              ? context.tr('Faz anos hoje')
+                              : context.tr('Faz anos a {date}', {'date': Fmt.dayMonth(person.nextBirthday())}),
                           style: context.text.bodySmall?.copyWith(color: muted),
                         ),
                       ],
@@ -393,14 +399,14 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('QUE TOM QUERES?', style: AppTheme.eyebrow(context)),
+            Text(context.tr('QUE TOM QUERES?'), style: AppTheme.eyebrow(context)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final t in MessageTone.values)
-                  ChoiceChip(label: Text(t.label), selected: _tone == t, onSelected: (_) => _pickTone(person, t)),
+                  ChoiceChip(label: Text(t.title), selected: _tone == t, onSelected: (_) => _pickTone(person, t)),
               ],
             ),
             const SizedBox(height: 20),
@@ -422,14 +428,14 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                     onChanged: (_) => setState(() {}),
                     textCapitalization: TextCapitalization.sentences,
                     style: AppTheme.display(context, size: 17, weight: FontWeight.w500).copyWith(height: 1.5),
-                    decoration: const InputDecoration(
-                      hintText: 'Escolhe um tom ou escreve os teus parabéns…',
+                    decoration: InputDecoration(
+                      hintText: context.tr('Escolhe um tom ou escreve os teus parabéns…'),
                       counterText: '',
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       filled: false,
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
                     ),
                   ),
                   const Divider(height: 20),
@@ -439,25 +445,25 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                     runSpacing: 8,
                     children: [
                       IconButton(
-                        tooltip: 'Copiar',
+                        tooltip: context.tr('Copiar'),
                         onPressed: !hasText
                             ? null
                             : () async {
                                 await Clipboard.setData(ClipboardData(text: _text.text.trim()));
-                                if (context.mounted) showMessage(context, 'Mensagem copiada.');
+                                if (context.mounted) showMessage(context, context.tr('Mensagem copiada.'));
                               },
                         icon: const Icon(LucideIcons.copy, size: 18),
                       ),
                       FilledButton.tonal(
                         onPressed: () => _focus.requestFocus(),
                         style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-                        child: const Text('Editar'),
+                        child: Text(context.tr('Editar')),
                       ),
                       FilledButton.tonalIcon(
                         onPressed: () => _suggest(person, next: hasText),
                         style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
                         icon: const Icon(LucideIcons.sparkles, size: 18),
-                        label: Text(hasText ? 'Gerar outra' : 'Gerar uma'),
+                        label: Text(hasText ? context.tr('Gerar outra') : context.tr('Gerar uma')),
                       ),
                     ],
                   ),
@@ -468,7 +474,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               const SizedBox(height: 28),
               Row(
                 children: [
-                  Flexible(child: Text('Juntar algo especial', style: AppTheme.display(context, size: 20))),
+                  Flexible(child: Text(context.tr('Juntar algo especial'), style: AppTheme.display(context, size: 20))),
                   const SizedBox(width: 8),
                   const PlusBadge(),
                 ],
@@ -478,9 +484,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                 Row(
                   children: [
                     for (final (kind, icon, label, hint) in [
-                      (CardMediaKind.image, LucideIcons.camera, 'Fotografia', 'Da galeria'),
-                      (CardMediaKind.video, LucideIcons.video, 'Vídeo', 'Da galeria'),
-                      (CardMediaKind.audio, LucideIcons.mic, 'Áudio', 'Gravar agora'),
+                      (CardMediaKind.image, LucideIcons.camera, context.tr('Fotografia'), context.tr('Da galeria')),
+                      (CardMediaKind.video, LucideIcons.video, context.tr('Vídeo'), context.tr('Da galeria')),
+                      (CardMediaKind.audio, LucideIcons.mic, context.tr('Áudio'), context.tr('Gravar agora')),
                     ]) ...[
                       if (kind != CardMediaKind.image) const SizedBox(width: 10),
                       Expanded(
@@ -514,7 +520,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                           _uploadedKey = null;
                         }),
                         icon: const Icon(LucideIcons.x, size: 16),
-                        label: const Text('Tirar'),
+                        label: Text(context.tr('Tirar')),
                       ),
                     ),
                   ],
@@ -525,11 +531,17 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(LucideIcons.clock),
-                title: const Text('Agendar'),
+                title: Text(context.tr('Agendar')),
                 subtitle: Text(
                   pending
-                      ? '${scheduled.scheduleVia == ScheduleVia.wall ? 'Vai para o mural' : 'Lembramos-te'}: ${scheduleLabel(scheduled.scheduledAt!).toLowerCase()}'
-                      : 'Escolhe o dia e a hora, e nós tratamos do resto',
+                      ? (scheduled.scheduleVia == ScheduleVia.wall
+                            ? context.tr('Vai para o mural: {when}', {
+                                'when': scheduleLabel(scheduled.scheduledAt!).toLowerCase(),
+                              })
+                            : context.tr('Lembramos-te: {when}', {
+                                'when': scheduleLabel(scheduled.scheduledAt!).toLowerCase(),
+                              }))
+                      : context.tr('Escolhe o dia e a hora, e nós tratamos do resto'),
                 ),
                 enabled: hasText || pending,
                 onTap: _saving || !hasText ? null : () => _schedule(person),
@@ -554,7 +566,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
             child: FilledButton.icon(
               onPressed: hasText ? () => _share(person) : null,
               icon: const Icon(LucideIcons.share2, size: 18),
-              label: const Text('Enviar'),
+              label: Text(context.tr('Enviar')),
             ),
           ),
         ),
@@ -582,24 +594,29 @@ class _ScheduleStatus extends ConsumerWidget {
     final (icon, text, error, pending) = switch (m) {
       _ when m.scheduleVia == ScheduleVia.wall && m.sendError != null => (
         LucideIcons.circleAlert,
-        'Não foi possível publicar no mural de $wallOf. Envia-a de outra forma.',
+        context.tr('Não foi possível publicar no mural de {name}. Envia-a de outra forma.', {'name': wallOf}),
         true,
         false,
       ),
       _ when m.scheduleVia == ScheduleVia.wall && m.sentAt != null => (
         LucideIcons.checkCheck,
-        'Publicada no mural de $wallOf ($when).',
+        context.tr('Publicada no mural de {name} ({when}).', {'name': wallOf, 'when': when}),
         false,
         false,
       ),
       _ when m.scheduleVia == ScheduleVia.wall => (
         LucideIcons.calendarClock,
-        'Vai para o mural de $wallOf $when.',
+        context.tr('Vai para o mural de {name} {when}.', {'name': wallOf, 'when': when}),
         false,
         true,
       ),
-      _ when m.isPending => (LucideIcons.bellRing, 'Vamos lembrar-te de a enviar $when.', false, true),
-      _ => (LucideIcons.bellRing, 'Lembrete enviado $when.', false, false),
+      _ when m.isPending => (
+        LucideIcons.bellRing,
+        context.tr('Vamos lembrar-te de a enviar {when}.', {'when': when}),
+        false,
+        true,
+      ),
+      _ => (LucideIcons.bellRing, context.tr('Lembrete enviado {when}.', {'when': when}), false, false),
     };
     // Por enviar, a linha "Agendar" já diz quando.
     if (pending) return const SizedBox.shrink();
@@ -636,13 +653,17 @@ class _CardStatus extends ConsumerWidget {
     if (card == null) return const SizedBox.shrink();
     final (icon, text, highlight) = card.onWall
         ? card.openedAt != null
-              ? (LucideIcons.checkCheck, '$firstName viu a tua mensagem no mural 🎉', true)
-              : (LucideIcons.partyPopper, 'Publicado no mural de $firstName', false)
+              ? (LucideIcons.checkCheck, context.tr('{name} viu a tua mensagem no mural 🎉', {'name': firstName}), true)
+              : (LucideIcons.partyPopper, context.tr('Publicado no mural de {name}', {'name': firstName}), false)
         : card.claimedAt != null
-        ? (LucideIcons.checkCheck, '$firstName guardou o teu cartão e pode responder-te na app 🎉', true)
+        ? (
+            LucideIcons.checkCheck,
+            context.tr('{name} guardou o teu cartão e pode responder-te na app 🎉', {'name': firstName}),
+            true,
+          )
         : card.openedAt != null
-        ? (LucideIcons.eye, '$firstName abriu o teu cartão', false)
-        : (LucideIcons.send, 'Cartão enviado. Ainda não foi aberto.', false);
+        ? (LucideIcons.eye, context.tr('{name} abriu o teu cartão', {'name': firstName}), false)
+        : (LucideIcons.send, context.tr('Cartão enviado. Ainda não foi aberto.'), false);
     final color = highlight ? context.colors.primary : context.palette.mutedForeground;
     return Padding(
       padding: const EdgeInsets.only(top: 12),

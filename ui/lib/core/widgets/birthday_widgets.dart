@@ -1,3 +1,4 @@
+import '../i18n/translations.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -135,7 +136,7 @@ class DaysPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
       child: Text(
-        days == 0 ? 'Hoje 🎉' : Fmt.shortRelative(days),
+        days == 0 ? context.tr('Hoje 🎉') : Fmt.shortRelative(days),
         style: context.text.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );
@@ -165,7 +166,7 @@ class PersonTile extends StatelessWidget {
     final days = person.daysUntil();
     final age = person.turningAge;
     final subtitle = [
-      if (age != null) days == 0 ? 'Faz $age hoje' : 'Faz $age',
+      if (age != null) days == 0 ? context.tr('Faz {age} hoje', {'age': age}) : context.tr('Faz {age}', {'age': age}),
       if (showDate)
         '${Fmt.weekdayShort(next)}, ${Fmt.dayMonth(next)}'
       else if (person.relation.isNotEmpty)

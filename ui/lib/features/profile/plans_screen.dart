@@ -13,6 +13,7 @@ import '../../core/utils/birthday_utils.dart';
 import '../../services/plus_store.dart';
 import '../auth/auth_widgets.dart';
 import 'plus.dart';
+import '../../core/i18n/translations.dart';
 
 /// Preços do Birthdayly+ (ver o plano de negócio).
 class PlusPricing {
@@ -25,20 +26,20 @@ class PlusPricing {
   static int get yearlySavingPercent => ((1 - yearly / (monthly * 12)) * 100).round();
 }
 
-const _freeFeatures = [
-  'Lembretes de todos os aniversários',
-  'Adicionar dos contactos e pedir datas por link',
-  'Prendas em grupo, conversas e amigos',
-  'Cartões de parabéns e o teu mural',
+List<String> get _freeFeatures => [
+  tr('Lembretes de todos os aniversários'),
+  tr('Adicionar dos contactos e pedir datas por link'),
+  tr('Prendas em grupo, conversas e amigos'),
+  tr('Cartões de parabéns e o teu mural'),
 ];
 
-const _plusFeatures = [
-  'Tudo o que o plano Grátis tem',
-  'Lembretes avançados: vários por pessoa e à hora que quiseres',
-  'Cartões especiais com foto, vídeo ou áudio',
-  'Mural com fotografias e um álbum de cada ano',
-  'Histórico completo de prendas e mensagens',
-  'Widgets no ecrã inicial e temas da app',
+List<String> get _plusFeatures => [
+  tr('Tudo o que o plano Grátis tem'),
+  tr('Lembretes avançados: vários por pessoa e à hora que quiseres'),
+  tr('Cartões especiais com foto, vídeo ou áudio'),
+  tr('Mural com fotografias e um álbum de cada ano'),
+  tr('Histórico completo de prendas e mensagens'),
+  tr('Widgets no ecrã inicial e temas da app'),
 ];
 
 /// Os planos: Grátis (o de todos) e Birthdayly+. Com a loja ligada (Adapty),
@@ -63,7 +64,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     await runGuarded(
       context,
       () => ref.read(authRepositoryProvider).startPlusTrial(),
-      success: 'Birthdayly+ ativo durante 30 dias. Bom proveito!',
+      success: tr('Birthdayly+ ativo durante 30 dias. Bom proveito!'),
     );
     if (mounted) setState(() => _sending = false);
   }
@@ -78,7 +79,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     });
     if (!mounted) return;
     setState(() => _sending = false);
-    if (ok && bought) showMessage(context, 'Bem-vindo ao Birthdayly+! 🎉');
+    if (ok && bought) showMessage(context, context.tr('Bem-vindo ao Birthdayly+! 🎉'));
   }
 
   Future<void> _restore(PlusStore store) async {
@@ -91,7 +92,10 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     setState(() => _sending = false);
     if (!ok) return;
     final plus = ref.read(currentUserProvider)?.isPlus ?? false;
-    showMessage(context, plus ? 'Compras restauradas.' : 'Não encontrámos o Birthdayly+ nesta conta da loja.');
+    showMessage(
+      context,
+      plus ? context.tr('Compras restauradas.') : context.tr('Não encontrámos o Birthdayly+ nesta conta da loja.'),
+    );
   }
 
   /// As subscrições geridas pela loja (cancelar, mudar de plano).
@@ -135,13 +139,19 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               Flexible(
                 child: Text(
                   user!.plusUntil!.year >= 9999
-                      ? 'Ativo para sempre.${user.planDebug ? ' (modo de testes)' : ''}'
-                      : 'Ativo até ${Fmt.fullDate(user.plusUntil!)}.${user.planDebug ? ' (modo de testes)' : ''}',
+                      ? context.tr('Ativo para sempre.{test}', {
+                          'test': user.planDebug ? context.tr(' (modo de testes)') : '',
+                        })
+                      : context.tr('Ativo até {date}.{test}', {
+                          'date': Fmt.fullDate(user.plusUntil!),
+                          'test': user.planDebug ? context.tr(' (modo de testes)') : '',
+                        }),
                 ),
               ),
             ],
           ),
-          if (store != null && !user.planDebug) TextButton(onPressed: _manage, child: const Text('Gerir subscrição')),
+          if (store != null && !user.planDebug)
+            TextButton(onPressed: _manage, child: Text(context.tr('Gerir subscrição'))),
         ],
       );
     } else if (store != null) {
@@ -150,45 +160,49 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
         children: [
           if (storePlan != null)
             LoadingButton(
-              label: 'Assinar por ${storePlan.price}${_yearly ? '/ano' : '/mês'}',
+              label: _yearly
+                  ? context.tr('Assinar por {price}/ano', {'price': storePlan.price})
+                  : context.tr('Assinar por {price}/mês', {'price': storePlan.price}),
               loading: _sending,
               onPressed: () => _buy(store, storePlan),
             )
           else
             Text(
-              storePlans.isLoading ? 'A carregar os preços…' : 'O Birthdayly+ não está disponível de momento.',
+              storePlans.isLoading
+                  ? context.tr('A carregar os preços…')
+                  : context.tr('O Birthdayly+ não está disponível de momento.'),
               textAlign: TextAlign.center,
               style: TextStyle(color: muted),
             ),
           if (user?.plusTrialAvailable ?? false)
-            TextButton(onPressed: _sending ? null : _trial, child: const Text('Experimentar 30 dias grátis')),
-          TextButton(onPressed: _sending ? null : () => _restore(store), child: const Text('Restaurar compras')),
+            TextButton(onPressed: _sending ? null : _trial, child: Text(context.tr('Experimentar 30 dias grátis'))),
+          TextButton(onPressed: _sending ? null : () => _restore(store), child: Text(context.tr('Restaurar compras'))),
         ],
       );
     } else if (user?.plusTrialAvailable ?? false) {
       plusAction = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LoadingButton(label: 'Experimentar 30 dias grátis', loading: _sending, onPressed: _trial),
+          LoadingButton(label: context.tr('Experimentar 30 dias grátis'), loading: _sending, onPressed: _trial),
           if (ref.watch(apiClientProvider) != null)
             _registered
                 ? Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
-                      'Vais ser dos primeiros a saber.',
+                      context.tr('Vais ser dos primeiros a saber.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: muted),
                     ),
                   )
                 : TextButton(
                     onPressed: _sending ? null : _notifyMe,
-                    child: const Text('Avisa-me quando a subscrição chegar'),
+                    child: Text(context.tr('Avisa-me quando a subscrição chegar')),
                   ),
         ],
       );
     } else if (ref.watch(apiClientProvider) == null) {
       plusAction = Text(
-        'Disponível em breve.',
+        context.tr('Disponível em breve.'),
         textAlign: TextAlign.center,
         style: TextStyle(color: muted),
       );
@@ -198,21 +212,21 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
         children: [
           Icon(LucideIcons.circleCheck, size: 18, color: context.colors.primary),
           const SizedBox(width: 8),
-          const Flexible(child: Text('Vais ser dos primeiros a saber.')),
+          Flexible(child: Text(context.tr('Vais ser dos primeiros a saber.'))),
         ],
       );
     } else {
-      plusAction = LoadingButton(label: 'Avisa-me quando chegar', loading: _sending, onPressed: _notifyMe);
+      plusAction = LoadingButton(label: context.tr('Avisa-me quando chegar'), loading: _sending, onPressed: _notifyMe);
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Planos')),
+      appBar: AppBar(title: Text(context.tr('Planos'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(0, 4, 0, 32),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'O essencial é grátis para sempre. O Birthdayly+ junta extras para quem quer ir mais longe.',
+              context.tr('O essencial é grátis para sempre. O Birthdayly+ junta extras para quem quer ir mais longe.'),
               style: context.text.bodyMedium?.copyWith(color: muted),
             ),
           ),
@@ -228,9 +242,9 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 forSale: store != null,
               ),
               _PlanCard(
-                name: 'Grátis',
+                name: context.tr('Grátis'),
                 price: '0 €',
-                badge: plus ? null : const Pill(label: 'O teu plano', dense: true),
+                badge: plus ? null : Pill(label: context.tr('O teu plano'), dense: true),
                 features: _freeFeatures,
               ),
             ],
@@ -239,7 +253,9 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'As prendas em grupo pagam-se diretamente a quem compra (MB WAY, Revolut, PayPal ou em mão), sem custos.',
+              context.tr(
+                'As prendas em grupo pagam-se diretamente a quem compra (MB WAY, Revolut, PayPal ou em mão), sem custos.',
+              ),
               style: context.text.bodySmall?.copyWith(color: muted),
             ),
           ),
@@ -478,9 +494,9 @@ class _PlusCard extends StatelessWidget {
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.2,
               child: SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(value: false, label: Text('Mensal')),
-                  ButtonSegment(value: true, label: Text('Anual')),
+                segments: [
+                  ButtonSegment(value: false, label: Text(context.tr('Mensal'))),
+                  ButtonSegment(value: true, label: Text(context.tr('Anual'))),
                 ],
                 selected: {yearly},
                 onSelectionChanged: (s) => onPeriod(s.first),
@@ -491,19 +507,22 @@ class _PlusCard extends StatelessWidget {
             _PlanBody(
               name: 'Birthdayly+',
               price: priceText,
-              period: yearly ? '/ano' : '/mês',
+              period: yearly ? context.tr('/ano') : context.tr('/mês'),
               note: !yearly
                   ? null
                   : storePlans.isEmpty
-                  ? 'Equivale a ${euros(PlusPricing.yearly / 12)}/mês · poupas ${PlusPricing.yearlySavingPercent}%'
+                  ? context.tr('Equivale a {amount}/mês · poupas {percent}%', {
+                      'amount': euros(PlusPricing.yearly / 12),
+                      'percent': PlusPricing.yearlySavingPercent,
+                    })
                   : saving != null && saving > 0
-                  ? 'Poupas $saving% face ao mensal'
+                  ? context.tr('Poupas {percent}% face ao mensal', {'percent': saving})
                   : null,
               badge: current
-                  ? const Pill(label: 'O teu plano', dense: true)
+                  ? Pill(label: context.tr('O teu plano'), dense: true)
                   : forSale
                   ? null
-                  : const Pill(label: 'Em breve', dense: true),
+                  : Pill(label: context.tr('Em breve'), dense: true),
               features: _plusFeatures,
             ),
             const SizedBox(height: 8),

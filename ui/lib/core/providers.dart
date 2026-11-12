@@ -228,7 +228,9 @@ class AccessibilityController extends Notifier<AccessibilitySettings> {
   }
 }
 
-final accessibilityProvider = NotifierProvider<AccessibilityController, AccessibilitySettings>(AccessibilityController.new);
+final accessibilityProvider = NotifierProvider<AccessibilityController, AccessibilitySettings>(
+  AccessibilityController.new,
+);
 
 /// Tema de cor escolhido (Birthdayly+), guardado neste dispositivo.
 class ThemeAccentController extends Notifier<AppAccent> {
@@ -260,14 +262,14 @@ class LocaleController extends Notifier<Locale?> {
 
   @override
   Locale? build() {
-    final code = ref.watch(sharedPrefsProvider).getString(_key);
-    return Translations.supportedLocales.where((l) => l.languageCode == code).firstOrNull;
+    final tag = ref.watch(sharedPrefsProvider).getString(_key);
+    return tag == null ? null : Translations.localeOf(tag);
   }
 
   void set(Locale? locale) {
     state = locale;
     final prefs = ref.read(sharedPrefsProvider);
-    locale == null ? prefs.remove(_key) : prefs.setString(_key, locale.languageCode);
+    locale == null ? prefs.remove(_key) : prefs.setString(_key, Translations.tagOf(locale));
   }
 }
 

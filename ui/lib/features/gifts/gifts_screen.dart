@@ -105,15 +105,7 @@ class _GiftsScreenState extends ConsumerState<GiftsScreen> {
     ];
 
     return Scaffold(
-      // Prendas em grupo e festas criam-se no "+" do meio.
-      floatingActionButton: plans
-          ? null
-          : FloatingActionButton.extended(
-              heroTag: 'fab-gifts',
-              onPressed: () => pickPersonThenAddGift(context, ref),
-              icon: const Icon(LucideIcons.plus, size: 20),
-              label: Text(context.tr('Nova ideia')),
-            ),
+      // Grupos, códigos e ideias novas criam-se no "+" do meio (Prendas).
       body: SafeArea(
         bottom: false,
         child: plans

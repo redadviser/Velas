@@ -188,10 +188,9 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Com altura limitada e letra grande, rola em vez de transbordar.
-    return LayoutBuilder(
-      builder: (context, c) => c.hasBoundedHeight ? SingleChildScrollView(child: _body(context)) : _body(context),
-    );
+    // Com altura limitada e letra grande, rola em vez de transbordar. Sem
+    // LayoutBuilder: o SliverFillRemaining pede a altura intrínseca, que ele não dá.
+    return SingleChildScrollView(child: _body(context));
   }
 
   Widget _body(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -858,13 +859,37 @@ Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Text(ctx.tr(Keys.settingsLanguage), style: AppTheme.display(ctx, size: 22)),
               ),
-              RadioListTile<String>(value: '', title: Text(ctx.tr(Keys.settingsLanguageSystem))),
+              RadioListTile<String>(
+                value: '',
+                title: Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: Icon(LucideIcons.smartphone, size: 20, color: ctx.palette.mutedForeground),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(ctx.tr(Keys.settingsLanguageSystem))),
+                  ],
+                ),
+              ),
               for (final code
                   in Translations.languageCodes.toList()..sort(
                     (a, b) =>
                         foldText(Translations.languageNames[a]!).compareTo(foldText(Translations.languageNames[b]!)),
                   ))
-                RadioListTile<String>(value: code, title: Text(Translations.languageNames[code]!)),
+                RadioListTile<String>(
+                  value: code,
+                  title: Row(
+                    children: [
+                      CountryFlag.fromCountryCode(
+                        Translations.languageFlags[code]!,
+                        theme: const ImageTheme(width: 28, height: 20, shape: RoundedRectangle(4)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(Translations.languageNames[code]!)),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 8),
             ],
           ),

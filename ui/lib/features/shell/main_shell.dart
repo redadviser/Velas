@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../chat/conversations_list.dart';
+import '../gifts/gift_widgets.dart';
 import '../groups/group_widgets.dart';
 import '../people/birthday_request.dart';
 import '../special/special_dates_screen.dart';
@@ -189,7 +190,7 @@ Future<void> showAddSheet(BuildContext context, WidgetRef ref) => showModalBotto
 enum _Step { menu, person, gift }
 
 /// "O que queres adicionar?" e o segundo passo de uma pessoa ("Quem queres
-/// guardar?") ou de um grupo de prenda (criar ou entrar com código).
+/// guardar?") ou das prendas (criar grupo, entrar com código ou nova ideia).
 class _AddSheet extends StatefulWidget {
   const _AddSheet({required this.host, required this.ref});
 
@@ -274,7 +275,7 @@ class _AddSheetState extends State<_AddSheet> {
                     child: Text(switch (_step) {
                       _Step.menu => context.tr('O que queres adicionar?'),
                       _Step.person => context.tr('Quem queres guardar?'),
-                      _Step.gift => context.tr('Grupo de prenda'),
+                      _Step.gift => context.tr('Prendas'),
                     }, style: AppTheme.display(context, size: 21)),
                   ),
                 ],
@@ -294,12 +295,7 @@ class _AddSheetState extends State<_AddSheet> {
                   context.tr('Aniversários, Dia da Mãe ou à medida'),
                   () => showSpecialDateEditor(host, ref),
                 ),
-                _next(
-                  LucideIcons.gift,
-                  context.tr('Um grupo de prenda'),
-                  context.tr('Junta amigos e divide o valor'),
-                  _Step.gift,
-                ),
+                _next(LucideIcons.gift, context.tr('Prendas'), context.tr('Grupos, códigos e ideias'), _Step.gift),
                 const Divider(),
                 _option(
                   LucideIcons.partyPopper,
@@ -310,11 +306,10 @@ class _AddSheetState extends State<_AddSheet> {
                 ),
               ] else if (_step == _Step.gift) ...[
                 _option(
-                  LucideIcons.plus,
-                  context.tr('Nova prenda em grupo'),
-                  context.tr('Escolhe a prenda, o valor e quem entra'),
+                  LucideIcons.usersRound,
+                  context.tr('Criar grupo'),
+                  context.tr('Junta amigos e divide o valor'),
                   () => host.push('/groups/new'),
-                  last: !codes,
                 ),
                 if (codes)
                   _option(
@@ -322,8 +317,14 @@ class _AddSheetState extends State<_AddSheet> {
                     context.tr('Tenho um código'),
                     context.tr('De uma prenda em grupo ou de uma festa surpresa'),
                     () => showJoinCodeSheet(host, ref),
-                    last: true,
                   ),
+                _option(
+                  LucideIcons.lightbulb,
+                  context.tr('Nova ideia'),
+                  context.tr('Guarda uma ideia para alguém'),
+                  () => pickPersonThenAddGift(host, ref),
+                  last: true,
+                ),
               ] else ...[
                 _option(
                   LucideIcons.userPlus,

@@ -88,7 +88,7 @@ ${store(config.appStoreUrl, 'Descarregar para iPhone', 'ios')}
 ${store(config.playStoreUrl, 'Descarregar para Android', 'android')}
 <div class="code" id="code">${escapeHtml(formatInviteCode(code))}</div>
 <button class="btn" id="copy" type="button">Copiar código</button>
-<p class="small">Depois de instalares a app, volta a este link e toca em <b>Abrir na app</b>, ou usa o código em <b>+ → Um grupo de prenda → Tenho um código</b>.</p>`,
+<p class="small">Depois de instalares a app, volta a este link e toca em <b>Abrir na app</b>, ou usa o código em <b>+ → Prendas → Tenho um código</b>.</p>`,
     script: `
 var ua = navigator.userAgent, android = /Android/i.test(ua), ios = /iPhone|iPad|iPod/i.test(ua);
 var hide = function (id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; };

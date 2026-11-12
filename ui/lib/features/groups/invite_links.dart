@@ -47,7 +47,7 @@ class InviteLinks {
   static String codeMessage(GiftGroup g) => tr(
     'Junta-te à prenda em grupo "{title}" na Birthdayly 🎁\n\n'
     'Código do grupo: {code}\n'
-    'Na app: + → Um grupo de prenda → Tenho um código.\n\n'
+    'Na app: + → Prendas → Tenho um código.\n\n'
     'Ou entra diretamente: {link}',
     {'title': g.title, 'code': formatCode(g.inviteCode), 'link': shareLink(g.inviteCode)},
   );

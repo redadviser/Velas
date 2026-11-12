@@ -62,6 +62,26 @@ class Translations {
     'ja': '日本語',
   };
 
+  /// O país da bandeira de cada língua (desenhada pelo country_flags, não emoji).
+  static const languageFlags = {
+    'pt': 'PT',
+    'pt_BR': 'BR',
+    'en': 'GB',
+    'es': 'ES',
+    'fr': 'FR',
+    'de': 'DE',
+    'it': 'IT',
+    'nl': 'NL',
+    'pl': 'PL',
+    'ro': 'RO',
+    'uk': 'UA',
+    'ru': 'RU',
+    'tr': 'TR',
+    'ar': 'SA',
+    'zh': 'CN',
+    'ja': 'JP',
+  };
+
   static String tagOf(Locale l) => l.languageCode == 'pt' && l.countryCode == 'BR' ? 'pt_BR' : l.languageCode;
 
   /// A língua suportada com esta etiqueta (`null` se não houver).

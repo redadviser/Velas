@@ -91,6 +91,8 @@ void main() {
       ]);
       expect(keys, isNotEmpty);
       expect(texts, isNotEmpty);
+      expect(Translations.languageNames.keys.toSet(), langs.toSet());
+      expect(Translations.languageFlags.keys.toSet(), langs.toSet());
     });
 
     for (final lang in langs) {

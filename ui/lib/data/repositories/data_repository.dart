@@ -95,10 +95,14 @@ abstract class CachedDataRepository implements DataRepository {
     final optimistic = removePhoto
         ? person.copyWith(photoPath: () => null, photoUrl: () => null)
         : person.copyWith(photoUrl: () => existing?.photoUrl ?? person.photoUrl);
-    await _optimistic(_data.copyWith(people: _upsert(_data.people, optimistic, (p) => p.id)), () async {
-      final saved = await persistPerson(person, photo, removePhoto);
-      emit(_data.copyWith(people: _upsert(_data.people, saved, (p) => p.id)));
-    });
+    final created = existing == null ? _data.peopleCreated + 1 : null;
+    await _optimistic(
+      _data.copyWith(people: _upsert(_data.people, optimistic, (p) => p.id), peopleCreated: created),
+      () async {
+        final saved = await persistPerson(person, photo, removePhoto);
+        emit(_data.copyWith(people: _upsert(_data.people, saved, (p) => p.id)));
+      },
+    );
   }
 
   @override
@@ -120,7 +124,8 @@ abstract class CachedDataRepository implements DataRepository {
   @override
   Future<void> importPeople(List<Person> people, {Map<String, Uint8List> photos = const {}}) async {
     if (people.isEmpty) return;
-    await _optimistic(_data.copyWith(people: [..._data.people, ...people]), () async {
+    final created = _data.peopleCreated + people.length;
+    await _optimistic(_data.copyWith(people: [..._data.people, ...people], peopleCreated: created), () async {
       final saved = await persistPeople(people, photos);
       var list = _data.people;
       for (final p in saved) {

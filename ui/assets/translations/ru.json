@@ -1264,7 +1264,6 @@
   "Exportar os meus dados": "Экспортировать мои данные",
   "Utilizadores bloqueados": "Заблокированные пользователи",
   "Perfil": "Профиль",
-  "pessoas": "людей",
   "ideias": "идей",
   "mensagens": "сообщений",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Локальный режим: данные хранятся только на этом устройстве.",
@@ -1389,8 +1388,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Присоединяйся к общему подарку «{title}» в Birthdayly 🎁\n\nКод группы: {code}\nВ приложении: + → Подарки → У меня есть код.\n\nИли переходи сразу: {link}",
   "Grupos, códigos e ideias": "Группы, коды и идеи",
   "Guarda uma ideia para alguém": "Сохрани идею для кого-нибудь",
-  "Guardar mais de {count} aniversários": "Сохранение более {count} дней рождения",
   "Até {count} aniversários, com lembretes": "До {count} дней рождения с напоминаниями",
   "Aniversários sem limite": "Неограниченное число дней рождения",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Вы достигли лимита дней рождения в бесплатном плане. С Birthdayly+ лимита нет."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Вы достигли лимита дней рождения в бесплатном плане. С Birthdayly+ лимита нет.",
+  "Criar mais de {count} aniversários": "Создание более {count} дней рождения",
+  "aniversários": "дней рождения",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "В бесплатном плане удаление не освобождает место: это всё равно учитывается в лимите {count} дней рождения."
 }

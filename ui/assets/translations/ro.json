@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "Exportă datele mele",
   "Utilizadores bloqueados": "Utilizatori blocați",
   "Perfil": "Profil",
-  "pessoas": "persoane",
   "ideias": "idei",
   "mensagens": "mesaje",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Mod local: datele sunt salvate doar pe acest dispozitiv.",
@@ -1385,8 +1384,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Alătură-te cadoului de grup „{title}” pe Birthdayly 🎁\n\nCodul grupului: {code}\nÎn aplicație: + → Cadouri → Am un cod.\n\nSau intră direct: {link}",
   "Grupos, códigos e ideias": "Grupuri, coduri și idei",
   "Guarda uma ideia para alguém": "Salvează o idee pentru cineva",
-  "Guardar mais de {count} aniversários": "Salvarea a peste {count} de zile de naștere",
   "Até {count} aniversários, com lembretes": "Până la {count} de zile de naștere, cu mementouri",
   "Aniversários sem limite": "Zile de naștere nelimitate",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ai atins limita de zile de naștere a planului Gratuit. Cu Birthdayly+ nu există limită."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ai atins limita de zile de naștere a planului Gratuit. Cu Birthdayly+ nu există limită.",
+  "Criar mais de {count} aniversários": "Crearea a peste {count} de zile de naștere",
+  "aniversários": "zile de naștere",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "În planul Gratuit, ștergerea nu eliberează spațiu: se numără în continuare la limita de {count} de zile de naștere."
 }

@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "Mijn gegevens exporteren",
   "Utilizadores bloqueados": "Geblokkeerde gebruikers",
   "Perfil": "Profiel",
-  "pessoas": "mensen",
   "ideias": "ideeën",
   "mensagens": "berichten",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Lokale modus: de gegevens staan alleen op dit apparaat.",
@@ -1381,8 +1380,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Doe mee met het groepscadeau \"{title}\" op Birthdayly 🎁\n\nGroepscode: {code}\nIn de app: + → Cadeaus → Ik heb een code.\n\nOf doe direct mee: {link}",
   "Grupos, códigos e ideias": "Groepen, codes en ideeën",
   "Guarda uma ideia para alguém": "Bewaar een idee voor iemand",
-  "Guardar mais de {count} aniversários": "Meer dan {count} verjaardagen opslaan",
   "Até {count} aniversários, com lembretes": "Tot {count} verjaardagen, met herinneringen",
   "Aniversários sem limite": "Onbeperkt verjaardagen",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Je hebt de verjaardagslimiet van het gratis abonnement bereikt. Met Birthdayly+ is er geen limiet."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Je hebt de verjaardagslimiet van het gratis abonnement bereikt. Met Birthdayly+ is er geen limiet.",
+  "Criar mais de {count} aniversários": "Meer dan {count} verjaardagen aanmaken",
+  "aniversários": "verjaardagen",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "In het gratis abonnement maakt verwijderen geen ruimte vrij: het telt mee voor de limiet van {count} verjaardagen."
 }

@@ -26,6 +26,7 @@ class ApiDataRepository extends CachedDataRepository {
       gifts: _list(j['gift_ideas']).map(GiftIdea.fromJson).toList(),
       messages: _list(j['messages']).map(BirthdayMessage.fromJson).toList(),
       specialDates: _list(j['special_dates']).map(SpecialDate.fromJson).toList(),
+      peopleCreated: j['people_created'] as int? ?? 0,
     );
   }
 

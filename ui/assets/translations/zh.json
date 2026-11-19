@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "导出我的数据",
   "Utilizadores bloqueados": "已屏蔽的用户",
   "Perfil": "个人资料",
-  "pessoas": "人",
   "ideias": "想法",
   "mensagens": "消息",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "本地模式：数据仅保存在这台设备上。",
@@ -1381,8 +1380,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "来 Birthdayly 一起合送礼物“{title}”吧 🎁\n\n群组邀请码：{code}\n在 App 中：+ → 礼物 → 我有邀请码。\n\n或直接加入：{link}",
   "Grupos, códigos e ideias": "群组、邀请码和点子",
   "Guarda uma ideia para alguém": "为某人保存一个点子",
-  "Guardar mais de {count} aniversários": "保存超过 {count} 个生日",
   "Até {count} aniversários, com lembretes": "最多 {count} 个生日，含提醒",
   "Aniversários sem limite": "生日数量不限",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "你已达到免费版的生日数量上限。Birthdayly+ 没有上限。"
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "你已达到免费版的生日数量上限。Birthdayly+ 没有上限。",
+  "Criar mais de {count} aniversários": "创建超过 {count} 个生日",
+  "aniversários": "个生日",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "免费版中删除不会腾出名额：仍计入 {count} 个生日的上限。"
 }

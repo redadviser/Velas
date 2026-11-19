@@ -1264,7 +1264,6 @@
   "Exportar os meus dados": "Експортувати мої дані",
   "Utilizadores bloqueados": "Заблоковані користувачі",
   "Perfil": "Профіль",
-  "pessoas": "людей",
   "ideias": "ідей",
   "mensagens": "повідомлень",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Локальний режим: дані зберігаються лише на цьому пристрої.",
@@ -1389,8 +1388,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Долучайся до групового подарунка «{title}» у Birthdayly 🎁\n\nКод групи: {code}\nУ застосунку: + → Подарунки → У мене є код.\n\nАбо одразу заходь: {link}",
   "Grupos, códigos e ideias": "Групи, коди та ідеї",
   "Guarda uma ideia para alguém": "Збережи ідею для когось",
-  "Guardar mais de {count} aniversários": "Збереження понад {count} днів народження",
   "Até {count} aniversários, com lembretes": "До {count} днів народження з нагадуваннями",
   "Aniversários sem limite": "Необмежена кількість днів народження",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ви досягли ліміту днів народження в безкоштовному плані. З Birthdayly+ ліміту немає."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ви досягли ліміту днів народження в безкоштовному плані. З Birthdayly+ ліміту немає.",
+  "Criar mais de {count} aniversários": "Створення понад {count} днів народження",
+  "aniversários": "днів народження",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "У безкоштовному плані видалення не звільняє місця: це й далі враховується в ліміт {count} днів народження."
 }

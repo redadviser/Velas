@@ -350,8 +350,8 @@ class ProfileScreen extends ConsumerWidget {
           Row(
             children: [
               _MiniStat(
-                value: '${data.people.length}',
-                label: context.tr('pessoas'),
+                value: ref.watch(isPlusProvider) ? '${data.people.length}' : '${data.peopleUsed}/$freePeopleLimit',
+                label: context.tr('aniversários'),
                 onTap: () => context.go('/people'),
               ),
               const SizedBox(width: 10),

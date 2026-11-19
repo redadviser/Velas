@@ -31,17 +31,17 @@ final storeIdentityProvider = Provider<void>((ref) {
   userId == null ? AdaptyStore.instance.logout() : AdaptyStore.instance.identify(userId);
 });
 
-/// Aniversários guardados no plano Grátis (o servidor tem o mesmo número em core/plus.ts).
+/// Aniversários que se podem criar no plano Grátis (o servidor tem o mesmo número em core/plus.ts).
 const freePeopleLimit = 20;
 
-/// Antes de acrescentar [adding] aniversários: acima do limite do plano Grátis
-/// passa pelo [requirePlus]. Quem já passou do limite mantém os que tem.
+/// Antes de criar [adding] aniversários: acima do limite do plano Grátis passa
+/// pelo [requirePlus]. Conta os criados (apagar não liberta espaço).
 Future<bool> requirePeopleRoom(BuildContext context, WidgetRef ref, {int adding = 1}) async {
-  if (ref.read(dataProvider).people.length + adding <= freePeopleLimit) return true;
+  if (ref.read(dataProvider).peopleUsed + adding <= freePeopleLimit) return true;
   return requirePlus(
     context,
     ref,
-    feature: context.tr('Guardar mais de {count} aniversários', {'count': freePeopleLimit}),
+    feature: context.tr('Criar mais de {count} aniversários', {'count': freePeopleLimit}),
   );
 }
 

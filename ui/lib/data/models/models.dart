@@ -638,6 +638,7 @@ class AppData {
     this.gifts = const [],
     this.messages = const [],
     this.specialDates = const [],
+    this.peopleCreated = 0,
     this.loaded = false,
   });
 
@@ -646,9 +647,15 @@ class AppData {
   final List<GiftIdea> gifts;
   final List<BirthdayMessage> messages;
   final List<SpecialDate> specialDates;
+
+  /// Aniversários criados desde sempre: apagar não desconta (limite do plano Grátis).
+  final int peopleCreated;
   final bool loaded;
 
   static const empty = AppData();
+
+  /// O que conta para o limite do plano Grátis (no modo local não há contador no servidor).
+  int get peopleUsed => peopleCreated > people.length ? peopleCreated : people.length;
 
   Person? person(String id) => people.where((p) => p.id == id).firstOrNull;
   PersonCategory? category(String? id) => id == null ? null : categories.where((c) => c.id == id).firstOrNull;
@@ -672,6 +679,7 @@ class AppData {
     List<GiftIdea>? gifts,
     List<BirthdayMessage>? messages,
     List<SpecialDate>? specialDates,
+    int? peopleCreated,
     bool? loaded,
   }) => AppData(
     people: people ?? this.people,
@@ -679,6 +687,7 @@ class AppData {
     gifts: gifts ?? this.gifts,
     messages: messages ?? this.messages,
     specialDates: specialDates ?? this.specialDates,
+    peopleCreated: peopleCreated ?? this.peopleCreated,
     loaded: loaded ?? this.loaded,
   );
 

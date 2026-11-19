@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "Esporta i miei dati",
   "Utilizadores bloqueados": "Utenti bloccati",
   "Perfil": "Profilo",
-  "pessoas": "persone",
   "ideias": "idee",
   "mensagens": "messaggi",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Modalità locale: i dati sono salvati solo su questo dispositivo.",
@@ -1381,8 +1380,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Partecipa al regalo di gruppo \"{title}\" su Birthdayly 🎁\n\nCodice del gruppo: {code}\nNell'app: + → Regali → Ho un codice.\n\nOppure entra direttamente: {link}",
   "Grupos, códigos e ideias": "Gruppi, codici e idee",
   "Guarda uma ideia para alguém": "Salva un'idea per qualcuno",
-  "Guardar mais de {count} aniversários": "Salvare più di {count} compleanni",
   "Até {count} aniversários, com lembretes": "Fino a {count} compleanni, con promemoria",
   "Aniversários sem limite": "Compleanni illimitati",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Hai raggiunto il limite di compleanni del piano Gratis. Con Birthdayly+ non ci sono limiti."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Hai raggiunto il limite di compleanni del piano Gratis. Con Birthdayly+ non ci sono limiti.",
+  "Criar mais de {count} aniversários": "Creare più di {count} compleanni",
+  "aniversários": "compleanni",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "Nel piano Gratis, eliminare non libera spazio: continua a contare per il limite di {count} compleanni."
 }

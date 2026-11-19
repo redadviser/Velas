@@ -95,7 +95,7 @@ export function termsOfUse(c: LegalContact): LegalDoc {
           'O Birthdayly+ é uma subscrição mensal ou anual que dá acesso a funcionalidades adicionais. É adquirida e paga através da App Store ou do Google Play, pelo preço indicado antes da compra.',
           'A subscrição renova-se automaticamente no fim de cada período, até ser cancelada pelo Utilizador nas definições de subscrições da respetiva loja. Após o cancelamento, mantém-se ativa até ao fim do período já pago.',
           'Os pedidos de reembolso seguem as condições da loja onde a compra foi feita.',
-          'No plano Grátis cada conta pode guardar até 20 aniversários. Quem já tiver mais mantém-nos, mas só pode acrescentar outros com o Birthdayly+.',
+          'No plano Grátis cada conta pode criar até 20 aniversários, e eliminar um não liberta espaço. Quem já tiver mais mantém-nos, mas só pode criar outros com o Birthdayly+.',
           'A eliminação da conta não cancela a subscrição na loja.',
         ],
       },

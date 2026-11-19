@@ -11,4 +11,6 @@ export interface Snapshot {
   gift_ideas: GiftRow[];
   messages: MessageRow[];
   special_dates: SpecialDateRow[];
+  /** Aniversários criados desde sempre (o limite do plano Grátis conta estes). */
+  people_created: number;
 }

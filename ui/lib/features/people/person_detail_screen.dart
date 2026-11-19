@@ -20,6 +20,7 @@ import '../gifts/gift_widgets.dart';
 import '../gifts/wishlist_widgets.dart';
 import '../../core/wishlist_providers.dart';
 import '../groups/group_widgets.dart';
+import '../profile/plus.dart';
 import 'linked_friend.dart';
 
 class PersonDetailScreen extends ConsumerWidget {
@@ -31,9 +32,16 @@ class PersonDetailScreen extends ConsumerWidget {
     final ok = await confirmDialog(
       context,
       title: context.tr('Eliminar {name}?', {'name': p.firstName}),
-      message: context.tr(
-        'Vais perder o aniversário, as ideias de presente e as mensagens guardadas. Esta ação não pode ser desfeita.',
-      ),
+      message: [
+        context.tr(
+          'Vais perder o aniversário, as ideias de presente e as mensagens guardadas. Esta ação não pode ser desfeita.',
+        ),
+        if (!ref.read(isPlusProvider))
+          context.tr(
+            'No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.',
+            {'count': freePeopleLimit},
+          ),
+      ].join('\n\n'),
     );
     if (!ok || !context.mounted) return;
     final router = GoRouter.of(context);

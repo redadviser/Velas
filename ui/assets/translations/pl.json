@@ -1264,7 +1264,6 @@
   "Exportar os meus dados": "Eksportuj moje dane",
   "Utilizadores bloqueados": "Zablokowani użytkownicy",
   "Perfil": "Profil",
-  "pessoas": "osoby",
   "ideias": "pomysły",
   "mensagens": "wiadomości",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Tryb lokalny: dane są zapisane tylko na tym urządzeniu.",
@@ -1389,8 +1388,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Dołącz do wspólnego prezentu „{title}” w Birthdayly 🎁\n\nKod grupy: {code}\nW aplikacji: + → Prezenty → Mam kod.\n\nAlbo dołącz od razu: {link}",
   "Grupos, códigos e ideias": "Grupy, kody i pomysły",
   "Guarda uma ideia para alguém": "Zapisz pomysł dla kogoś",
-  "Guardar mais de {count} aniversários": "Zapisywanie ponad {count} urodzin",
   "Até {count} aniversários, com lembretes": "Do {count} urodzin z przypomnieniami",
   "Aniversários sem limite": "Nieograniczona liczba urodzin",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Osiągnięto limit urodzin w planie Darmowym. W Birthdayly+ nie ma limitu."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Osiągnięto limit urodzin w planie Darmowym. W Birthdayly+ nie ma limitu.",
+  "Criar mais de {count} aniversários": "Dodawanie ponad {count} urodzin",
+  "aniversários": "urodziny",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "W planie Darmowym usunięcie nie zwalnia miejsca: nadal liczy się do limitu {count} urodzin."
 }

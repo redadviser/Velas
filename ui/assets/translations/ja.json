@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "データをエクスポート",
   "Utilizadores bloqueados": "ブロック中のユーザー",
   "Perfil": "プロフィール",
-  "pessoas": "人",
   "ideias": "アイデア",
   "mensagens": "メッセージ",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "ローカルモード: データはこの端末にのみ保存されています。",
@@ -1381,8 +1380,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Birthdaylyのプレゼント「{title}」に参加しよう 🎁\n\nグループコード: {code}\nアプリで: + → プレゼント → コードを持っている\n\nまたはこちらから直接参加: {link}",
   "Grupos, códigos e ideias": "グループ、コード、アイデア",
   "Guarda uma ideia para alguém": "誰かのためのアイデアを保存",
-  "Guardar mais de {count} aniversários": "{count}件を超える誕生日の保存",
   "Até {count} aniversários, com lembretes": "誕生日{count}件まで（リマインダー付き）",
   "Aniversários sem limite": "誕生日の登録数無制限",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "無料プランの誕生日の上限に達しました。Birthdayly+なら上限はありません。"
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "無料プランの誕生日の上限に達しました。Birthdayly+なら上限はありません。",
+  "Criar mais de {count} aniversários": "{count}件を超える誕生日の作成",
+  "aniversários": "件の誕生日",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "無料プランでは削除しても枠は空きません。{count}件の上限に含まれたままです。"
 }

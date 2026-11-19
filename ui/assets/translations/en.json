@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "Export my data",
   "Utilizadores bloqueados": "Blocked users",
   "Perfil": "Profile",
-  "pessoas": "people",
   "ideias": "ideas",
   "mensagens": "messages",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Local mode: your data is stored only on this device.",
@@ -1381,8 +1380,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Join the group gift \"{title}\" on Birthdayly 🎁\n\nGroup code: {code}\nIn the app: + → Gifts → I have a code.\n\nOr join directly: {link}",
   "Grupos, códigos e ideias": "Groups, codes and ideas",
   "Guarda uma ideia para alguém": "Save an idea for someone",
-  "Guardar mais de {count} aniversários": "Saving more than {count} birthdays",
   "Até {count} aniversários, com lembretes": "Up to {count} birthdays, with reminders",
   "Aniversários sem limite": "Unlimited birthdays",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "You've reached the Free plan's birthday limit. Birthdayly+ has no limit."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "You've reached the Free plan's birthday limit. Birthdayly+ has no limit.",
+  "Criar mais de {count} aniversários": "Creating more than {count} birthdays",
+  "aniversários": "birthdays",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "On the Free plan, deleting doesn't free up space: it still counts towards the {count}-birthday limit."
 }

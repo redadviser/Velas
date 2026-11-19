@@ -1323,6 +1323,10 @@ describe('Birthdayly+', () => {
     // Editar um que já existe continua a dar.
     const edit = await call('PUT', `/people/${first[0]!.id}`, { token: s.access_token, body: { ...first[0], name: 'Outro nome' } });
     expect(edit.status).toBe(200);
+    // Apagar não liberta espaço: conta o que foi criado.
+    expect((await call('DELETE', `/people/${first[1]!.id}`, { token: s.access_token })).status).toBe(204);
+    expect((await call('PUT', `/people/${uuid()}`, { token: s.access_token, body: person(24) })).body.error).toBe('people_limit');
+    expect((await call('GET', '/data', { token: s.access_token })).body).toMatchObject({ people_created: 20 });
     await db.query(`update profiles set trial_until = now() + interval '30 days' where id = $1`, [s.user.id]);
     const more = await call('POST', '/people/import', { token: s.access_token, body: { people: [person(22), person(23)] } });
     expect(more.status).toBe(200);

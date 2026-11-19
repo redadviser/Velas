@@ -1256,7 +1256,6 @@
   "Exportar os meus dados": "Verilerimi dışa aktar",
   "Utilizadores bloqueados": "Engellenen kullanıcılar",
   "Perfil": "Profil",
-  "pessoas": "kişi",
   "ideias": "fikir",
   "mensagens": "mesaj",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "Yerel mod: veriler yalnızca bu cihazda saklanıyor.",
@@ -1381,8 +1380,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "Birthdayly'deki \"{title}\" ortak hediyesine katıl 🎁\n\nGrup kodu: {code}\nUygulamada: + → Hediyeler → Kodum var.\n\nYa da doğrudan katıl: {link}",
   "Grupos, códigos e ideias": "Gruplar, kodlar ve fikirler",
   "Guarda uma ideia para alguém": "Biri için bir fikir kaydet",
-  "Guardar mais de {count} aniversários": "{count} doğum gününden fazlasını kaydetmek",
   "Até {count} aniversários, com lembretes": "Hatırlatıcılarla {count} doğum gününe kadar",
   "Aniversários sem limite": "Sınırsız doğum günü",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ücretsiz planın doğum günü sınırına ulaştın. Birthdayly+ ile sınır yok."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ücretsiz planın doğum günü sınırına ulaştın. Birthdayly+ ile sınır yok.",
+  "Criar mais de {count} aniversários": "{count} doğum gününden fazlasını oluşturmak",
+  "aniversários": "doğum günü",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "Ücretsiz planda silmek yer açmaz: {count} doğum günü sınırına sayılmaya devam eder."
 }

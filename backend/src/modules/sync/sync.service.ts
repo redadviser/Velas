@@ -24,6 +24,9 @@ export class SyncService {
       gift_ideas: await this.gifts.listIn(c, userId),
       messages: await this.messages.listIn(c, userId),
       special_dates: await this.specialDates.listIn(c, userId),
+      people_created: (
+        await c.query<{ n: number }>('select people_created as n from profiles where id = $1', [userId])
+      ).rows[0]!.n,
     }));
   }
 }

@@ -17,11 +17,12 @@ export const FREE_PEOPLE_LIMIT = 20;
 
 /**
  * Antes de guardar [adding] aniversários novos: sem o plano, acima do limite
- * responde 402 people_limit. Quem já passou do limite mantém os que tem.
+ * responde 402 people_limit. Conta os criados (profiles.people_created), por
+ * isso apagar não liberta espaço. Quem já passou do limite mantém os que tem.
  */
 export async function requirePeopleRoom(c: Db | Tx, userId: string, adding = 1): Promise<void> {
   if (adding <= 0) return;
-  const { rows } = await c.query<{ n: number }>('select count(*)::int as n from people where user_id = $1', [userId]);
+  const { rows } = await c.query<{ n: number }>('select people_created as n from profiles where id = $1', [userId]);
   if ((rows[0]?.n ?? 0) + adding <= FREE_PEOPLE_LIMIT) return;
   if (!(await hasPlus(c, userId))) throw new HttpError(402, 'people_limit');
 }

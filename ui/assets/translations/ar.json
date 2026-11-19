@@ -1272,7 +1272,6 @@
   "Exportar os meus dados": "تصدير بياناتي",
   "Utilizadores bloqueados": "المستخدمون المحظورون",
   "Perfil": "الملف الشخصي",
-  "pessoas": "أشخاص",
   "ideias": "أفكار",
   "mensagens": "رسائل",
   "Modo local: os dados estão guardados apenas neste dispositivo.": "الوضع المحلي: البيانات محفوظة على هذا الجهاز فقط.",
@@ -1397,8 +1396,10 @@
   "Junta-te à prenda em grupo \"{title}\" na Birthdayly 🎁\n\nCódigo do grupo: {code}\nNa app: + → Prendas → Tenho um código.\n\nOu entra diretamente: {link}": "انضم إلى الهدية الجماعية \"{title}\" على Birthdayly 🎁\n\nرمز المجموعة: {code}\nفي التطبيق: + ← الهدايا ← لديّ رمز.\n\nأو انضم مباشرة: {link}",
   "Grupos, códigos e ideias": "مجموعات ورموز وأفكار",
   "Guarda uma ideia para alguém": "احفظ فكرة لشخص ما",
-  "Guardar mais de {count} aniversários": "حفظ أكثر من {count} عيد ميلاد",
   "Até {count} aniversários, com lembretes": "حتى {count} عيد ميلاد مع التذكيرات",
   "Aniversários sem limite": "أعياد ميلاد بلا حدود",
-  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "وصلت إلى حد أعياد الميلاد في الخطة المجانية. مع Birthdayly+ لا يوجد حد."
+  "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "وصلت إلى حد أعياد الميلاد في الخطة المجانية. مع Birthdayly+ لا يوجد حد.",
+  "Criar mais de {count} aniversários": "إنشاء أكثر من {count} عيد ميلاد",
+  "aniversários": "أعياد الميلاد",
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "في الخطة المجانية، الحذف لا يحرر مساحة: يظل محسوبًا ضمن حد {count} عيد ميلاد."
 }

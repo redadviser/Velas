@@ -1302,7 +1302,7 @@ describe('Birthdayly+', () => {
 
   it('sem o plano, as funcionalidades Plus respondem plus_required', async () => {
     const me = (await call('GET', '/me', { token: nuno.access_token })).body;
-    expect(me).toMatchObject({ plus: false, plus_until: null, plus_trial_available: true, weekly_digest: false });
+    expect(me).toMatchObject({ plus: false, plus_until: null, weekly_digest: false });
     expect((await upload(nuno, '/cards/media', mp4)).json().error).toBe('plus_required');
     expect((await upload(nuno, '/wall/photos?year=2026', jpeg)).statusCode).toBe(402);
     const custom = await call('PUT', `/people/${personId}`, {
@@ -1312,13 +1312,27 @@ describe('Birthdayly+', () => {
     expect(custom.body.error).toBe('plus_required');
   });
 
-  it('o período experimental dá 30 dias, uma vez por conta', async () => {
-    const trial = await call('POST', '/me/plus/trial', { token: nuno.access_token });
-    expect(trial.status).toBe(200);
-    expect(trial.body).toMatchObject({ plus: true, plus_trial_available: false });
-    const days = (Date.parse(trial.body.plus_until) - Date.now()) / 86_400_000;
-    expect(days).toBeGreaterThan(29.9);
-    expect((await call('POST', '/me/plus/trial', { token: nuno.access_token })).body.error).toBe('trial_used');
+  it('sem o plano, guarda até 20 aniversários; com ele, sem limite', async () => {
+    const s = await signup('Paula', 'paula', 'paula@ex.pt');
+    const person = (i: number) => ({ id: uuid(), name: `Pessoa ${i}`, birth_day: 1 + (i % 28), birth_month: 1 + (i % 12) });
+    const first = Array.from({ length: 20 }, (_, i) => person(i));
+    expect((await call('POST', '/people/import', { token: s.access_token, body: { people: first } })).status).toBe(200);
+    const extra = await call('PUT', `/people/${uuid()}`, { token: s.access_token, body: person(21) });
+    expect(extra.status).toBe(402);
+    expect(extra.body.error).toBe('people_limit');
+    // Editar um que já existe continua a dar.
+    const edit = await call('PUT', `/people/${first[0]!.id}`, { token: s.access_token, body: { ...first[0], name: 'Outro nome' } });
+    expect(edit.status).toBe(200);
+    await db.query(`update profiles set trial_until = now() + interval '30 days' where id = $1`, [s.user.id]);
+    const more = await call('POST', '/people/import', { token: s.access_token, body: { people: [person(22), person(23)] } });
+    expect(more.status).toBe(200);
+  });
+
+  it('já não há período experimental pedido pela app', async () => {
+    expect((await call('POST', '/me/plus/trial', { token: nuno.access_token })).status).toBe(404);
+    // Quem já o tinha continua com o plano até ao fim.
+    await db.query(`update profiles set trial_until = now() + interval '30 days' where id = $1`, [nuno.user.id]);
+    expect((await call('GET', '/me', { token: nuno.access_token })).body.plus).toBe(true);
     expect((await call('PATCH', '/me', { token: nuno.access_token, body: { weekly_digest: true } })).body.weekly_digest).toBe(true);
   });
 
@@ -1784,8 +1798,7 @@ describe('Birthdayly+ pelas lojas (Adapty) e plan_source', () => {
 
   it('o período experimental continua a contar com a loja', async () => {
     const ana = await signup('Ana Trial', 'anatrial', 'anatrial@ex.pt');
-    const trial = await call('POST', '/me/plus/trial', { token: ana.access_token });
-    expect(trial.body.plus).toBe(true);
+    await db.query(`update profiles set trial_until = now() + interval '30 days' where id = $1`, [ana.user.id]);
     // Sem compra na loja, a sincronização não tira o período experimental.
     expect((await call('POST', '/me/plus/sync', { token: ana.access_token })).body.plus).toBe(true);
   });

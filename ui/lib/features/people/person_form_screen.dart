@@ -207,6 +207,8 @@ class _PersonFormScreenState extends ConsumerState<PersonFormScreen> {
 
     final repo = ref.read(dataRepositoryProvider);
     if (repo == null) return;
+    if (!_isEdit && !await requirePeopleRoom(context, ref)) return;
+    if (!mounted) return;
     final isFirst = ref.read(dataProvider).people.isEmpty;
     final d = _date!;
     final base =

@@ -411,12 +411,10 @@ class _UpcomingState extends State<_Upcoming> {
     final data = widget.data;
     final cats = data.categories;
     final today = BirthdayUtils.today();
-    final list = data.upcoming
-        .where((p) => !widget.exclude.contains(p.id))
-        .where((p) => _category == null || p.categoryId == _category)
-        .take(8)
-        .toList();
-    if (list.isEmpty && _category == null) return const SizedBox.shrink();
+    final soon = data.upcoming.where((p) => !widget.exclude.contains(p.id) && p.daysUntil() <= 30).toList();
+    if (soon.isEmpty) return const SizedBox.shrink();
+    final filtered = soon.where((p) => _category == null || p.categoryId == _category).toList();
+    final list = filtered.take(2).toList();
 
     final groups = <String, List<Person>>{};
     for (final p in list) {
@@ -434,7 +432,7 @@ class _UpcomingState extends State<_Upcoming> {
       children: [
         SectionTitle(
           context.tr('Próximos aniversários'),
-          action: context.tr('Ver todos'),
+          action: filtered.length > 2 ? context.tr('Ver todos') : null,
           onAction: () => context.go('/people'),
         ),
         if (cats.isNotEmpty)

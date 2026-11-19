@@ -24,13 +24,12 @@ export interface Profile {
   typing_indicator: boolean;
   message_notifications: boolean;
   message_previews: boolean;
-  /** Birthdayly+: ativo agora, até quando, e se ainda pode experimentar 30 dias grátis. */
+  /** Birthdayly+: ativo agora e até quando. */
   plus: boolean;
   /** Até quando tem o plano, venha de onde vier (loja, período experimental ou testes). */
   plus_until: string | null;
   /** 'store' (o normal), ou 'plus' / 'free' postos à mão para testes (ver migrations/024_plan_columns.sql). */
   plan_source: 'store' | 'plus' | 'free';
-  plus_trial_available: boolean;
   /** Resumo semanal dos aniversários (Birthdayly+). */
   weekly_digest: boolean;
   /** Versão dos Termos que aceitou (null = ainda não aceitou nenhuma). */

@@ -1,7 +1,7 @@
 import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
 import { imageType, type PhotoStorage } from '../../core/storage.js';
-import { hasPlus } from '../../core/plus.js';
+import { hasPlus, requirePeopleRoom } from '../../core/plus.js';
 import type { HistoryYear, PersonHistory, PersonInput, PersonJson, PersonRow, PhotoJson } from './people.model.js';
 
 export class PeopleService {
@@ -25,6 +25,8 @@ export class PeopleService {
     // A hora própria do lembrete é do Birthdayly+.
     const customTime = p.reminder_hour != null && p.reminder_minute != null;
     if (customTime && !(await hasPlus(c, userId))) throw new HttpError(402, 'plus_required');
+    const existing = await c.query('select 1 from people where id = $1 and user_id = $2', [p.id, userId]);
+    if (!existing.rowCount) await requirePeopleRoom(c, userId);
     // photo_path não vem da app: só muda pelas rotas de fotografia. Sem
     // linked_user_id no pedido (versões antigas da app), a ligação mantém-se.
     const { rows } = await c.query<PersonRow>(

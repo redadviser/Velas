@@ -6,7 +6,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/common.dart';
 import '../../services/plus_store.dart';
 import '../../core/i18n/translations.dart';
 
@@ -32,11 +31,24 @@ final storeIdentityProvider = Provider<void>((ref) {
   userId == null ? AdaptyStore.instance.logout() : AdaptyStore.instance.identify(userId);
 });
 
+/// Aniversários guardados no plano Grátis (o servidor tem o mesmo número em core/plus.ts).
+const freePeopleLimit = 20;
+
+/// Antes de acrescentar [adding] aniversários: acima do limite do plano Grátis
+/// passa pelo [requirePlus]. Quem já passou do limite mantém os que tem.
+Future<bool> requirePeopleRoom(BuildContext context, WidgetRef ref, {int adding = 1}) async {
+  if (ref.read(dataProvider).people.length + adding <= freePeopleLimit) return true;
+  return requirePlus(
+    context,
+    ref,
+    feature: context.tr('Guardar mais de {count} aniversários', {'count': freePeopleLimit}),
+  );
+}
+
 /// Antes de uma funcionalidade do Birthdayly+: com o plano, segue (`true`);
-/// sem ele, explica o que é e oferece os 30 dias grátis ou os planos.
+/// sem ele, explica o que é e mostra os planos.
 Future<bool> requirePlus(BuildContext context, WidgetRef ref, {required String feature}) async {
   if (ref.read(isPlusProvider)) return true;
-  final trial = ref.read(currentUserProvider)?.plusTrialAvailable ?? false;
   final choice = await showModalBottomSheet<String>(
     context: context,
     builder: (ctx) => SafeArea(
@@ -57,19 +69,12 @@ Future<bool> requirePlus(BuildContext context, WidgetRef ref, {required String f
               ),
               const SizedBox(height: 8),
               Text(
-                trial
-                    ? ctx.tr('Experimenta todas as funcionalidades durante 30 dias, sem pagar nada.')
-                    : ctx.tr('Vê o que o Birthdayly+ inclui e como ficar com ele.'),
+                ctx.tr('Vê o que o Birthdayly+ inclui e como ficar com ele.'),
                 textAlign: TextAlign.center,
                 style: ctx.text.bodyMedium?.copyWith(color: ctx.palette.mutedForeground),
               ),
               const SizedBox(height: 18),
-              if (trial)
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, 'trial'),
-                  child: Text(ctx.tr('Experimentar 30 dias grátis')),
-                ),
-              TextButton(onPressed: () => Navigator.pop(ctx, 'plans'), child: Text(ctx.tr('Ver os planos'))),
+              FilledButton(onPressed: () => Navigator.pop(ctx, 'plans'), child: Text(ctx.tr('Ver os planos'))),
             ],
           ),
         ),
@@ -77,14 +82,6 @@ Future<bool> requirePlus(BuildContext context, WidgetRef ref, {required String f
     ),
   );
   if (!context.mounted) return false;
-  if (choice == 'trial') {
-    final ok = await runGuarded(
-      context,
-      () => ref.read(authRepositoryProvider).startPlusTrial(),
-      success: tr('Birthdayly+ ativo durante 30 dias.'),
-    );
-    return ok && ref.read(isPlusProvider);
-  }
   if (choice == 'plans') context.push('/profile/plans');
   return false;
 }

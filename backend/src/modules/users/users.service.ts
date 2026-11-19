@@ -24,7 +24,7 @@ export class UsersService {
               p.photo_path, p.show_presence, p.read_receipts, p.typing_indicator,
               p.message_notifications, p.message_previews,
               coalesce(plan_until(p) > now(), false) as plus, plan_until(p) as plus_until, p.plan_source,
-              p.trial_until is null as plus_trial_available, p.weekly_digest, u.terms_version, p.interests
+              p.weekly_digest, u.terms_version, p.interests
        from profiles p join users u on u.id = p.id
        where p.id = $1`,
       [userId],
@@ -96,18 +96,6 @@ export class UsersService {
     });
     await this.onUpdated?.(userId, patch).catch(() => {});
     return profile;
-  }
-
-  /** Período experimental do Birthdayly+: 30 dias, uma vez por conta. */
-  async startPlusTrial(userId: string): Promise<Profile> {
-    return tx(this.db, userId, async (c) => {
-      const { rowCount } = await c.query(
-        `update profiles set trial_until = now() + interval '30 days' where id = $1 and trial_until is null`,
-        [userId],
-      );
-      if (!rowCount) throw new HttpError(409, 'trial_used');
-      return this.profileIn(c, userId);
-    });
   }
 
   /** Fotografia de perfil (bytes da imagem). Substitui a anterior. */

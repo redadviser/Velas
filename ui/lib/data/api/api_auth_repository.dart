@@ -190,17 +190,6 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> startPlusTrial() async {
-    try {
-      final json = ((await _api.post('/me/plus/trial')) as Map).cast<String, dynamic>();
-      _set(_profile(json), json);
-    } on ApiException catch (e) {
-      if (e.code == 'trial_used') throw const AppException('Já usaste o período experimental do Birthdayly+.');
-      rethrow;
-    }
-  }
-
-  @override
   Future<String?> requestAccountDeletion() async {
     try {
       final json = ((await _api.post('/me/deletion')) as Map).cast<String, dynamic>();

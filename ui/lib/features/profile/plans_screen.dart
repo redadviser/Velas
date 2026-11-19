@@ -27,7 +27,7 @@ class PlusPricing {
 }
 
 List<String> get _freeFeatures => [
-  tr('Lembretes de todos os aniversários'),
+  tr('Até {count} aniversários, com lembretes', {'count': freePeopleLimit}),
   tr('Adicionar dos contactos e pedir datas por link'),
   tr('Prendas em grupo, conversas e amigos'),
   tr('Cartões de parabéns e o teu mural'),
@@ -35,6 +35,7 @@ List<String> get _freeFeatures => [
 
 List<String> get _plusFeatures => [
   tr('Tudo o que o plano Grátis tem'),
+  tr('Aniversários sem limite'),
   tr('Lembretes avançados: vários por pessoa e à hora que quiseres'),
   tr('Cartões especiais com foto, vídeo ou áudio'),
   tr('Mural com fotografias e um álbum de cada ano'),
@@ -58,16 +59,6 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
 
   String get _key => 'velas.plusInterest.${ref.read(currentUserProvider)?.id}';
   bool get _registered => ref.read(sharedPrefsProvider).getString(_key) != null;
-
-  Future<void> _trial() async {
-    setState(() => _sending = true);
-    await runGuarded(
-      context,
-      () => ref.read(authRepositoryProvider).startPlusTrial(),
-      success: tr('Birthdayly+ ativo durante 30 dias. Bom proveito!'),
-    );
-    if (mounted) setState(() => _sending = false);
-  }
 
   /// Comprar na loja; o servidor confirma com o Adapty e o perfil passa a ter o plano.
   Future<void> _buy(PlusStore store, StorePlan plan) async {
@@ -174,30 +165,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: muted),
             ),
-          if (user?.plusTrialAvailable ?? false)
-            TextButton(onPressed: _sending ? null : _trial, child: Text(context.tr('Experimentar 30 dias grátis'))),
           TextButton(onPressed: _sending ? null : () => _restore(store), child: Text(context.tr('Restaurar compras'))),
-        ],
-      );
-    } else if (user?.plusTrialAvailable ?? false) {
-      plusAction = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LoadingButton(label: context.tr('Experimentar 30 dias grátis'), loading: _sending, onPressed: _trial),
-          if (ref.watch(apiClientProvider) != null)
-            _registered
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      context.tr('Vais ser dos primeiros a saber.'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: muted),
-                    ),
-                  )
-                : TextButton(
-                    onPressed: _sending ? null : _notifyMe,
-                    child: Text(context.tr('Avisa-me quando a subscrição chegar')),
-                  ),
         ],
       );
     } else if (ref.watch(apiClientProvider) == null) {

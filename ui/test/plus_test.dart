@@ -20,11 +20,9 @@ void main() {
     final p = UserProfile.fromJson({
       'display_name': 'Nuno',
       'plus_until': DateTime.now().add(const Duration(days: 30)).toUtc().toIso8601String(),
-      'plus_trial_available': false,
       'weekly_digest': true,
     }, id: 'u1', email: 'n@ex.pt');
     expect(p.isPlus, isTrue);
-    expect(p.plusTrialAvailable, isFalse);
     expect(p.weeklyDigest, isTrue);
     expect(p.toPrefsJson()['weekly_digest'], isTrue);
     expect(p.copyWith(plusUntil: () => DateTime.now().subtract(const Duration(days: 1))).isPlus, isFalse);

@@ -21,11 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const me = UserProfile(id: 'me', email: 'eu@ex.pt', name: 'Eu');
 
 class FakeAuth implements AuthRepository {
-  var trials = 0;
   var syncs = 0;
-
-  @override
-  Future<void> startPlusTrial() async => trials++;
 
   @override
   Future<void> syncPlus() async => syncs++;
@@ -90,12 +86,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('2,49 €'), findsOneWidget);
 
-    // Sem o plano e com o período experimental por usar, o botão principal é experimentar.
-    await tester.tap(find.text('Experimentar 30 dias grátis'));
-    await tester.pumpAndSettle();
-    expect(auth.trials, 1);
+    expect(find.text('Experimentar 30 dias grátis'), findsNothing);
 
-    await tester.tap(find.text('Avisa-me quando a subscrição chegar'));
+    await tester.tap(find.text('Avisa-me quando chegar'));
     await tester.pumpAndSettle();
     expect(sent, [
       {'plan': 'monthly'},

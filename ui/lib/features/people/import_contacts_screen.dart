@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/i18n/translations.dart';
 import '../../core/providers.dart';
+import '../profile/plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/birthday_utils.dart';
 import '../../core/utils/text.dart';
@@ -222,6 +223,7 @@ class _ImportContactsScreenState extends ConsumerState<ImportContactsScreen> {
       people.add(p);
       if (c.photo != null) photos[p.id] = c.photo!;
     }
+    if (!await requirePeopleRoom(context, ref, adding: people.length) || !mounted) return;
     setState(() => _importing = true);
     final ok = await runGuarded(
       context,

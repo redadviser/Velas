@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
+import { requirePeopleRoom } from '../../core/plus.js';
 import type { RealtimeHub } from '../../core/realtime.js';
 import {
   maxAnswers,
@@ -144,6 +145,7 @@ export class BirthdayRequestsService {
       if (answerId && !rows.length) throw notFound();
       let n = 0;
       for (const a of rows) {
+        await requirePeopleRoom(c, userId);
         const r = await c.query(
           `insert into people (user_id, name, birth_day, birth_month, birth_year)
            select $1, $2, $3, $4, $5

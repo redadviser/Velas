@@ -11,3 +11,17 @@ export async function hasPlus(c: Db | Tx, userId: string): Promise<boolean> {
 export async function requirePlus(c: Db | Tx, userId: string): Promise<void> {
   if (!(await hasPlus(c, userId))) throw new HttpError(402, 'plus_required');
 }
+
+/** Aniversários guardados no plano Grátis (a app tem o mesmo número em plus.dart). */
+export const FREE_PEOPLE_LIMIT = 20;
+
+/**
+ * Antes de guardar [adding] aniversários novos: sem o plano, acima do limite
+ * responde 402 people_limit. Quem já passou do limite mantém os que tem.
+ */
+export async function requirePeopleRoom(c: Db | Tx, userId: string, adding = 1): Promise<void> {
+  if (adding <= 0) return;
+  const { rows } = await c.query<{ n: number }>('select count(*)::int as n from people where user_id = $1', [userId]);
+  if ((rows[0]?.n ?? 0) + adding <= FREE_PEOPLE_LIMIT) return;
+  if (!(await hasPlus(c, userId))) throw new HttpError(402, 'people_limit');
+}

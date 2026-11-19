@@ -62,12 +62,6 @@ export async function usersRoutes(app: FastifyInstance, users: UsersService, del
   );
 
   app.post(
-    '/me/plus/trial',
-    { schema: doc({ tag, summary: 'Experimentar o Birthdayly+ durante 30 dias (uma vez por conta)' }) },
-    (req) => users.startPlusTrial(req.uid),
-  );
-
-  app.post(
     '/me/plus-interest',
     {
       schema: doc({

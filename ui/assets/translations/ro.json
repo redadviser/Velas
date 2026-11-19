@@ -1389,5 +1389,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ai atins limita de zile de naștere a planului Gratuit. Cu Birthdayly+ nu există limită.",
   "Criar mais de {count} aniversários": "Crearea a peste {count} de zile de naștere",
   "aniversários": "zile de naștere",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "În planul Gratuit, ștergerea nu eliberează spațiu: se numără în continuare la limita de {count} de zile de naștere."
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "În planul Gratuit, ștergerea nu eliberează spațiu: se numără în continuare la limita de {count} de zile de naștere.",
+  "Eliminar mensagem": "Șterge mesajul",
+  "Eliminar a mensagem para {name}?": "Ștergi mesajul pentru {name}?",
+  "Se estava agendada, deixa de ser enviada.": "Dacă era programat, nu va mai fi trimis.",
+  "Mensagem eliminada.": "Mesaj șters."
 }

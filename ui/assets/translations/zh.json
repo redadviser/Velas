@@ -1385,5 +1385,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "你已达到免费版的生日数量上限。Birthdayly+ 没有上限。",
   "Criar mais de {count} aniversários": "创建超过 {count} 个生日",
   "aniversários": "个生日",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "免费版中删除不会腾出名额：仍计入 {count} 个生日的上限。"
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "免费版中删除不会腾出名额：仍计入 {count} 个生日的上限。",
+  "Eliminar mensagem": "删除消息",
+  "Eliminar a mensagem para {name}?": "删除给 {name} 的消息？",
+  "Se estava agendada, deixa de ser enviada.": "如果已定时发送，将不会再发送。",
+  "Mensagem eliminada.": "消息已删除。"
 }

@@ -1385,5 +1385,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "無料プランの誕生日の上限に達しました。Birthdayly+なら上限はありません。",
   "Criar mais de {count} aniversários": "{count}件を超える誕生日の作成",
   "aniversários": "件の誕生日",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "無料プランでは削除しても枠は空きません。{count}件の上限に含まれたままです。"
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "無料プランでは削除しても枠は空きません。{count}件の上限に含まれたままです。",
+  "Eliminar mensagem": "メッセージを削除",
+  "Eliminar a mensagem para {name}?": "{name}へのメッセージを削除しますか？",
+  "Se estava agendada, deixa de ser enviada.": "予約していた場合、送信されなくなります。",
+  "Mensagem eliminada.": "メッセージを削除しました。"
 }

@@ -364,7 +364,7 @@ class ProfileScreen extends ConsumerWidget {
               _MiniStat(
                 value: '${data.messages.length}',
                 label: context.tr('mensagens'),
-                onTap: () => _showMessages(context, data),
+                onTap: () => _showMessages(context),
               ),
             ],
           ),
@@ -518,55 +518,79 @@ class ProfileSectionScreen extends ConsumerWidget {
   }
 }
 
-/// As mensagens de parabéns guardadas; cada uma abre o editor dessa pessoa.
-void _showMessages(BuildContext context, AppData data) {
-  final withMessage = [
-    for (final p in data.upcoming)
-      if (data.messageFor(p.id) case final m?) (p, m),
-  ];
+/// As mensagens de parabéns guardadas, mais recentes primeiro; cada uma abre o
+/// editor dessa pessoa ou pode ser eliminada.
+void _showMessages(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (ctx) => SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(ctx.tr('Mensagens guardadas'), style: AppTheme.display(ctx, size: 22)),
-            ),
-            if (withMessage.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: Text(
-                  ctx.tr('Ainda não escreveste nenhuma. Abre uma pessoa e toca em "Ver mensagem".'),
-                  style: TextStyle(color: ctx.palette.mutedForeground),
+        child: Consumer(
+          builder: (ctx, ref, _) {
+            final data = ref.watch(dataProvider);
+            final messages = [
+              for (final m in [...data.messages]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)))
+                if (data.person(m.personId) case final p?) (p, m),
+            ];
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Text(ctx.tr('Mensagens guardadas'), style: AppTheme.display(ctx, size: 22)),
                 ),
-              ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final (p, m) in withMessage)
-                    ListTile(
-                      title: Text(p.name),
-                      subtitle: Text(m.body, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        context.push('/person/${p.id}/message');
-                      },
+                if (messages.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    child: Text(
+                      ctx.tr('Ainda não escreveste nenhuma. Abre uma pessoa e toca em "Ver mensagem".'),
+                      style: TextStyle(color: ctx.palette.mutedForeground),
                     ),
-                ],
-              ),
-            ),
-          ],
+                  ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final (p, m) in messages)
+                        ListTile(
+                          title: Text(p.name),
+                          subtitle: Text(m.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          trailing: IconButton(
+                            icon: Icon(LucideIcons.trash2, size: 18, color: ctx.colors.error),
+                            tooltip: ctx.tr('Eliminar mensagem'),
+                            onPressed: () => _deleteMessage(ctx, ref, p, m),
+                          ),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            context.push('/person/${p.id}/message');
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     ),
+  );
+}
+
+Future<void> _deleteMessage(BuildContext context, WidgetRef ref, Person p, BirthdayMessage m) async {
+  final ok = await confirmDialog(
+    context,
+    title: context.tr('Eliminar a mensagem para {name}?', {'name': p.firstName}),
+    message: context.tr('Se estava agendada, deixa de ser enviada.'),
+  );
+  if (!ok || !context.mounted) return;
+  await runGuarded(
+    context,
+    () => ref.read(dataRepositoryProvider)!.deleteMessage(m.id),
+    success: context.tr('Mensagem eliminada.'),
   );
 }
 

@@ -1401,5 +1401,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "وصلت إلى حد أعياد الميلاد في الخطة المجانية. مع Birthdayly+ لا يوجد حد.",
   "Criar mais de {count} aniversários": "إنشاء أكثر من {count} عيد ميلاد",
   "aniversários": "أعياد الميلاد",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "في الخطة المجانية، الحذف لا يحرر مساحة: يظل محسوبًا ضمن حد {count} عيد ميلاد."
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "في الخطة المجانية، الحذف لا يحرر مساحة: يظل محسوبًا ضمن حد {count} عيد ميلاد.",
+  "Eliminar mensagem": "حذف الرسالة",
+  "Eliminar a mensagem para {name}?": "حذف الرسالة الموجهة إلى {name}؟",
+  "Se estava agendada, deixa de ser enviada.": "إذا كانت مجدولة، فلن تُرسل.",
+  "Mensagem eliminada.": "تم حذف الرسالة."
 }

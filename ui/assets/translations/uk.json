@@ -1393,5 +1393,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Ви досягли ліміту днів народження в безкоштовному плані. З Birthdayly+ ліміту немає.",
   "Criar mais de {count} aniversários": "Створення понад {count} днів народження",
   "aniversários": "днів народження",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "У безкоштовному плані видалення не звільняє місця: це й далі враховується в ліміт {count} днів народження."
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "У безкоштовному плані видалення не звільняє місця: це й далі враховується в ліміт {count} днів народження.",
+  "Eliminar mensagem": "Видалити повідомлення",
+  "Eliminar a mensagem para {name}?": "Видалити повідомлення для {name}?",
+  "Se estava agendada, deixa de ser enviada.": "Якщо його було заплановано, воно не надішлеться.",
+  "Mensagem eliminada.": "Повідомлення видалено."
 }

@@ -1385,5 +1385,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Je hebt de verjaardagslimiet van het gratis abonnement bereikt. Met Birthdayly+ is er geen limiet.",
   "Criar mais de {count} aniversários": "Meer dan {count} verjaardagen aanmaken",
   "aniversários": "verjaardagen",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "In het gratis abonnement maakt verwijderen geen ruimte vrij: het telt mee voor de limiet van {count} verjaardagen."
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "In het gratis abonnement maakt verwijderen geen ruimte vrij: het telt mee voor de limiet van {count} verjaardagen.",
+  "Eliminar mensagem": "Bericht verwijderen",
+  "Eliminar a mensagem para {name}?": "Het bericht voor {name} verwijderen?",
+  "Se estava agendada, deixa de ser enviada.": "Als het gepland was, wordt het niet verstuurd.",
+  "Mensagem eliminada.": "Bericht verwijderd."
 }

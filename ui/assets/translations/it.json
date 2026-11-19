@@ -1385,5 +1385,9 @@
   "Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.": "Hai raggiunto il limite di compleanni del piano Gratis. Con Birthdayly+ non ci sono limiti.",
   "Criar mais de {count} aniversários": "Creare più di {count} compleanni",
   "aniversários": "compleanni",
-  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "Nel piano Gratis, eliminare non libera spazio: continua a contare per il limite di {count} compleanni."
+  "No plano Grátis, eliminar não liberta espaço: continua a contar para o limite de {count} aniversários.": "Nel piano Gratis, eliminare non libera spazio: continua a contare per il limite di {count} compleanni.",
+  "Eliminar mensagem": "Elimina messaggio",
+  "Eliminar a mensagem para {name}?": "Eliminare il messaggio per {name}?",
+  "Se estava agendada, deixa de ser enviada.": "Se era programmato, non verrà inviato.",
+  "Mensagem eliminada.": "Messaggio eliminato."
 }

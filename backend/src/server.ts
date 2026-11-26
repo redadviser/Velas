@@ -8,6 +8,7 @@ import { createPool, ensureDatabase } from './core/database.js';
 import { createMailer, type Mailer } from './core/mailer.js';
 import { migrate } from './core/migrations.js';
 import { PhotoStorage } from './core/storage.js';
+import { appleAuth } from './modules/auth/apple.js';
 import { googleVerifier } from './modules/auth/google.js';
 import { AccessTokens } from './modules/auth/tokens.js';
 import { FcmSender, loadServiceAccount } from './modules/push/push.gateway.js';
@@ -30,6 +31,7 @@ async function main() {
     tokens: new AccessTokens(config.jwtSecret),
     mail: (m) => mailer(m),
     verifyGoogle: googleVerifier(config.googleClientIds),
+    apple: appleAuth(config.apple),
     push: firebase ? new FcmSender(firebase) : undefined,
     adapty: config.adapty ? new AdaptyApi(config.adapty) : undefined,
   };

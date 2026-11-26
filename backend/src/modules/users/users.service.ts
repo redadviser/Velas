@@ -13,6 +13,8 @@ export class UsersService {
 
   /** Chamado depois de mudar o perfil (ex.: o chat volta a anunciar a presença). */
   onUpdated?: (userId: string, patch: ProfilePatch) => Promise<void>;
+  /** Revoga o acesso da Apple a uma conta apagada (exigido pela Apple). */
+  revokeApple?: (refreshToken: string) => Promise<void>;
 
   // Dentro de uma transação de outro módulo (ex.: autenticação) -------------
 
@@ -37,8 +39,8 @@ export class UsersService {
   /** Cria a conta, o perfil e as categorias por defeito. Devolve o id. */
   async createIn(c: Tx, u: NewUser): Promise<string> {
     const { rows } = await c.query<{ id: string }>(
-      `insert into users (email, password_hash, google_sub, email_verified) values ($1, $2, $3, $4) returning id`,
-      [u.email, u.passwordHash, u.googleSub ?? null, u.emailVerified ?? false],
+      `insert into users (email, password_hash, google_sub, apple_sub, email_verified) values ($1, $2, $3, $4, $5) returning id`,
+      [u.email, u.passwordHash, u.googleSub ?? null, u.appleSub ?? null, u.emailVerified ?? false],
     );
     const userId = rows[0]!.id;
     await c.query(`insert into profiles (id, display_name, username, phone) values ($1, $2, $3, $4)`, [
@@ -141,6 +143,10 @@ export class UsersService {
 
   /** Direito ao apagamento (RGPD): conta, dados e fotografias. */
   async deleteAccount(userId: string): Promise<void> {
+    const { rows: apple } = await this.db.query<{ apple_refresh_token: string | null }>(
+      'select apple_refresh_token from users where id = $1',
+      [userId],
+    );
     const conversations = await tx(this.db, userId, async (c) => {
       // Conversas que desaparecem com a conta: as privadas e as dos grupos que administra.
       const { rows } = await c.query<{ id: string }>(
@@ -158,6 +164,9 @@ export class UsersService {
     });
     await this.storage.removeFolder(userId);
     for (const { id } of conversations) await this.storage.removeFolder(id);
+    const appleToken = apple[0]?.apple_refresh_token;
+    // A conta já foi apagada; uma falha na Apple não a pode repor.
+    if (appleToken) await this.revokeApple?.(appleToken).catch(() => {});
   }
 
   /** Interesse no Birthdayly+ (ainda sem compra): o último plano escolhido conta. */

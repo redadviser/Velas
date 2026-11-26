@@ -6,6 +6,7 @@ import { doc } from '../../core/openapi.js';
 import {
   forgotSchema,
   googleSchema,
+  appleSchema,
   loginSchema,
   logoutSchema,
   recoverSchema,
@@ -54,6 +55,15 @@ export async function authRoutes(app: FastifyInstance, auth: AuthService) {
     (req) => {
       const body = googleSchema.parse(req.body);
       return auth.google(body.id_token, body.accept_terms ?? false);
+    },
+  );
+
+  app.post(
+    '/auth/apple',
+    { config: strict, schema: doc({ tag, summary: 'Entrar com o identity token da Apple', body: appleSchema }) },
+    (req) => {
+      const body = appleSchema.parse(req.body);
+      return auth.apple(body, req.log);
     },
   );
 

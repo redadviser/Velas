@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "Mijn verlanglijst",
   "Junta o primeiro desejo": "Voeg je eerste wens toe",
   "Adicionar dos contactos e pedir datas por link": "Toevoegen uit contacten en datums vragen via een link",
-  "Prendas em grupo, conversas e amigos": "Groepscadeaus, chats en vrienden",
-  "Cartões de parabéns e o teu mural": "Felicitatiekaarten en je eigen muur",
   "Tudo o que o plano Grátis tem": "Alles uit het Gratis-abonnement",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Uitgebreide herinneringen: meerdere per persoon en op elk tijdstip",
   "Cartões especiais com foto, vídeo ou áudio": "Speciale kaarten met foto, video of audio",
@@ -1389,5 +1387,14 @@
   "Eliminar mensagem": "Bericht verwijderen",
   "Eliminar a mensagem para {name}?": "Het bericht voor {name} verwijderen?",
   "Se estava agendada, deixa de ser enviada.": "Als het gepland was, wordt het niet verstuurd.",
-  "Mensagem eliminada.": "Bericht verwijderd."
+  "Mensagem eliminada.": "Bericht verwijderd.",
+  "Prendas em grupo": "Groepscadeaus",
+  "Continuar com a Apple": "Doorgaan met Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "Dit account is gemaakt met Apple. Gebruik \"Doorgaan met Apple\".",
+  "O login com a Apple ainda não está disponível.": "Inloggen met Apple is nog niet beschikbaar.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Je Apple-account kon niet worden gecontroleerd. Probeer het opnieuw.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple heeft je e-mail niet doorgegeven. Verwijder Birthdayly via Instellingen > je account > Log in met Apple en probeer het opnieuw.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Kan geen verbinding maken met je Apple-account. Probeer het opnieuw.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "Inloggen met Apple vereist de Birthdayly-server.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "Houd op het beginscherm een lege plek ingedrukt, tik op Wijzig > Voeg widget toe en zoek naar Birthdayly."
 }

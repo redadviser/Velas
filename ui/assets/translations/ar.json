@@ -1203,8 +1203,6 @@
   "A minha lista de desejos": "قائمة أمنياتي",
   "Junta o primeiro desejo": "أضف أول أمنية",
   "Adicionar dos contactos e pedir datas por link": "الإضافة من جهات الاتصال وطلب التواريخ عبر رابط",
-  "Prendas em grupo, conversas e amigos": "هدايا جماعية ومحادثات وأصدقاء",
-  "Cartões de parabéns e o teu mural": "بطاقات تهنئة وحائطك",
   "Tudo o que o plano Grátis tem": "كل ما في الخطة المجانية",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "تذكيرات متقدمة: عدة تذكيرات لكل شخص وفي الساعة التي تريدها",
   "Cartões especiais com foto, vídeo ou áudio": "بطاقات خاصة مع صورة أو فيديو أو صوت",
@@ -1405,5 +1403,14 @@
   "Eliminar mensagem": "حذف الرسالة",
   "Eliminar a mensagem para {name}?": "حذف الرسالة الموجهة إلى {name}؟",
   "Se estava agendada, deixa de ser enviada.": "إذا كانت مجدولة، فلن تُرسل.",
-  "Mensagem eliminada.": "تم حذف الرسالة."
+  "Mensagem eliminada.": "تم حذف الرسالة.",
+  "Prendas em grupo": "هدايا جماعية",
+  "Continuar com a Apple": "المتابعة باستخدام Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "تم إنشاء هذا الحساب باستخدام Apple. استخدم \"المتابعة باستخدام Apple\".",
+  "O login com a Apple ainda não está disponível.": "تسجيل الدخول باستخدام Apple غير متاح بعد.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "تعذّر التحقق من حساب Apple. حاول مرة أخرى.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "لم ترسل Apple بريدك الإلكتروني. من الإعدادات > حسابك > تسجيل الدخول باستخدام Apple، أزل Birthdayly وحاول مرة أخرى.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "تعذّر الاتصال بحساب Apple. حاول مرة أخرى.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "يحتاج تسجيل الدخول باستخدام Apple إلى خادم Birthdayly.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "في الشاشة الرئيسية، المس مساحة فارغة مع الاستمرار، ثم اضغط على تعديل > إضافة أداة وابحث عن Birthdayly."
 }

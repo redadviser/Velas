@@ -5,5 +5,14 @@
 	<!-- Notificações push (Firebase Cloud Messaging via APNs). O Xcode passa a "production" ao exportar para a App Store. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+	<!-- Partilhado com o widget (BirthdaysWidget): dados e fotografias. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.velas.app</string>
+	</array>
 </dict>
 </plist>

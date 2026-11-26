@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -169,30 +172,34 @@ class Validators {
   static String? required(String? v, String message) => (v == null || v.trim().isEmpty) ? message : null;
 }
 
-/// "Continuar com Google", com o separador "ou" opcional. Só aparece quando
-/// o servidor e o Google estão configurados.
-class GoogleAuthButton extends ConsumerStatefulWidget {
-  const GoogleAuthButton({super.key, this.divider = true});
+/// "Continuar com a Apple" (só no iPhone) e "Continuar com Google", com o
+/// separador "ou" opcional. Só aparecem quando há servidor.
+class SocialAuthButtons extends ConsumerStatefulWidget {
+  const SocialAuthButtons({super.key, this.divider = true});
 
   final bool divider;
 
   @override
-  ConsumerState<GoogleAuthButton> createState() => _GoogleAuthButtonState();
+  ConsumerState<SocialAuthButtons> createState() => _SocialAuthButtonsState();
 }
 
-class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
+class _SocialAuthButtonsState extends ConsumerState<SocialAuthButtons> {
   bool _loading = false;
 
-  Future<void> _signIn() async {
+  static bool get _showApple => !kIsWeb && Platform.isIOS;
+
+  Future<void> _signIn(Future<void> Function() action) async {
     setState(() => _loading = true);
-    await runGuarded(context, () => ref.read(authRepositoryProvider).signInWithGoogle());
+    await runGuarded(context, action);
     if (mounted) setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!ref.watch(authRepositoryProvider).supportsGoogle) return const SizedBox.shrink();
+    final auth = ref.watch(authRepositoryProvider);
+    if (!auth.supportsGoogle) return const SizedBox.shrink();
     final muted = context.palette.mutedForeground;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -210,8 +217,21 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
               ],
             ),
           ),
+        if (_showApple) ...[
+          IgnorePointer(
+            ignoring: _loading,
+            child: SignInWithAppleButton(
+              onPressed: () => _signIn(auth.signInWithApple),
+              text: context.tr('Continuar com a Apple'),
+              style: dark ? SignInWithAppleButtonStyle.white : SignInWithAppleButtonStyle.black,
+              height: 52,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSmall + 2),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         OutlinedButton(
-          onPressed: _loading ? null : _signIn,
+          onPressed: _loading ? null : () => _signIn(auth.signInWithGoogle),
           child: _loading
               ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.2))
               : Row(

@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "マイほしいものリスト",
   "Junta o primeiro desejo": "最初のほしいものを追加",
   "Adicionar dos contactos e pedir datas por link": "連絡先から追加、リンクで日付をリクエスト",
-  "Prendas em grupo, conversas e amigos": "グループギフト、チャット、友だち",
-  "Cartões de parabéns e o teu mural": "お祝いカードとあなたのウォール",
   "Tudo o que o plano Grátis tem": "無料プランのすべての機能",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "高度なリマインダー: 1人に複数、好きな時刻に",
   "Cartões especiais com foto, vídeo ou áudio": "写真、動画、音声付きの特別なカード",
@@ -1389,5 +1387,14 @@
   "Eliminar mensagem": "メッセージを削除",
   "Eliminar a mensagem para {name}?": "{name}へのメッセージを削除しますか？",
   "Se estava agendada, deixa de ser enviada.": "予約していた場合、送信されなくなります。",
-  "Mensagem eliminada.": "メッセージを削除しました。"
+  "Mensagem eliminada.": "メッセージを削除しました。",
+  "Prendas em grupo": "グループギフト",
+  "Continuar com a Apple": "Appleで続ける",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "このアカウントはAppleで作成されました。「Appleで続ける」を使ってください。",
+  "O login com a Apple ainda não está disponível.": "Appleでのサインインはまだ利用できません。",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Appleアカウントを確認できませんでした。もう一度お試しください。",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Appleからメールアドレスが届きませんでした。設定 > アカウント > Appleでサインイン でBirthdaylyを削除してから、もう一度お試しください。",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Appleアカウントに接続できませんでした。もう一度お試しください。",
+  "O login com a Apple precisa do servidor da Birthdayly.": "AppleでのサインインにはBirthdaylyのサーバーが必要です。",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "ホーム画面の空いている場所を長押しし、「編集」>「ウィジェットを追加」をタップして Birthdayly を検索してください。"
 }

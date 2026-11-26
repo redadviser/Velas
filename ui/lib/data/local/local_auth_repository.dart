@@ -150,6 +150,11 @@ class LocalAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> signInWithApple() async {
+    throw const AppException('O login com a Apple precisa do servidor da Birthdayly.');
+  }
+
+  @override
   Future<bool> handleAuthLink(Uri uri) async => false;
 
   @override

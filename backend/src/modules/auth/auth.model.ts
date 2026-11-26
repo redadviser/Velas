@@ -36,6 +36,14 @@ export const googleSchema = z.object({
   /** "Ao continuar, aceitas os Termos…": regista a aceitação numa conta nova. */
   accept_terms: z.boolean().optional(),
 });
+export const appleSchema = z.object({
+  identity_token: z.string().min(20).max(4096),
+  /** Código de uso único da Apple; com ele o servidor obtém o refresh token a revogar ao apagar a conta. */
+  authorization_code: z.string().max(1024).nullish(),
+  /** A Apple só envia o nome no primeiro login, e só à app (não vem no token). */
+  name: z.string().trim().max(100).nullish(),
+  accept_terms: z.boolean().optional(),
+});
 export const refreshSchema = z.object({ refresh_token: z.string().min(20).max(200) });
 export const logoutSchema = z.object({ refresh_token: z.string().max(200) });
 export const forgotSchema = z.object({ email: emailSchema });

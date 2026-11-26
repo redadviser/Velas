@@ -1195,8 +1195,6 @@
   "A minha lista de desejos": "Мій список бажань",
   "Junta o primeiro desejo": "Додай перше бажання",
   "Adicionar dos contactos e pedir datas por link": "Додавання з контактів і запит дат за посиланням",
-  "Prendas em grupo, conversas e amigos": "Групові подарунки, чати й друзі",
-  "Cartões de parabéns e o teu mural": "Вітальні листівки й твоя стіна",
   "Tudo o que o plano Grátis tem": "Усе, що є в безкоштовному тарифі",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Розширені нагадування: кілька для кожної людини й у будь-який час",
   "Cartões especiais com foto, vídeo ou áudio": "Особливі листівки з фото, відео чи аудіо",
@@ -1397,5 +1395,14 @@
   "Eliminar mensagem": "Видалити повідомлення",
   "Eliminar a mensagem para {name}?": "Видалити повідомлення для {name}?",
   "Se estava agendada, deixa de ser enviada.": "Якщо його було заплановано, воно не надішлеться.",
-  "Mensagem eliminada.": "Повідомлення видалено."
+  "Mensagem eliminada.": "Повідомлення видалено.",
+  "Prendas em grupo": "Групові подарунки",
+  "Continuar com a Apple": "Продовжити з Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "Цей акаунт створено через Apple. Натисніть «Продовжити з Apple».",
+  "O login com a Apple ainda não está disponível.": "Вхід через Apple поки недоступний.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Не вдалося перевірити акаунт Apple. Спробуйте ще раз.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple не передав ваш email. У Параметрах > ваш акаунт > Вхід з Apple видаліть Birthdayly і спробуйте знову.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Не вдалося підключитися до акаунта Apple. Спробуйте ще раз.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "Для входу через Apple потрібен сервер Birthdayly.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "На початковому екрані натисніть і утримуйте порожнє місце, торкніть «Редагувати» > «Додати віджет» і знайдіть Birthdayly."
 }

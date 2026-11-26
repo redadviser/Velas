@@ -28,6 +28,9 @@ abstract class AuthRepository {
   /// Entra com a conta Google; cria a conta se ainda não existir.
   Future<void> signInWithGoogle();
 
+  /// Entra com a conta Apple (só iPhone); cria a conta se ainda não existir.
+  Future<void> signInWithApple();
+
   /// [phone] em formato E.164, ou vazio.
   Future<SignUpResult> signUp({
     required String name,

@@ -4,6 +4,7 @@ import type { Mailer } from './core/mailer.js';
 import { RealtimeHub } from './core/realtime.js';
 import type { PhotoStorage } from './core/storage.js';
 import { AuthService } from './modules/auth/auth.service.js';
+import type { AppleAuth } from './modules/auth/apple.js';
 import type { GoogleVerifier } from './modules/auth/google.js';
 import type { AccessTokens } from './modules/auth/tokens.js';
 import { BirthdayRequestsService } from './modules/birthday-requests/birthday-requests.service.js';
@@ -38,6 +39,8 @@ export interface Deps {
   tokens: AccessTokens;
   mail: Mailer;
   verifyGoogle: GoogleVerifier;
+  /** Entrar com a Apple; sem ele a rota responde 503. Substituído nos testes. */
+  apple?: AppleAuth;
   /** Pedidos HTTP a serviços externos (GIPHY); substituído nos testes. */
   fetch?: typeof fetch;
   /** Firebase Cloud Messaging (notificações push); sem ele não há push. Substituído nos testes. */
@@ -67,12 +70,13 @@ export function createServices(deps: Deps) {
   cards.onWallCard = (to, from) => void push.wallCard(to, from).catch((e) => push.onError(e));
   messages.scheduled = { cards, push, hub };
   // Mudar a privacidade da presença avisa logo quem a estava a ver.
+  if (deps.apple) users.revokeApple = (token) => deps.apple!.revoke(token);
   users.onUpdated = async (userId, patch) => {
     if (patch.show_presence !== undefined) await chat.announcePresence(userId);
   };
   return {
     hub,
-    auth: new AuthService(db, users, deps.tokens, deps.mail, deps.verifyGoogle, deps.config),
+    auth: new AuthService(db, users, deps.tokens, deps.mail, deps.verifyGoogle, deps.config, deps.apple),
     users,
     accountDeletion: new AccountDeletionService(db, users, deps.mail, deps.config),
     categories,

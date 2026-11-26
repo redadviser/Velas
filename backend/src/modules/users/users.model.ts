@@ -43,6 +43,7 @@ export interface NewUser {
   email: string;
   passwordHash: string | null;
   googleSub?: string;
+  appleSub?: string;
   emailVerified?: boolean;
   name: string;
   username: string | null;

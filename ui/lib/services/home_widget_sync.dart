@@ -5,6 +5,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path_provider_foundation/path_provider_foundation.dart';
 
 import '../core/i18n/translations.dart';
 import '../core/providers.dart';
@@ -51,10 +52,18 @@ String homeWidgetPeople(List<Person> upcoming, {Map<String, String> photos = con
   ].join('\n');
 }
 
+/// Partilhado com a extensão do widget no iPhone (ios/BirthdaysWidget).
+const _iosAppGroup = 'group.com.velas.app';
+
 /// Copia a fotografia de cada um dos primeiros aniversários para um ficheiro do
-/// telemóvel que o widget consegue ler. Só descarrega uma vez por fotografia.
+/// telemóvel que o widget consegue ler (no iPhone, a pasta do App Group). Só
+/// descarrega uma vez por fotografia.
 Future<Map<String, String>> _photoFiles(List<Person> upcoming) async {
-  final dir = Directory('${(await getApplicationSupportDirectory()).path}/widget');
+  final base = Platform.isIOS
+      ? await PathProviderFoundation().getContainerPath(appGroupIdentifier: _iosAppGroup)
+      : (await getApplicationSupportDirectory()).path;
+  if (base == null) return const {};
+  final dir = Directory('$base/widget');
   await dir.create(recursive: true);
   final out = <String, String>{};
   for (final p in upcoming.take(_widgetPhotos)) {
@@ -81,10 +90,10 @@ Future<Map<String, String>> _photoFiles(List<Person> upcoming) async {
   return out;
 }
 
-/// Mantém o widget do Android atualizado com os dados, o plano e a língua da
-/// app. No iOS o widget precisa de uma extensão WidgetKit no Xcode (ainda não existe).
+/// Mantém o widget atualizado com os dados, o plano e a língua da app
+/// (Android: BirthdaysWidget.kt; iPhone: ios/BirthdaysWidget).
 final homeWidgetSyncProvider = Provider<void>((ref) {
-  if (!Platform.isAndroid) return;
+  if (!Platform.isAndroid && !Platform.isIOS) return;
   final data = ref.watch(appDataProvider).value;
   if (data == null || !data.loaded) return;
   final plus = ref.watch(isPlusProvider);
@@ -92,11 +101,12 @@ final homeWidgetSyncProvider = Provider<void>((ref) {
   final upcoming = data.upcoming;
   Future(() async {
     try {
+      if (Platform.isIOS) await HomeWidget.setAppGroupId(_iosAppGroup);
       final photos = plus ? await _photoFiles(upcoming) : const <String, String>{};
       await HomeWidget.saveWidgetData<bool>('plus', plus);
       await HomeWidget.saveWidgetData<String>('texts', homeWidgetTexts(Translations.current));
       await HomeWidget.saveWidgetData<String>('people', homeWidgetPeople(upcoming, photos: photos));
-      await HomeWidget.updateWidget(qualifiedAndroidName: 'com.velas.app.BirthdaysWidget');
+      await HomeWidget.updateWidget(qualifiedAndroidName: 'com.velas.app.BirthdaysWidget', iOSName: 'BirthdaysWidget');
     } catch (_) {
       // Sem widget no ecrã inicial ou plugin indisponível: nada a fazer.
     }

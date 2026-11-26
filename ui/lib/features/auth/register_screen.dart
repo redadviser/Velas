@@ -225,7 +225,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 const SizedBox(height: 24),
                 LoadingButton(label: context.tr('Criar conta'), loading: _loading, onPressed: _submit),
-                const GoogleAuthButton(),
+                const SocialAuthButtons(),
               ],
             ),
           ),

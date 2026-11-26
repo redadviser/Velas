@@ -149,8 +149,9 @@ export class PushService {
         return {
           title: groupTitle ?? name,
           body,
-          // Sem categoria no iOS: o "Responder" de um push mostrado pelo sistema não
-          // chega à app (no Android a app desenha a notificação e responde).
+          // iOS: "Responder" e "Marcar como lida" (a categoria é registada pela app
+          // e a resposta tratada no AppDelegate.swift, com o reply_token).
+          category: 'chat_message',
           threadId: message.conversation_id,
           data: {
             type: 'chat',

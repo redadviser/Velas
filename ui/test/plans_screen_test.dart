@@ -82,6 +82,9 @@ void main() {
     expect(find.textContaining('19,99 €'), findsOneWidget);
     expect(find.textContaining('poupas 33%'), findsOneWidget);
 
+    // O Grátis vem primeiro: desliza até ao Birthdayly+.
+    await tester.ensureVisible(find.text('Mensal'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Mensal'));
     await tester.pumpAndSettle();
     expect(find.textContaining('2,49 €'), findsOneWidget);
@@ -123,6 +126,9 @@ void main() {
     expect(find.textContaining('Poupas 26%'), findsOneWidget); // 1 − 21,99 ÷ (2,49 × 12)
     expect(find.text('Em breve'), findsNothing);
 
+    // O Grátis vem primeiro: desliza até ao Birthdayly+.
+    await tester.ensureVisible(find.text('Mensal'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Mensal'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Assinar por 2,49 €/mês'));

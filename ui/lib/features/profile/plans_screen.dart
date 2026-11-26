@@ -29,8 +29,7 @@ class PlusPricing {
 List<String> get _freeFeatures => [
   tr('Até {count} aniversários, com lembretes', {'count': freePeopleLimit}),
   tr('Adicionar dos contactos e pedir datas por link'),
-  tr('Prendas em grupo, conversas e amigos'),
-  tr('Cartões de parabéns e o teu mural'),
+  tr('Prendas em grupo'),
 ];
 
 List<String> get _plusFeatures => [
@@ -201,6 +200,12 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           const SizedBox(height: 16),
           _PlanCarousel(
             cards: [
+              _PlanCard(
+                name: context.tr('Grátis'),
+                price: '0 €',
+                badge: plus ? null : Pill(label: context.tr('O teu plano'), dense: true),
+                features: _freeFeatures,
+              ),
               _PlusCard(
                 yearly: _yearly,
                 onPeriod: (y) => setState(() => _yearly = y),
@@ -208,12 +213,6 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 action: plusAction,
                 storePlans: storePlans.value ?? const [],
                 forSale: store != null,
-              ),
-              _PlanCard(
-                name: context.tr('Grátis'),
-                price: '0 €',
-                badge: plus ? null : Pill(label: context.tr('O teu plano'), dense: true),
-                features: _freeFeatures,
               ),
             ],
           ),

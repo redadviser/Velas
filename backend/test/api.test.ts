@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { HttpError } from '../src/core/errors.js';
 import { AccessTokens } from '../src/modules/auth/tokens.js';
+import type { AppleAuth, AppleIdentity } from '../src/modules/auth/apple.js';
 import type { GoogleIdentity } from '../src/modules/auth/google.js';
 import type { Config } from '../src/config/env.js';
 import type { Mail } from '../src/core/mailer.js';
@@ -24,6 +25,22 @@ import { createTestDb } from './pglite-pool.js';
 const secret = 'test-secret-with-at-least-32-characters!!';
 const sent: Mail[] = [];
 const googleTokens = new Map<string, GoogleIdentity>();
+// Apple falsa: identity tokens conhecidos e os refresh tokens revogados.
+const appleTokens = new Map<string, AppleIdentity>();
+const appleRevoked: string[] = [];
+const fakeApple: AppleAuth = {
+  async verify(token) {
+    const identity = appleTokens.get(token);
+    if (!identity) throw new HttpError(401, 'invalid_apple_token');
+    return identity;
+  },
+  async refreshToken(code) {
+    return `refresh-${code}`;
+  },
+  async revoke(token) {
+    appleRevoked.push(token);
+  },
+};
 
 let db: Db;
 let closeDb: () => Promise<void>;
@@ -90,6 +107,7 @@ beforeAll(async () => {
     giphyApiKey: 'giphy-test-key',
     moderationEmail: 'moderacao@birthdayly.test',
     legal: { entity: 'RedAdviser, Digital Solutions Lda.', email: 'webmaster@eupasoft.com', privacyUrl: 'https://redadviser.com/?page_id=316' },
+    apple: { clientId: 'com.velas.app' },
     adapty: { secretKey: 'adapty-test', webhookAuth: 'segredo-do-webhook', accessLevel: 'premium' },
   };
   app = await buildApp({
@@ -105,6 +123,7 @@ beforeAll(async () => {
       if (!identity) throw new HttpError(401, 'invalid_google_token');
       return identity;
     },
+    apple: fakeApple,
     fetch: fakeGiphy,
     push: fakePush,
     adapty: fakeAdapty,
@@ -214,6 +233,41 @@ describe('autenticação', () => {
     googleTokens.set('tok-unverified-0123456789abcdef', { sub: 'g-3', email: 'pedro@ex.pt', emailVerified: false, name: 'P' });
     expect((await call('POST', '/auth/google', { body: { id_token: 'tok-unverified-0123456789abcdef' } })).body.error).toBe('email_taken');
     expect((await call('POST', '/auth/google', { body: { id_token: 'tok-invalido-xxxxxxxxxxxx' } })).status).toBe(401);
+  });
+
+  it('entra com a Apple: cria conta com o nome enviado pela app, liga contas e revoga o token ao apagar', async () => {
+    appleTokens.set('apple-new-0123456789abcdef', { sub: 'a-1', email: 'Rita@privaterelay.appleid.com', emailVerified: true });
+    const first = await call('POST', '/auth/apple', {
+      body: { identity_token: 'apple-new-0123456789abcdef', authorization_code: 'code-1', name: 'Rita Sousa', accept_terms: true },
+    });
+    expect(first.status).toBe(200);
+    expect(first.body.user.display_name).toBe('Rita Sousa');
+    expect(first.body.user.has_password).toBe(false);
+
+    // Nos logins seguintes a Apple pode não mandar o email: conta encontrada pelo sub.
+    appleTokens.set('apple-again-0123456789abcdef', { sub: 'a-1', email: null, emailVerified: false });
+    const again = await call('POST', '/auth/apple', { body: { identity_token: 'apple-again-0123456789abcdef' } });
+    expect(again.body.user.id).toBe(first.body.user.id);
+
+    const pw = await call('POST', '/auth/login', { body: { identifier: 'rita@privaterelay.appleid.com', password: 'qualquer1' } });
+    expect(pw.body.error).toBe('apple_account');
+
+    // Liga a uma conta com o mesmo email.
+    const s = await signup('Apple Link', 'applelink', 'applelink@ex.pt');
+    appleTokens.set('apple-link-0123456789abcdef', { sub: 'a-2', email: 'applelink@ex.pt', emailVerified: true });
+    expect((await call('POST', '/auth/apple', { body: { identity_token: 'apple-link-0123456789abcdef' } })).body.user.id).toBe(s.user.id);
+
+    appleTokens.set('apple-noemail-0123456789abcdef', { sub: 'a-3', email: null, emailVerified: false });
+    expect((await call('POST', '/auth/apple', { body: { identity_token: 'apple-noemail-0123456789abcdef' } })).body.error).toBe('apple_email_missing');
+    expect((await call('POST', '/auth/apple', { body: { identity_token: 'apple-invalido-xxxxxxxxxx' } })).status).toBe(401);
+
+    // Apagar a conta revoga o acesso da Apple.
+    await call('POST', '/me/deletion', { token: first.body.access_token });
+    const token = /\/conta\/apagar\?token=([A-Za-z0-9_-]+)/.exec(sent.at(-1)!.text)![1]!;
+    expect((await call('POST', '/account-deletion/confirm', { body: { token } })).status).toBe(204);
+    expect(appleRevoked).toContain('refresh-code-1');
+    // O teste seguinte conta os emails desde o início.
+    sent.length = 0;
   });
 
   it('recupera a palavra-passe pelo link do email', async () => {

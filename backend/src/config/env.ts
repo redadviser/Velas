@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 
+import type { AppleConfig } from '../modules/auth/apple.js';
 import { loadAdaptyConfig, type AdaptyConfig } from '../modules/subscriptions/adapty.js';
 
 /** Ligação ao servidor PostgreSQL. */
@@ -40,6 +41,8 @@ export interface Config {
   publicUrl: string;
   /** Client IDs OAuth aceites como audiência do ID token Google (iOS, Android, Web). */
   googleClientIds: string[];
+  /** Entrar com a Apple: bundle ID da app e, para revogar tokens, a chave Sign in with Apple. */
+  apple: AppleConfig;
   uploadDir: string;
   mail: MailConfig;
   /** Esquema de URL da app (abre a app a partir dos links de email e de convite). */
@@ -94,6 +97,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    apple: {
+      clientId: env.APPLE_BUNDLE_ID?.trim() || 'com.velas.app',
+      teamId: env.APPLE_TEAM_ID?.trim() || undefined,
+      keyId: env.APPLE_KEY_ID?.trim() || undefined,
+      privateKey: env.APPLE_PRIVATE_KEY?.trim() || undefined,
+    },
     uploadDir: env.UPLOAD_DIR ?? './uploads',
     mail: loadMailConfig(env),
     appScheme: env.APP_SCHEME ?? 'com.eupasoft.velas',
@@ -116,7 +125,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 }
 
 export function loadMailConfig(env: NodeJS.ProcessEnv = process.env): MailConfig {
-  const from = env.MAIL_FROM?.trim() || 'Birthdayly <no-reply@velas.app>';
+  const from = env.MAIL_FROM?.trim() || 'Birthdayly <no-reply@mail.eupasoft.com>';
   const host = env.SMTP_HOST?.trim();
   if (!host) return { from };
   const port = Number(env.SMTP_PORT || 465);

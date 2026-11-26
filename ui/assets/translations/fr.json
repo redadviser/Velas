@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "Ma liste d'envies",
   "Junta o primeiro desejo": "Ajoutez votre première envie",
   "Adicionar dos contactos e pedir datas por link": "Ajouter depuis les contacts et demander des dates par lien",
-  "Prendas em grupo, conversas e amigos": "Cadeaux en groupe, discussions et amis",
-  "Cartões de parabéns e o teu mural": "Cartes d'anniversaire et votre mur",
   "Tudo o que o plano Grátis tem": "Tout ce qu'offre la formule Gratuite",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Rappels avancés : plusieurs par personne et à l'heure de votre choix",
   "Cartões especiais com foto, vídeo ou áudio": "Cartes spéciales avec photo, vidéo ou audio",
@@ -1389,5 +1387,14 @@
   "Eliminar mensagem": "Supprimer le message",
   "Eliminar a mensagem para {name}?": "Supprimer le message pour {name} ?",
   "Se estava agendada, deixa de ser enviada.": "S'il était programmé, il ne sera pas envoyé.",
-  "Mensagem eliminada.": "Message supprimé."
+  "Mensagem eliminada.": "Message supprimé.",
+  "Prendas em grupo": "Cadeaux de groupe",
+  "Continuar com a Apple": "Continuer avec Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "Ce compte a été créé avec Apple. Utilise « Continuer avec Apple ».",
+  "O login com a Apple ainda não está disponível.": "La connexion avec Apple n'est pas encore disponible.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Impossible de valider le compte Apple. Réessaie.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple n'a pas envoyé ton e-mail. Dans Réglages > ton compte > Se connecter avec Apple, retire Birthdayly et réessaie.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Impossible de se connecter au compte Apple. Réessaie.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "La connexion avec Apple nécessite le serveur Birthdayly.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "Sur l'écran d'accueil, maintiens le doigt sur un espace vide, touche Modifier > Ajouter un widget et cherche Birthdayly."
 }

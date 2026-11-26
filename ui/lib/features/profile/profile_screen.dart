@@ -336,7 +336,19 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user.name, style: AppTheme.display(context, size: 24)),
+                    Text.rich(
+                      TextSpan(
+                        text: user.name,
+                        children: [
+                          if (user.isPlus)
+                            const WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Padding(padding: EdgeInsets.only(left: 8), child: PlusBadge()),
+                            ),
+                        ],
+                      ),
+                      style: AppTheme.display(context, size: 24),
+                    ),
                     Text(
                       user.username.isEmpty ? user.email : '@${user.username} · ${user.email}',
                       style: TextStyle(color: context.palette.mutedForeground),
@@ -397,6 +409,12 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/wall'),
                 ),
                 _Tile(
+                  icon: LucideIcons.heart,
+                  title: context.tr('Gostos e desejos'),
+                  value: user.interests.isEmpty ? null : context.tr('{count} gostos', {'count': user.interests.length}),
+                  onTap: () => context.push('/profile/wishlist'),
+                ),
+                _Tile(
                   icon: LucideIcons.sparkles,
                   title: context.tr('Plano'),
                   value: user.isPlus ? 'Birthdayly+' : context.tr('Grátis'),
@@ -437,7 +455,8 @@ class ProfileScreen extends ConsumerWidget {
                 },
                 onTap: () => context.push('/profile/preferences'),
               ),
-              if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+              if (!kIsWeb &&
+                  (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS))
                 _Tile(
                   icon: LucideIcons.layoutGrid,
                   title: context.tr('Widgets'),
@@ -448,12 +467,13 @@ class ProfileScreen extends ConsumerWidget {
                 title: context.tr('Privacidade e dados'),
                 onTap: () => context.push('/profile/privacy'),
               ),
-              _Tile(
-                icon: LucideIcons.heart,
-                title: context.tr('Gostos e desejos'),
-                value: user.interests.isEmpty ? null : context.tr('{count} gostos', {'count': user.interests.length}),
-                onTap: () => context.push('/profile/wishlist'),
-              ),
+              if (!(ref.watch(cardsRepositoryProvider) != null))
+                _Tile(
+                  icon: LucideIcons.heart,
+                  title: context.tr('Gostos e desejos'),
+                  value: user.interests.isEmpty ? null : context.tr('{count} gostos', {'count': user.interests.length}),
+                  onTap: () => context.push('/profile/wishlist'),
+                ),
             ],
           ),
           const SizedBox(height: 24),

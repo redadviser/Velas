@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
@@ -12,7 +13,7 @@ import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
 import '../../core/i18n/translations.dart';
 
-/// O widget do ecrã principal (só Android: BirthdaysWidget.kt).
+/// O widget do ecrã principal (Android: BirthdaysWidget.kt; iPhone: ios/BirthdaysWidget).
 class WidgetScreen extends ConsumerStatefulWidget {
   const WidgetScreen({super.key});
 
@@ -114,31 +115,42 @@ class _WidgetScreenState extends ConsumerState<WidgetScreen> {
             ),
             const SizedBox(height: 12),
           ],
-          FilledButton.icon(
-            onPressed: _canPin && !_waiting ? _pin : null,
-            icon: _waiting
-                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(LucideIcons.layoutGrid, size: 18),
-            label: Text(
-              _waiting
-                  ? context.tr('A adicionar…')
-                  : _installed > 0
-                  ? context.tr('Adicionar outro')
-                  : context.tr('Adicionar ao ecrã principal'),
+          // O iPhone não deixa uma app pôr widgets no ecrã principal: só se explica como.
+          if (defaultTargetPlatform == TargetPlatform.iOS)
+            Text(
+              context.tr(
+                'No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.',
+              ),
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium?.copyWith(color: muted),
+            )
+          else ...[
+            FilledButton.icon(
+              onPressed: _canPin && !_waiting ? _pin : null,
+              icon: _waiting
+                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(LucideIcons.layoutGrid, size: 18),
+              label: Text(
+                _waiting
+                    ? context.tr('A adicionar…')
+                    : _installed > 0
+                    ? context.tr('Adicionar outro')
+                    : context.tr('Adicionar ao ecrã principal'),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            _canPin
-                ? context.tr(
-                    'O telemóvel põe-no num espaço livre. Para o mudar de sítio ou de tamanho, toca sem soltar no widget.',
-                  )
-                : context.tr(
-                    'Este telemóvel não deixa adicionar widgets a partir da app: procura o Birthdayly na lista de widgets do ecrã principal.',
-                  ),
-            textAlign: TextAlign.center,
-            style: context.text.bodySmall?.copyWith(color: muted),
-          ),
+            const SizedBox(height: 10),
+            Text(
+              _canPin
+                  ? context.tr(
+                      'O telemóvel põe-no num espaço livre. Para o mudar de sítio ou de tamanho, toca sem soltar no widget.',
+                    )
+                  : context.tr(
+                      'Este telemóvel não deixa adicionar widgets a partir da app: procura o Birthdayly na lista de widgets do ecrã principal.',
+                    ),
+              textAlign: TextAlign.center,
+              style: context.text.bodySmall?.copyWith(color: muted),
+            ),
+          ],
         ],
       ),
     );

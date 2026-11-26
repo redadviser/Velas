@@ -38,6 +38,7 @@ String friendlyError(Object error) {
 String _apiError(ApiException e) => switch (e.code) {
   'invalid_credentials' => tr('Email, username ou palavra-passe incorretos.'),
   'google_account' => tr('Esta conta foi criada com o Google. Usa "Continuar com Google".'),
+  'apple_account' => tr('Esta conta foi criada com a Apple. Usa "Continuar com a Apple".'),
   'email_taken' => tr('Já existe uma conta com este email.'),
   'username_taken' => tr('Este username já está a ser usado.'),
   'phone_taken' => tr('Este telemóvel já está associado a outra conta.'),
@@ -48,6 +49,11 @@ String _apiError(ApiException e) => switch (e.code) {
   'invalid_reset_token' => tr('Este link já foi usado ou expirou. Pede um novo email de recuperação.'),
   'google_not_configured' => tr('O login com Google ainda não está disponível.'),
   'invalid_google_token' => tr('Não foi possível validar a conta Google. Tenta novamente.'),
+  'apple_not_configured' => tr('O login com a Apple ainda não está disponível.'),
+  'invalid_apple_token' => tr('Não foi possível validar a conta Apple. Tenta novamente.'),
+  'apple_email_missing' => tr(
+    'A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.',
+  ),
   'people_limit' => tr('Chegaste ao limite de aniversários do plano Grátis. Com o Birthdayly+ não há limite.'),
   'plus_required' => tr('Isto faz parte do Birthdayly+. Vê os planos no Perfil.'),
   'friend_already_linked' => tr('Este amigo já está ligado a outro aniversário.'),

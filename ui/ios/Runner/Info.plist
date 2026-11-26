@@ -2,42 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
-	<key>NSContactsUsageDescription</key>
-	<string>Para importar os aniversários guardados nos teus contactos.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>Para importar os aniversários guardados no teu calendário.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Para importar os aniversários guardados no teu calendário.</string>
-	<key>FlutterDeepLinkingEnabled</key>
-	<false/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.eupasoft.velas</string>
-			</array>
-		</dict>
-		<dict>
-			<!-- Regresso do login com Google (ios/Flutter/Google.xcconfig) -->
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
-			</array>
-		</dict>
-	</array>
-	<key>GIDClientID</key>
-	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Para escolheres fotografias das pessoas e para enviares imagens nas conversas.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Para tirares fotografias das pessoas, para as enviares nas conversas e para gravares vídeos de parabéns.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Para gravares mensagens de voz e vídeos de parabéns nos cartões.</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Birthdayly</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>pt-PT</string>
@@ -57,18 +33,6 @@
 		<string>zh-Hans</string>
 		<string>ja</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Birthdayly</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>Birthdayly</string>
 	<key>CFBundlePackageType</key>
@@ -77,10 +41,41 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.eupasoft.velas</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Para importar os aniversários guardados no teu calendário.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Para importar os aniversários guardados no teu calendário.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Para tirares fotografias das pessoas, para as enviares nas conversas e para gravares vídeos de parabéns.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Para importar os aniversários guardados nos teus contactos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para gravares mensagens de voz e vídeos de parabéns nos cartões.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para escolheres fotografias das pessoas e para enviares imagens nas conversas.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -104,6 +99,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

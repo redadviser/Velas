@@ -100,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
                 LoadingButton(label: context.tr('Entrar'), loading: _loading, onPressed: _submit),
-                const GoogleAuthButton(),
+                const SocialAuthButtons(),
               ],
             ),
           ),

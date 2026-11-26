@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "Dilek listem",
   "Junta o primeiro desejo": "İlk dileğini ekle",
   "Adicionar dos contactos e pedir datas por link": "Kişilerden ekleme ve tarihleri linkle isteme",
-  "Prendas em grupo, conversas e amigos": "Ortak hediyeler, sohbetler ve arkadaşlar",
-  "Cartões de parabéns e o teu mural": "Doğum günü kartları ve duvarın",
   "Tudo o que o plano Grátis tem": "Ücretsiz plandaki her şey",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Gelişmiş hatırlatmalar: kişi başına birden fazla, istediğin saatte",
   "Cartões especiais com foto, vídeo ou áudio": "Fotoğraf, video ya da sesli özel kartlar",
@@ -1389,5 +1387,14 @@
   "Eliminar mensagem": "Mesajı sil",
   "Eliminar a mensagem para {name}?": "{name} için mesaj silinsin mi?",
   "Se estava agendada, deixa de ser enviada.": "Zamanlanmışsa artık gönderilmeyecek.",
-  "Mensagem eliminada.": "Mesaj silindi."
+  "Mensagem eliminada.": "Mesaj silindi.",
+  "Prendas em grupo": "Grup hediyeleri",
+  "Continuar com a Apple": "Apple ile devam et",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "Bu hesap Apple ile oluşturuldu. \"Apple ile devam et\"i kullan.",
+  "O login com a Apple ainda não está disponível.": "Apple ile giriş henüz kullanılamıyor.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Apple hesabı doğrulanamadı. Tekrar dene.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple e-postanı göndermedi. Ayarlar > hesabın > Apple ile Giriş Yap bölümünden Birthdayly'yi kaldırıp tekrar dene.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Apple hesabına bağlanılamadı. Tekrar dene.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "Apple ile giriş için Birthdayly sunucusu gerekir.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "Ana ekranda boş bir alana dokunup basılı tut, Düzenle > Widget Ekle'ye dokun ve Birthdayly'yi ara."
 }

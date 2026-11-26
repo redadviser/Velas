@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../core/utils/identity.dart';
 import '../../services/google_service.dart';
@@ -96,6 +97,31 @@ class ApiAuthRepository implements AuthRepository {
     final idToken = await GoogleService.instance.signIn();
     // O botão diz "Ao continuar, aceitas os Termos…": numa conta nova fica registado.
     await _applySession(await _api.postPublic('/auth/google', {'id_token': idToken, 'accept_terms': true}));
+  }
+
+  @override
+  Future<void> signInWithApple() async {
+    final AuthorizationCredentialAppleID credential;
+    try {
+      credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) throw const SilentException();
+      throw const AppException('Não foi possível ligar à conta Apple. Tenta novamente.');
+    }
+    final token = credential.identityToken;
+    if (token == null) throw const AppException('Não foi possível ligar à conta Apple. Tenta novamente.');
+    // A Apple só dá o nome no primeiro login e não o põe no token.
+    final name = [credential.givenName, credential.familyName].whereType<String>().join(' ').trim();
+    await _applySession(
+      await _api.postPublic('/auth/apple', {
+        'identity_token': token,
+        'authorization_code': credential.authorizationCode,
+        if (name.isNotEmpty) 'name': name,
+        'accept_terms': true,
+      }),
+    );
   }
 
   @override

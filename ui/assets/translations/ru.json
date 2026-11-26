@@ -1195,8 +1195,6 @@
   "A minha lista de desejos": "Мой список желаний",
   "Junta o primeiro desejo": "Добавь первое желание",
   "Adicionar dos contactos e pedir datas por link": "Добавление из контактов и запрос дат по ссылке",
-  "Prendas em grupo, conversas e amigos": "Общие подарки, чаты и друзья",
-  "Cartões de parabéns e o teu mural": "Открытки и твоя стена",
   "Tudo o que o plano Grátis tem": "Всё, что есть в бесплатном тарифе",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Расширенные напоминания: несколько на человека и в любое время",
   "Cartões especiais com foto, vídeo ou áudio": "Особые открытки с фото, видео или аудио",
@@ -1397,5 +1395,14 @@
   "Eliminar mensagem": "Удалить сообщение",
   "Eliminar a mensagem para {name}?": "Удалить сообщение для {name}?",
   "Se estava agendada, deixa de ser enviada.": "Если оно было запланировано, оно не будет отправлено.",
-  "Mensagem eliminada.": "Сообщение удалено."
+  "Mensagem eliminada.": "Сообщение удалено.",
+  "Prendas em grupo": "Групповые подарки",
+  "Continuar com a Apple": "Продолжить с Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "Этот аккаунт создан через Apple. Нажмите «Продолжить с Apple».",
+  "O login com a Apple ainda não está disponível.": "Вход через Apple пока недоступен.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Не удалось проверить аккаунт Apple. Попробуйте ещё раз.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple не передал ваш email. В Настройках > ваш аккаунт > Вход с Apple удалите Birthdayly и попробуйте снова.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Не удалось подключиться к аккаунту Apple. Попробуйте ещё раз.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "Для входа через Apple нужен сервер Birthdayly.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "На экране «Домой» нажмите и удерживайте пустое место, коснитесь «Править» > «Добавить виджет» и найдите Birthdayly."
 }

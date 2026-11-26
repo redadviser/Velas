@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "Lista mea de dorințe",
   "Junta o primeiro desejo": "Adaugă prima dorință",
   "Adicionar dos contactos e pedir datas por link": "Adaugă din contacte și cere date prin link",
-  "Prendas em grupo, conversas e amigos": "Cadouri de grup, conversații și prieteni",
-  "Cartões de parabéns e o teu mural": "Felicitări și peretele tău",
   "Tudo o que o plano Grátis tem": "Tot ce are planul Gratuit",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Mementouri avansate: mai multe pentru fiecare persoană și la ora dorită",
   "Cartões especiais com foto, vídeo ou áudio": "Felicitări speciale cu fotografie, video sau audio",
@@ -1393,5 +1391,14 @@
   "Eliminar mensagem": "Șterge mesajul",
   "Eliminar a mensagem para {name}?": "Ștergi mesajul pentru {name}?",
   "Se estava agendada, deixa de ser enviada.": "Dacă era programat, nu va mai fi trimis.",
-  "Mensagem eliminada.": "Mesaj șters."
+  "Mensagem eliminada.": "Mesaj șters.",
+  "Prendas em grupo": "Cadouri de grup",
+  "Continuar com a Apple": "Continuă cu Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "Acest cont a fost creat cu Apple. Folosește „Continuă cu Apple”.",
+  "O login com a Apple ainda não está disponível.": "Conectarea cu Apple nu este încă disponibilă.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Contul Apple nu a putut fi validat. Încearcă din nou.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple nu a trimis emailul tău. În Configurări > contul tău > Conectare cu Apple, elimină Birthdayly și încearcă din nou.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Nu s-a putut face legătura cu contul Apple. Încearcă din nou.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "Conectarea cu Apple are nevoie de serverul Birthdayly.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "Pe ecranul principal, ține apăsat pe un spațiu gol, atinge Editează > Adaugă widget și caută Birthdayly."
 }

@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "我的心愿单",
   "Junta o primeiro desejo": "添加第一个心愿",
   "Adicionar dos contactos e pedir datas por link": "从通讯录添加，通过链接询问日期",
-  "Prendas em grupo, conversas e amigos": "合送礼物、聊天和好友",
-  "Cartões de parabéns e o teu mural": "生日贺卡和你的留言墙",
   "Tudo o que o plano Grátis tem": "包含免费版的全部功能",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "高级提醒：每人可设多个，时间随你定",
   "Cartões especiais com foto, vídeo ou áudio": "带照片、视频或音频的特别贺卡",
@@ -1389,5 +1387,14 @@
   "Eliminar mensagem": "删除消息",
   "Eliminar a mensagem para {name}?": "删除给 {name} 的消息？",
   "Se estava agendada, deixa de ser enviada.": "如果已定时发送，将不会再发送。",
-  "Mensagem eliminada.": "消息已删除。"
+  "Mensagem eliminada.": "消息已删除。",
+  "Prendas em grupo": "团体礼物",
+  "Continuar com a Apple": "通过 Apple 继续",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "此账户是通过 Apple 创建的。请使用“通过 Apple 继续”。",
+  "O login com a Apple ainda não está disponível.": "通过 Apple 登录暂不可用。",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "无法验证 Apple 账户。请重试。",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple 未发送你的邮箱。请在 设置 > 你的账户 > 通过 Apple 登录 中移除 Birthdayly 后重试。",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "无法连接到 Apple 账户。请重试。",
+  "O login com a Apple precisa do servidor da Birthdayly.": "通过 Apple 登录需要 Birthdayly 服务器。",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "在主屏幕上按住空白处，轻点“编辑”>“添加小组件”，然后搜索 Birthdayly。"
 }

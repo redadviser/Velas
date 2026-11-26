@@ -18,6 +18,7 @@ import '../notifications/notifications_screen.dart';
 import '../special/special_dates_screen.dart';
 import '../parties/party_widgets.dart';
 import 'home_inbox.dart';
+import '../profile/plus.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -42,7 +43,12 @@ class HomeScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 110),
                 children: [
-                  _Header(name: user?.firstName ?? '', date: today, thisMonth: thisMonth),
+                  _Header(
+                    name: user?.firstName ?? '',
+                    date: today,
+                    thisMonth: thisMonth,
+                    plus: ref.watch(isPlusProvider),
+                  ),
                   const WallBanner(),
                   const HomeInbox(),
                   const _GroupsBanner(),
@@ -118,9 +124,10 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.date, required this.thisMonth});
+  const _Header({required this.name, required this.date, required this.thisMonth, required this.plus});
 
   final String name;
+  final bool plus;
   final DateTime date;
   final int thisMonth;
 
@@ -147,10 +154,19 @@ class _Header extends StatelessWidget {
               children: [
                 Text(Fmt.weekdayDayMonth(date).toUpperCase(), style: AppTheme.eyebrow(context)),
                 const SizedBox(height: 4),
-                Text(
-                  name.isEmpty
-                      ? context.tr('{greeting}!', {'greeting': greeting})
-                      : context.tr('{greeting}, {name}!', {'greeting': greeting, 'name': name}),
+                Text.rich(
+                  TextSpan(
+                    text: name.isEmpty
+                        ? context.tr('{greeting}!', {'greeting': greeting})
+                        : context.tr('{greeting}, {name}!', {'greeting': greeting, 'name': name}),
+                    children: [
+                      if (plus)
+                        const WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(padding: EdgeInsets.only(left: 8), child: PlusBadge()),
+                        ),
+                    ],
+                  ),
                   style: AppTheme.display(context, size: 29),
                 ),
                 const SizedBox(height: 4),

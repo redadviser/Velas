@@ -8,6 +8,7 @@ import { hashPassword, verifyPassword } from '../../core/passwords.js';
 import { termsVersion } from '../legal/legal.content.js';
 import type { UsersService } from '../users/users.service.js';
 import type { Session, SignupInput } from './auth.model.js';
+import type { AppleAuth } from './apple.js';
 import type { GoogleVerifier } from './google.js';
 import { AccessTokens, hashToken, randomToken, refreshTtlDays, resetTtlMinutes } from './tokens.js';
 
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly mail: Mailer,
     private readonly verifyGoogle: GoogleVerifier,
     private readonly config: Config,
+    private readonly appleAuth?: AppleAuth,
   ) {}
 
   /** Nova sessão: access token curto + refresh token (só o hash é guardado). */
@@ -65,15 +67,21 @@ export class AuthService {
   /** [identifier] é o email ou o username. */
   async login(identifier: string, password: string): Promise<Session> {
     const byEmail = identifier.includes('@') && !identifier.startsWith('@');
-    const { rows } = await this.db.query<{ id: string; password_hash: string | null; google_sub: string | null }>(
+    const { rows } = await this.db.query<{
+      id: string;
+      password_hash: string | null;
+      google_sub: string | null;
+      apple_sub: string | null;
+    }>(
       byEmail
-        ? 'select id, password_hash, google_sub from users where lower(email) = lower($1)'
-        : 'select u.id, u.password_hash, u.google_sub from users u join profiles p on p.id = u.id where p.username = $1',
+        ? 'select id, password_hash, google_sub, apple_sub from users where lower(email) = lower($1)'
+        : 'select u.id, u.password_hash, u.google_sub, u.apple_sub from users u join profiles p on p.id = u.id where p.username = $1',
       [byEmail ? identifier : identifier.replace(/^@/, '').toLowerCase()],
     );
     const user = rows[0];
     const ok = await verifyPassword(password, user?.password_hash);
     if (user && !user.password_hash && user.google_sub) throw unauthorized('google_account');
+    if (user && !user.password_hash && user.apple_sub) throw unauthorized('apple_account');
     if (!user || !ok) throw unauthorized('invalid_credentials');
     return tx(this.db, null, (c) => this.issueSession(c, user.id));
   }
@@ -107,6 +115,51 @@ export class AuthService {
           if (acceptTerms) await acceptTermsIn(c, userId);
         }
       }
+      return this.issueSession(c, userId);
+    });
+  }
+
+  /**
+   * Entrar com a Apple. Como no Google: liga à conta com o mesmo email ou cria
+   * uma nova. O email pode ser um endereço de reencaminhamento da Apple.
+   */
+  async apple(
+    input: { identity_token: string; authorization_code?: string | null; name?: string | null; accept_terms?: boolean },
+    log: FastifyBaseLogger,
+  ): Promise<Session> {
+    if (!this.appleAuth) throw new HttpError(503, 'apple_not_configured');
+    const a = await this.appleAuth.verify(input.identity_token);
+    let refreshToken: string | null = null;
+    if (input.authorization_code) {
+      // Sem o refresh token a conta entra na mesma; só não se revoga ao apagar.
+      refreshToken = await this.appleAuth
+        .refreshToken(input.authorization_code)
+        .catch((e) => (log.warn(e, 'Apple: falhou a troca do authorization code'), null));
+    }
+    const email = a.email?.trim().toLowerCase() ?? null;
+    return tx(this.db, null, async (c) => {
+      const bySub = await c.query<{ id: string }>('select id from users where apple_sub = $1', [a.sub]);
+      let userId = bySub.rows[0]?.id;
+      if (!userId) {
+        if (!email) throw new HttpError(400, 'apple_email_missing');
+        const byEmail = await c.query<{ id: string }>('select id from users where lower(email) = $1', [email]);
+        userId = byEmail.rows[0]?.id;
+        if (userId) {
+          if (!a.emailVerified) throw new HttpError(409, 'email_taken');
+          await c.query('update users set apple_sub = $2, email_verified = true where id = $1', [userId, a.sub]);
+        } else {
+          userId = await this.users.createIn(c, {
+            email,
+            passwordHash: null,
+            appleSub: a.sub,
+            emailVerified: a.emailVerified,
+            name: input.name ?? '',
+            username: await this.users.suggestUsernameIn(c, email),
+          });
+          if (input.accept_terms) await acceptTermsIn(c, userId);
+        }
+      }
+      if (refreshToken) await c.query('update users set apple_refresh_token = $2 where id = $1', [userId, refreshToken]);
       return this.issueSession(c, userId);
     });
   }

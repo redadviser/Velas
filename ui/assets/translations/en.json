@@ -1187,8 +1187,6 @@
   "A minha lista de desejos": "My wish list",
   "Junta o primeiro desejo": "Add your first wish",
   "Adicionar dos contactos e pedir datas por link": "Add from contacts and ask for dates by link",
-  "Prendas em grupo, conversas e amigos": "Group gifts, chats and friends",
-  "Cartões de parabéns e o teu mural": "Birthday cards and your wall",
   "Tudo o que o plano Grátis tem": "Everything in the Free plan",
   "Lembretes avançados: vários por pessoa e à hora que quiseres": "Advanced reminders: several per person, at any time you like",
   "Cartões especiais com foto, vídeo ou áudio": "Special cards with photo, video or audio",
@@ -1389,5 +1387,14 @@
   "Eliminar mensagem": "Delete message",
   "Eliminar a mensagem para {name}?": "Delete the message for {name}?",
   "Se estava agendada, deixa de ser enviada.": "If it was scheduled, it won't be sent.",
-  "Mensagem eliminada.": "Message deleted."
+  "Mensagem eliminada.": "Message deleted.",
+  "Prendas em grupo": "Group gifts",
+  "Continuar com a Apple": "Continue with Apple",
+  "Esta conta foi criada com a Apple. Usa \"Continuar com a Apple\".": "This account was created with Apple. Use \"Continue with Apple\".",
+  "O login com a Apple ainda não está disponível.": "Sign in with Apple is not available yet.",
+  "Não foi possível validar a conta Apple. Tenta novamente.": "Couldn't verify your Apple account. Try again.",
+  "A Apple não enviou o teu email. Em Definições > a tua conta > Iniciar sessão com a Apple, remove a Birthdayly e tenta outra vez.": "Apple didn't send your email. In Settings > your account > Sign in with Apple, remove Birthdayly and try again.",
+  "Não foi possível ligar à conta Apple. Tenta novamente.": "Couldn't connect to your Apple account. Try again.",
+  "O login com a Apple precisa do servidor da Birthdayly.": "Sign in with Apple needs the Birthdayly server.",
+  "No ecrã principal, toca sem soltar num espaço vazio, toca em Editar > Adicionar widget e procura o Birthdayly.": "On the Home Screen, touch and hold an empty area, tap Edit > Add Widget and search for Birthdayly."
 }

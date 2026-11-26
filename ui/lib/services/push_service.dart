@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/config/env.dart';
 import '../core/i18n/translations.dart';
 import 'notification_service.dart';
 
@@ -80,6 +81,8 @@ class PushService {
     _started = true;
     try {
       await Firebase.initializeApp(options: FirebaseConfig.options);
+      // O AppDelegate.swift responde às notificações com a app fechada: precisa do endereço da API.
+      if (Platform.isIOS) await (await SharedPreferences.getInstance()).setString('velas.apiUrl', Env.apiUrl);
       FirebaseMessaging.onBackgroundMessage(firebaseBackgroundMessage);
       final fm = FirebaseMessaging.instance;
 

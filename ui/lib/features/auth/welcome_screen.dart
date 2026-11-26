@@ -270,7 +270,7 @@ class _Actions extends StatelessWidget {
           const SizedBox(height: 12),
           Theme(
             data: theme.copyWith(outlinedButtonTheme: OutlinedButtonThemeData(style: glass)),
-            child: const GoogleAuthButton(divider: false),
+            child: const SocialAuthButtons(divider: false),
           ),
         ],
         const SizedBox(height: 8),

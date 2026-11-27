@@ -1,1 +1,7 @@
 graphify-out/
+/ui/test
+/backend/test
+/backend/test
+backend/test/api.test.ts
+/ui/integration_test
+/ui/tool

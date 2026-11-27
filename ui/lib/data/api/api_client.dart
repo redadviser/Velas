@@ -24,7 +24,13 @@ class ApiClient {
   ApiClient(String baseUrl, {http.Client? client, FlutterSecureStorage? storage})
     : _base = baseUrl.replaceFirst(RegExp(r'/+$'), ''),
       _http = client ?? http.Client(),
-      _storage = storage ?? const FlutterSecureStorage();
+      _storage = storage ?? secureStorage;
+
+  /// iPhone: o token só se lê depois do primeiro desbloqueio e não passa para
+  /// outro aparelho por cópia de segurança (no Android, ver data_extraction_rules.xml).
+  static const secureStorage = FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+  );
 
   static const _refreshKey = 'velas.api.refreshToken';
   static const _timeout = Duration(seconds: 25);

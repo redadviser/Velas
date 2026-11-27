@@ -49,6 +49,16 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
   services.push.onError = (e) => app.log.warn({ err: e }, 'push: envio falhou');
   app.decorate('jobs', { sendScheduledMessages: () => services.messages.sendDue() });
   app.setErrorHandler(errorHandler);
+  // A API não é para abrir em frames nem para o browser adivinhar tipos (as
+  // páginas públicas e os ficheiros enviados pelos utilizadores incluídos).
+  const https = deps.config.publicUrl.startsWith('https://');
+  app.addHook('onSend', async (_req, reply) => {
+    // Com HTTPS, o browser deixa de aceitar a API em HTTP durante um ano.
+    if (https) reply.header('strict-transport-security', 'max-age=31536000');
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('referrer-policy', 'no-referrer');
+  });
   await app.register(rateLimit, { global: false, enableDraftSpec: true, allowList: () => !deps.config.rateLimit });
   // Quem valida os pedidos é o Zod; os schemas das rotas são só documentação (ver core/openapi.ts).
   app.setValidatorCompiler(() => (value) => ({ value }));
@@ -66,7 +76,6 @@ export async function buildApp(deps: Deps, options: FastifyServerOptions = {}) {
         schema: rows[0]?.name ?? null,
         storage: await deps.storage.writable(),
         storage_persistent: await deps.storage.onVolume(),
-        upload_dir: deps.storage.dir,
       };
     },
   );

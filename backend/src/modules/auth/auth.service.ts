@@ -4,6 +4,7 @@ import type { Config } from '../../config/env.js';
 import { tx, type Db, type Tx } from '../../core/database.js';
 import { HttpError, unauthorized } from '../../core/errors.js';
 import type { Mailer } from '../../core/mailer.js';
+import { emailQuota, loginFailures } from '../../core/attempts.js';
 import { hashPassword, verifyPassword } from '../../core/passwords.js';
 import { termsVersion } from '../legal/legal.content.js';
 import type { UsersService } from '../users/users.service.js';
@@ -67,6 +68,8 @@ export class AuthService {
   /** [identifier] é o email ou o username. */
   async login(identifier: string, password: string): Promise<Session> {
     const byEmail = identifier.includes('@') && !identifier.startsWith('@');
+    const attemptKey = identifier.trim().toLowerCase().replace(/^@/, '');
+    if (loginFailures.blocked(attemptKey)) throw new HttpError(429, 'rate_limited');
     const { rows } = await this.db.query<{
       id: string;
       password_hash: string | null;
@@ -82,7 +85,11 @@ export class AuthService {
     const ok = await verifyPassword(password, user?.password_hash);
     if (user && !user.password_hash && user.google_sub) throw unauthorized('google_account');
     if (user && !user.password_hash && user.apple_sub) throw unauthorized('apple_account');
-    if (!user || !ok) throw unauthorized('invalid_credentials');
+    if (!user || !ok) {
+      loginFailures.hit(attemptKey);
+      throw unauthorized('invalid_credentials');
+    }
+    loginFailures.clear(attemptKey);
     return tx(this.db, null, (c) => this.issueSession(c, user.id));
   }
 
@@ -184,7 +191,7 @@ export class AuthService {
   async forgotPassword(email: string, log: FastifyBaseLogger): Promise<void> {
     const { rows } = await this.db.query<{ id: string }>('select id from users where lower(email) = $1', [email]);
     const user = rows[0];
-    if (!user) return;
+    if (!user || !emailQuota.hit(email.toLowerCase())) return;
     const token = randomToken();
     await this.db.query(
       `insert into password_resets (token_hash, user_id, expires_at) values ($1, $2, now() + make_interval(mins => $3))`,

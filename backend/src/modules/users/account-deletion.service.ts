@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 
 import type { Config } from '../../config/env.js';
+import { emailQuota } from '../../core/attempts.js';
 import type { Db } from '../../core/database.js';
 import { HttpError, notFound } from '../../core/errors.js';
 import { escapeHtml } from '../../core/html.js';
@@ -41,7 +42,7 @@ export class AccountDeletionService {
       'select id, email from users where lower(email) = $1',
       [email],
     );
-    if (!rows[0]) return;
+    if (!rows[0] || !emailQuota.hit(rows[0].email.toLowerCase())) return;
     await this.send(rows[0].id, rows[0].email).catch((e) => log.error(e, 'falhou o envio do email de eliminação da conta'));
   }
 
